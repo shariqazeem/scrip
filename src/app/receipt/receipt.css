@@ -50,7 +50,9 @@
   gap: var(--s-4);
   margin-bottom: var(--s-8);
 }
-.wg-receipt-brand {
+/* `.wg-receipt a` is a descendant selector and outranks a bare class, so the brand was
+   picking up the link gold. The mark is chrome, not a link to follow. */
+.wg-receipt a.wg-receipt-brand {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);

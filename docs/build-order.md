@@ -1,5 +1,11 @@
 # Build order (dependency order, not versions)
 
+> **Where it stands, 2026-09-12.** Steps 0 to 8 are built. The program is deployed to devnet
+> and a real payout, a real sponsored claim and a real goal skim have run through it
+> (`npm run test:devnet`). What is NOT done: a mainnet deploy, which needs ~2.3 SOL; the email
+> sign-in door, which needs an embedded-wallet app id; and the docs beyond the index page.
+
+
 **The target is the whole product, not a stripped-down first release.** This list is
 dependency order only: a balance cannot be painted before it can be computed, and a receipt
 cannot be written before there is something to receive. Nothing here is optional and nothing
