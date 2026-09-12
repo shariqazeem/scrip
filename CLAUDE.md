@@ -67,13 +67,19 @@ of paying strangers in public — never a dependency.
 
 ### The three calls, settled
 
-- **Gold is metal**, Oro GOLD or Matrixdock XAUm, priced against Pyth XAU. GLDx is a fund
-  share and may never appear under grams.
+- **Gold is metal** — **Oro GOLD**, `GoLDppdjB1vDTPSGxyMJFqdnj134yH6Prg9eqsGDiw6A`, priced
+  against Pyth XAU. Chosen over Matrixdock XAUm by the rule the law already set, "whichever
+  Jupiter can actually fill": ~$372k of depth against XAUm's ~$43k. It is also a plain SPL
+  mint with **no freeze authority and no permanent delegate**. GLDx is a fund share and may
+  never appear under grams.
 - **The market sleeve is SPYx** by default. Other xStocks are held the way a wallet holds
   any token; single names are a recipient's choice, never the company's.
-- **Inbound value follows the recipient's policy**, defaulting to 50% gold, 20% silver, 30%
-  SPY. A payer may constrain the asset set but never dictates weights. A named gift stays
-  named; only unspecified value converts.
+- **Inbound value follows the recipient's policy**, defaulting to **70% gold, 30% SPY**. A
+  payer may constrain the asset set but never dictates weights. A named gift stays named;
+  only unspecified value converts. *(Was 50/20/30. Silver failed the metal test it was
+  required to pass — no allocated-silver token on Solana has real depth — so it left the
+  default and the metal weight absorbed it. Evidence and the founder's decision:
+  `docs/decisions.md`, 2026-09-12.)*
 
 ### The number that decides everything
 
@@ -87,6 +93,11 @@ xStocks mints carry a **permanent delegate** and a **pause authority**: the issu
 burn or freeze. Self-custody here means *not our custody*, not *nobody can touch it*.
 Dividends are **reinvested, not paid**, so never show expected income. Say both plainly
 rather than letting a judge find them.
+
+**But the disclosure is per-row, never a banner.** Verified on chain 2026-09-12: Oro GOLD has
+*no* freeze authority and *no* permanent delegate, so a blanket warning would be false about
+the gold sleeve — and a false warning is the kind of lazy honesty that reads as dishonesty the
+moment somebody checks. Each asset row states what is true of that mint.
 
 ## 2. Principles
 
@@ -254,3 +265,5 @@ gets written down rather than quietly edited away.
 | §5 marks `/app/goals` "(v2)" | it is a route from the scaffold, built at build-order step 7 | There are no versions. `build-order.md` settles it |
 | §4 implies the Anchor program sits at the repo root | it is a workspace at `anchor/` | A Rust `target/` at the root would sit inside the Next build's watch path. `anchor/target` is gitignored; the IDL and types the app needs are synced into `src/lib/anchor/` by `scripts/sync-idl.mjs` and committed, with `src/lib/solana/program.test.ts` failing on any drift between the three places the program id is written |
 | §8 lists five commands | plus `npm run anchor:build`, `anchor:test`, `db:generate`, `format` | Additions, not changes |
+| §1 said the default mix is 50 gold / 20 silver / 30 SPY | **70 gold / 30 SPY** | Not drift — a founder decision on evidence the law demanded be gathered ("verify before shipping the default 50/20/30"). Silver failed: every silver token on Solana is a fund tracker or a miner. Recorded in `docs/decisions.md`, and the lines above were updated rather than left to contradict the code |
+| §3 and `docs/research.md` describe the multiplier as one value activated at 00:30 UTC | the extension carries TWO values and a timestamp, and the live one is `newMultiplier` once that timestamp passes; the one activation observed on chain is 04:00 UTC | Reading the field named `multiplier` paints every SPYx balance 0.18% short, forever. `src/lib/corporate-actions/multiplier.ts` holds the rule and the evidence |

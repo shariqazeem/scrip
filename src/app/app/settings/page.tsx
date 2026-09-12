@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Settings } from "lucide-react";
 import { EmptyState, PageFrame } from "@/components/app/page-frame";
+import { DEFAULT_POLICY_BPS, assetBySymbol } from "@/lib/assets/registry";
+import { bps } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -12,6 +14,13 @@ export const metadata: Metadata = { title: "Settings" };
  * owner signed, prices come from Pyth, routing comes from Jupiter. Built at build-order step 2.
  */
 export default function SettingsPage() {
+  // Read from the registry rather than written into the sentence. A weight stated in prose
+  // beside a weight stated in code is two lists that drift, and the one a person reads is the
+  // one that would be wrong.
+  const defaultMix = DEFAULT_POLICY_BPS.map(
+    (l) => `${bps(l.bps)} ${assetBySymbol(l.symbol)?.name ?? l.symbol}`,
+  ).join(" and ");
+
   return (
     <PageFrame
       eyebrow="Settings"
@@ -25,7 +34,7 @@ export default function SettingsPage() {
         <EmptyState
           icon={<Settings size={22} strokeWidth={1.6} />}
           title="No policy is signed here yet"
-          note="The default is 50% gold, 20% silver, 30% the market — but a default is not a policy until you have signed it, so nothing is shown as yours until you do."
+          note={`The default is ${defaultMix} — but a default is not a policy until you have signed it, so nothing is shown as yours until you do.`}
         />
       </div>
     </PageFrame>

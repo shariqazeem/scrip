@@ -5,7 +5,7 @@ import { EmptyState, PageFrame } from "@/components/app/page-frame";
 export const metadata: Metadata = { title: "Your book" };
 
 /**
- * THE BOOK — grams, ounces, share-equivalents, dollars last.
+ * THE BOOK — grams, share-equivalents, dollars last.
  *
  * Nothing renders here until a book exists on chain, because every number on this page is a
  * claim about someone's money. Balances arrive with `open_book` and the valuer
@@ -17,7 +17,7 @@ export default function BookPage() {
   return (
     <PageFrame
       eyebrow="Your book"
-      title="Grams, ounces and the market — in your own wallet."
+      title="Grams and the market — in your own wallet."
       sub="Webgold indexes your book; it never holds it. Constituents sit in token accounts you own, and the program keeps the policy and the receipts."
     >
       <div className="wg-panel">

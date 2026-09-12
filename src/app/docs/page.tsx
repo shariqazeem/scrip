@@ -86,15 +86,16 @@ export default function DocsPage() {
         <Info size={16} strokeWidth={2} aria-hidden />
         <p>
           <strong>Gold is metal or it is not gold.</strong> A fund share that tracks bullion is
-          never displayed under grams. If it is listed at all it sits under funds and says so —
-          and silver is held to exactly the same test.
+          never displayed under grams. If it is listed at all it sits under funds and says so.
+          Silver was held to the same test and did not pass it: every silver token on Solana is
+          a fund tracker or a mining company, so silver is not a sleeve here.
         </p>
       </div>
       <div className="wg-doc-note">
         <Info size={16} strokeWidth={2} aria-hidden />
         <p>
-          <strong>Savings-grade, not stable.</strong> Gold, silver and equities fall as well as
-          rise. Webgold is not a dollar substitute and does not present itself as one.
+          <strong>Savings-grade, not stable.</strong> Gold and equities fall as well as rise.
+          Webgold is not a dollar substitute and does not present itself as one.
         </p>
       </div>
 

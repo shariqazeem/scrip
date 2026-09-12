@@ -4,18 +4,21 @@
 
 **Web3 made assets programmable. Webgold makes ownership receivable.**
 
-A receive book for real assets on Solana. You do not come here to trade. Value arrives as
-gold, silver and the market because you earned it, were gifted it, or were sponsored into
-it. Every arrival has a memory that lives on chain: who paid, who received, how much in
-grams and in shares, the reason, the transaction. Anyone can open that account forever.
+A receive book for real assets on Solana. You do not come here to trade. Value arrives as gold
+and the market because you earned it, were gifted it, or were sponsored into it. Every arrival
+has a memory that lives on chain: who paid, who received, how much in grams and in shares, the
+reason, the transaction. Anyone can open that account forever.
 
 Binance is buy-and-park. This is where work becomes ownership.
 
 ## The three calls, settled
 
 **Gold is metal.** Grams on the home screen only works if the token is a bar in a vault.
-The book holds Oro GOLD or Matrixdock XAUm, whichever Jupiter can actually fill at launch,
-priced against Pyth XAU. GLDx is a fund share from the same shop as the equity sleeve.
+The book holds **Oro GOLD** (`GoLDppdjB1vDTPSGxyMJFqdnj134yH6Prg9eqsGDiw6A`), priced against
+Pyth XAU — chosen over Matrixdock XAUm by this document's own rule, "whichever Jupiter can
+actually fill": ~$372k of depth against XAUm's ~$43k, verified 2026-09-12. It is also a plain
+SPL mint with no freeze authority and no permanent delegate, so once it is in your wallet
+nobody can move or freeze it. GLDx is a fund share from the same shop as the equity sleeve.
 Convenient, and a lie if you call it grams. If GLDx is ever listed it sits under **gold
 funds**, never under grams.
 
@@ -25,16 +28,17 @@ and NVDAx is a recipient's choice, never the company's default.
 
 **Inbound value follows the recipient's book.** A payout is denominated in dollars of value,
 not in the payer's preferred ticker. The vault releases value; the recipient's own policy
-turns it into their mix, defaulting to 50% gold, 20% silver, 30% SPY. A payer may constrain
-the set — "gold only", "no single names" — but never dictates weights. Your book is yours.
-A gift that is explicitly 0.2 grams of gold stays 0.2 grams of gold; named gifts are named,
-and only unspecified payouts convert.
+turns it into their mix, defaulting to **70% gold, 30% SPY** (see below — silver failed the
+metal test this document demanded it pass). A payer may constrain the set — "gold only", "no
+single names" — but never dictates weights. Your book is yours. A gift that is explicitly 0.2
+grams of gold stays 0.2 grams of gold; named gifts are named, and only unspecified payouts
+convert.
 
 ## The book
 
-One home screen, in this order: fine grams of gold, ounces of silver, SPY share-equivalents,
-dollars last. Balances are real tokens in the user's own wallet. Webgold indexes the book; it
-never custodies an idle one.
+One home screen, in this order: fine grams of gold, SPY share-equivalents, dollars last. Two
+honest units rather than three — see the silver finding under honesty. Balances are real
+tokens in the user's own wallet. Webgold indexes the book; it never custodies an idle one.
 
 **Goal vaults** are program accounts that skim a chosen percentage of every inbound payout
 toward a named goal: a laptop, three months of runway, a wedding. They can spend in exactly
@@ -77,10 +81,12 @@ later, and never the home page.
 - Dividends are **reinvested through a mint-level scale factor**, never paid as cash.
   Displayed shares apply that multiplier before any screen paints a number.
 - Physical metal carries the vault and redemption terms of its issuer, stated on the book.
-- **Silver needs the same test as gold.** If the only liquid silver on Solana is a fund
-  tracker rather than metal, then silver either moves under "funds" or leaves the default
-  mix. The rule that kills GLDx-as-grams kills SLVon-as-ounces. Verify before shipping the
-  default 50/20/30.
+- **Silver needed the same test as gold, and failed it (verified 2026-09-12).** Every silver
+  instrument on Solana is a fund tracker or a miner's equity: SLVon ~$48k of liquidity, SLVx
+  ~$1, XAGx not a real listing, AGon $0. There are no honest ounces to show, so silver left
+  the default mix and sits under funds on `/assets`, holdable and labelled a fund share. The
+  rule that killed GLDx-as-grams killed SLVon-as-ounces. Full evidence in
+  `docs/decisions.md`.
 
 ## What the program does, and does not
 

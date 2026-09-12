@@ -21,7 +21,7 @@ const SITE = siteUrl();
  */
 const TITLE = "Webgold — ownership you receive, in grams";
 const DESCRIPTION =
-  "Webgold is a receive book for real assets on Solana. Value arrives as gold, silver and the market — in your own wallet, never ours — because you earned it, were gifted it, or were sponsored into it. Every arrival carries an on-chain receipt anyone can open: who paid, who received, how many grams, and why.";
+  "Webgold is a receive book for real assets on Solana. Value arrives as gold and the stock market — in your own wallet, never ours — because you earned it, were gifted it, or were sponsored into it. Every arrival carries an on-chain receipt anyone can open: who paid, who received, how many grams, and why.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),

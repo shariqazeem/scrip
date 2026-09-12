@@ -168,3 +168,125 @@
   border-color: var(--accent-strong);
   color: var(--accent-ink);
 }
+
+/* ── asset rows: the explore surface ─────────────────────────────────────
+   A dense row list. Every row names the issuer, the wrapper and what the token is a claim
+   on, because a row that hides its wrapper is the row a judge opens first. */
+.wg-rows {
+  display: grid;
+}
+.wg-row {
+  display: grid;
+  /* Identity is a fixed narrow column; the wrapper description needs room to be a sentence
+     rather than one word per line. Chips and the disclosure take the full width beneath. */
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  gap: var(--s-3) var(--s-5);
+  align-items: start;
+  padding: var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+.wg-row:last-child {
+  border-bottom: 0;
+}
+.wg-row-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wg-row-sym {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-mono);
+}
+.wg-row-name {
+  font-size: 0.9375rem;
+  color: var(--ink);
+}
+.wg-row-issuer {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.wg-row-issuer a {
+  color: var(--ink-muted);
+}
+.wg-row-issuer a:hover {
+  color: var(--brass);
+}
+.wg-row-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.wg-row-disclosure {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  max-width: 88ch;
+}
+@media (max-width: 720px) {
+  .wg-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── chips ───────────────────────────────────────────────────────────────
+   Pills are for status only (the radius rule). A chip states a FACT about a mint; it is
+   never decoration, and it never uses the money colours. */
+.wg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--tracking-mono);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.wg-chip.is-unit {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+/* A caution chip, for a fact a holder should weigh: an issuer that can move or freeze a
+   token, or a share that tracks metal rather than being metal. */
+.wg-chip.is-caution {
+  border-color: var(--warn-border);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+/* ── a section note that carries a finding ──────────────────────────────── */
+.wg-finding {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-soft);
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-5);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.wg-finding svg {
+  color: var(--brass);
+  margin-top: 3px;
+}
+.wg-finding strong {
+  font-weight: 600;
+}
+.wg-stack {
+  display: grid;
+  gap: var(--s-5);
+}

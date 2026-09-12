@@ -44,9 +44,9 @@ export default function LandingPage() {
             Web3 made assets programmable. Webgold makes ownership <em>receivable</em>.
           </h1>
           <p className="wg-lede">
-            A receive book for real assets on Solana. Value arrives as gold, silver and the
-            market — in your own wallet, never ours — because you earned it, were gifted it, or
-            were sponsored into it. Every arrival carries a receipt anyone can open.
+            A receive book for real assets on Solana. Value arrives as gold and the market —
+            in your own wallet, never ours — because you earned it, were gifted it, or were
+            sponsored into it. Every arrival carries a receipt anyone can open.
           </p>
           <div className="wg-hero-cta">
             <Link href="/app" className="wg-btn is-primary">
@@ -99,8 +99,8 @@ export default function LandingPage() {
               <h3>Earn</h3>
               <p>
                 A payer escrows value and releases it with a reason attached. Your own policy
-                turns it into grams, ounces and the market. A cohort is recorded at release, so
-                what you keep is measurable rather than guessed.
+                turns it into grams and the market. A cohort is recorded at release, so what
+                you keep is measurable rather than guessed.
               </p>
             </article>
             <article className="wg-tile">
@@ -134,17 +134,16 @@ export default function LandingPage() {
           <p className="wg-lede">
             Gold is metal here, not a fund share that tracks it. If a token is a claim on a fund
             rather than a bar, it is never shown under grams — it sits under funds and says so.
+            That test is why there is no silver line: every silver token on Solana is a fund
+            tracker or a mining company, so there are no honest ounces to show.
           </p>
           <div className="wg-order">
             <div className="wg-order-row">
               <span className="wg-order-name">Gold</span>
               <span className="wg-order-unit">fine grams</span>
-              <span className="wg-order-issuer">Allocated metal, issuer named on every row</span>
-            </div>
-            <div className="wg-order-row">
-              <span className="wg-order-name">Silver</span>
-              <span className="wg-order-unit">troy ounces</span>
-              <span className="wg-order-issuer">Held to the same test as gold</span>
+              <span className="wg-order-issuer">
+                Allocated metal. One troy ounce a token, issuer named on the row
+              </span>
             </div>
             <div className="wg-order-row">
               <span className="wg-order-name">The market</span>
@@ -185,9 +184,9 @@ export default function LandingPage() {
             <p className="wg-note">
               <Info size={16} strokeWidth={2} aria-hidden />
               <span>
-                <strong>This is savings-grade, not stable.</strong> Gold, silver and equities
-                fall as well as rise. Webgold is not competing with a dollar for your cash
-                position — it is competing for the position that sits idle.
+                <strong>This is savings-grade, not stable.</strong> Gold and equities fall as
+                well as rise. Webgold is not competing with a dollar for your cash position —
+                it is competing for the position that sits idle.
               </span>
             </p>
           </div>

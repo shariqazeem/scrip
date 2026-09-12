@@ -54,6 +54,81 @@ reserve page is opt-in for anyone who wants one. Chain data is public; a product
 not build the surface that makes someone's net worth searchable by name. A savings product
 that leaks balances by default loses the exact user it is for.
 
+## 2026-09-12 — Silver failed the metal test. The default mix is 70 gold / 30 market
+
+**Decided by the founder, on evidence, in the session that built the asset registry.** The
+product law already required this check: *"Silver needs the same test as gold. If the only
+liquid silver on Solana is a fund tracker rather than metal, then silver either moves under
+funds or leaves the default mix. Verify before shipping the default 50/20/30."*
+
+**The verification.** Every silver instrument on Solana mainnet, checked through Jupiter's
+token API and by reading the mint accounts, 2026-09-12:
+
+| Token | What it actually is | Liquidity | Holders |
+| --- | --- | --- | --- |
+| `SLVon` iShares Silver Trust (Ondo) | a **fund share**, ~$59 ≈ the SLV ETF | ~$48k | 887 |
+| `SLVx` iShares Silver Trust (xStocks) | a **fund share** | ~$1 | 310 |
+| `XAGx` "Silver XStock" | not a real listing | ~$1 | 3 |
+| `AGon` First Majestic Silver (Ondo) | a **miner's equity**, not metal | $0 | 6 |
+
+There is no allocated-silver token on Solana with meaningful depth. The rule that stops GLDx
+(~$398, the price of a GLD ETF share, not of an ounce at ~$4,365) being called a gram stops
+SLVon being called an ounce.
+
+**The decision.** Silver leaves the default mix and moves under funds on `/assets`, holdable
+by anyone who wants it and clearly labelled a fund share. The 20% goes to gold, holding the
+70:30 metal-to-market ratio the original mix expressed. **The default is 70% gold, 30% the
+market.** The home screen keeps two honest units — grams and share-equivalents — instead of
+gaining a dishonest third.
+
+## 2026-09-12 — Resolved: which issuer family for each sleeve
+
+Answers the open question *"Which equity family and which metal family for v1, given the
+wrappers differ?"* Both were settled by reading the mints, not by preference.
+
+**Gold is Oro GOLD** — `GoLDppdjB1vDTPSGxyMJFqdnj134yH6Prg9eqsGDiw6A`, 6 decimals, one troy
+ounce per token, ~$372k liquidity and 10,670 holders. The law said "Oro GOLD or Matrixdock
+XAUm, whichever Jupiter can actually fill at launch", and that rule selects: XAUm carries
+~$43k, roughly a ninth of the depth.
+
+It is also, by some distance, the cleanest asset in the registry. Read off the mint: a plain
+SPL Token mint, **freeze authority null, no permanent delegate, no transfer hook, no
+extensions at all.** Once it is in a wallet, nobody — not the issuer, not us — can move or
+freeze it. PAXG is deeper (~$590k) but carries a permanent delegate *and* a transfer fee;
+XAUt0 carries a freeze authority. Oro was the named candidate and is the better asset.
+
+**The market sleeve is SPYx** — `XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W`, 8 decimals,
+~$4.3M liquidity, ~70,000 holders. Confirmed by reading the mint to carry every extension the
+architecture doc predicted: `PermanentDelegate`, `PausableConfig`, `ScaledUiAmountConfig`,
+plus `TransferHook` and `ConfidentialTransferMint` both present with the hook program set to
+the system program — reserved and disabled, exactly as described.
+
+**Consequence for the copy: the disclosure is per-row, not a banner.** A blanket "the issuer
+can move, burn or freeze" would be *false* about the gold sleeve, and a false warning is the
+kind of lazy honesty that reads as dishonesty the moment somebody checks. Each asset row
+states what is true of that mint.
+
+## 2026-09-12 — Correction to the spec, from chain state: which multiplier is live
+
+`docs/research.md` says a multiplier is "published before each ex-date, activated 00:30 UTC
+the day after". Two things about that are wrong in ways that matter, both found by reading
+the SPYx mint rather than the docs:
+
+1. **The live value is not the field named `multiplier`.** The ScaledUiAmount extension keeps
+   the OLD value in `multiplier` and the newer one in `newMultiplier`, with a timestamp. On
+   2026-09-12 SPYx read `multiplier = 1.003909240011759`, `newMultiplier = 1.005714560286254`,
+   effective `1781755200` — **three months in the past**, so the live multiplier was the
+   "new" one and reading the obvious field paints every SPYx balance 0.18% short, forever,
+   with nothing about the reading looking wrong. This is the corporate-action bug in its
+   quietest form: not a crash, not a missing feed, a plausible number from the wrong field.
+2. **The observed activation is 04:00:00 UTC, not 00:30.** Nothing in the code hardcodes an
+   activation hour — the timestamp on the mint is the only authority. A boundary we cannot
+   verify would be an invented fact doing real work.
+
+A third finding, in our favour: both values are published *before* the change activates, so a
+pending corporate action is visible in advance and a snapshot taken before an activation still
+values correctly through it.
+
 ## Revenue (v1 intent)
 
 Three lines, in order of how much they matter, and none of them is a management fee — a
@@ -72,7 +147,8 @@ The pay rail is deliberately free. It is the growth loop, not a revenue line.
 ## Open questions
 
 - Sponsor outreach timing: before there are holders, or after?
-- Which equity family and which metal family for v1, given the wrappers differ?
+- ~~Which equity family and which metal family for v1~~ — settled 2026-09-12 by reading the
+  mints: Oro GOLD and SPYx. See the entry below.
 
 ## 2026-09-12 — FINAL LOCK: Webgold, ownership you receive
 
