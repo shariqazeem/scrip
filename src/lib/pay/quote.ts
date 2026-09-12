@@ -35,14 +35,17 @@ export type QuoteView = {
   readonly valueBase: string;
   readonly gramsE8: string;
   readonly legs: readonly QuoteLeg[];
-  /** Whether the recipient has signed a policy, or this is the default standing in. */
-  readonly policySource: "signed" | "default";
+  /**
+   * Where the split came from. "named" means no policy was consulted at all, because nothing
+   * was left for one to decide — saying "default" there would claim a decision nobody made.
+   */
+  readonly policySource: "signed" | "default" | "named";
 };
 
 export function toQuoteView(
   recipient: string,
   allocation: Allocation,
-  policySource: "signed" | "default",
+  policySource: QuoteView["policySource"],
 ): QuoteView {
   return {
     recipient,

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   BookOpen,
+  HandCoins,
   House,
   Layers,
   ScrollText,
@@ -40,6 +41,7 @@ const NAV = [
     items: [
       { href: "/app", label: "Book", Icon: House },
       { href: "/app/pay", label: "Pay", Icon: Send },
+      { href: "/app/request", label: "Request", Icon: HandCoins },
       { href: "/app/goals", label: "Goals", Icon: Target },
       { href: "/app/settings", label: "Settings", Icon: Settings },
     ],

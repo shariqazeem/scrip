@@ -19,8 +19,11 @@ export const dynamic = "force-dynamic";
  * Whether the reason was verified by a human, a model, or nobody at all is outside this
  * system. Webgold settles; it does not judge.
  */
-export default async function PayPage() {
+type Search = Promise<{ to?: string; amount?: string; for?: string }>;
+
+export default async function PayPage({ searchParams }: { searchParams: Search }) {
   const owner = await currentOwner();
+  const q = await searchParams;
 
   if (!owner) {
     return (
@@ -53,7 +56,14 @@ export default async function PayPage() {
           <span className="mono">{clusterConfig().label}</span>
         </div>
         <div className="wg-panel-body">
-          <PayForm owner={owner} />
+          {/* A request link arrives as query parameters, so the payer lands on a form that
+              is already filled in. Nothing here is trusted: the recipient is re-validated on
+              the server when the quote is asked for, and the payer sees every field before
+              they sign. */}
+          <PayForm
+            owner={owner}
+            initial={{ to: q.to, amount: q.amount, reason: q.for }}
+          />
         </div>
       </div>
     </PageFrame>

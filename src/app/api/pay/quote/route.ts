@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
-import { allocate } from "@/lib/allocator";
-import { ASSETS } from "@/lib/assets/registry";
+import { allocate, named } from "@/lib/allocator";
+import { ASSETS, assetByMint } from "@/lib/assets/registry";
 import { connection } from "@/lib/book/read-book";
 import { readPolicyOf } from "@/lib/book/read-book";
 import { toQuoteView } from "@/lib/pay/quote";
@@ -29,20 +29,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sign in to quote a payout." }, { status: 401 });
   }
 
-  let body: { recipient?: unknown; dollars?: unknown; constraint?: unknown };
+  let body: {
+    recipient?: unknown;
+    dollars?: unknown;
+    constraint?: unknown;
+    mode?: unknown;
+    mint?: unknown;
+    quantity?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
     return bad("That request could not be read.");
   }
-  const { recipient, dollars, constraint } = body;
+  const { recipient, dollars, constraint, mode, mint, quantity } = body;
   if (typeof recipient !== "string") return bad("Name a recipient.");
-  if (typeof dollars !== "number" || !Number.isFinite(dollars) || dollars <= 0) {
+
+  /**
+   * A NAMED GIFT SKIPS ALLOCATION ENTIRELY. Somebody sending 0.2 grams of gold means 0.2
+   * grams of gold, and only unspecified value converts. It is the same instruction, the same
+   * escrow and the same receipt as a payout — the difference is that the recipient's policy
+   * never gets consulted, because nothing was left for it to decide.
+   */
+  const isNamed = mode === "named";
+  if (isNamed) {
+    if (typeof mint !== "string") return bad("Name the asset being sent.");
+    if (typeof quantity !== "number" || !Number.isFinite(quantity) || quantity <= 0) {
+      return bad("Enter a quantity greater than zero.");
+    }
+  } else if (typeof dollars !== "number" || !Number.isFinite(dollars) || dollars <= 0) {
+    // Six decimals is the whole precision of the unit. Anything finer is a number the rail
+    // cannot carry, and silently truncating somebody's input is how a payment surprises them.
     return bad("Enter an amount greater than zero.");
   }
-  // Six decimals is the whole precision of the unit. Anything finer is a number the rail
-  // cannot carry, and silently truncating somebody's input is how a payment surprises them.
-  const requestedBase = BigInt(Math.round(dollars * 1e6));
 
   let recipientKey: PublicKey;
   try {
@@ -63,6 +82,20 @@ export async function POST(req: NextRequest) {
   const conn = connection();
   const now = Math.floor(Date.now() / 1000);
 
+  if (isNamed) {
+    const asset = assetByMint(mint as string);
+    if (!asset) return bad("Webgold does not know how to settle that asset.");
+    const price = await readPrice(conn, asset.price);
+    if (!price.ok) return NextResponse.json({ error: price.why }, { status: 422 });
+    const amount = BigInt(Math.round((quantity as number) * 10 ** asset.decimals));
+    const gift = named(asset.mint, amount, price.value, now);
+    if (!gift.ok) return NextResponse.json({ error: gift.why }, { status: 422 });
+    // "named" rather than "signed" or "default": no policy was consulted, and saying either
+    // of the others would claim a decision nobody made.
+    return NextResponse.json(toQuoteView(recipient, gift.value, "named"));
+  }
+
+  const requestedBase = BigInt(Math.round((dollars as number) * 1e6));
   const signed = await readPolicyOf(conn, recipientKey);
   const policy = signed ?? defaultPolicy();
 

@@ -822,3 +822,55 @@
     grid-column: 1 / -1;
   }
 }
+
+/* ── a request: a QR and a link, and nothing that needs reconciling ──────── */
+.wg-request {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  gap: var(--s-5);
+  align-items: start;
+  padding: var(--s-5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+.wg-request-qr {
+  width: 176px;
+  height: 176px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  display: block;
+}
+.wg-request-qr-blank {
+  display: grid;
+  place-items: center;
+}
+.wg-request-side {
+  display: grid;
+  gap: var(--s-3);
+  justify-items: start;
+}
+.wg-request-url {
+  display: block;
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: var(--tracking-mono);
+  color: var(--ink-muted);
+  word-break: break-all;
+  line-height: 1.6;
+}
+@media (max-width: 620px) {
+  .wg-request {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+  .wg-request-side {
+    justify-items: stretch;
+  }
+}

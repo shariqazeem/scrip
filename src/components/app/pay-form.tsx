@@ -28,12 +28,25 @@ import { type QuoteView, fromQuoteView } from "@/lib/pay/quote";
  * fails has a balance in limbo and no receipt to point at.
  */
 const SLEEVES = ASSETS.filter((a) => a.kind !== "cash");
+/** Only an asset with a pinned price feed can be sent by name — the receipt stamps a value. */
+const NAMEABLE = ASSETS.filter((a) => a.price.account !== "");
 
-export function PayForm({ owner }: { owner: string }) {
+export type PayMode = "payout" | "named";
+
+export function PayForm({
+  owner,
+  initial,
+}: {
+  owner: string;
+  initial?: { to?: string; amount?: string; reason?: string };
+}) {
   const router = useRouter();
-  const [recipient, setRecipient] = useState("");
-  const [amount, setAmount] = useState("");
-  const [reason, setReason] = useState("");
+  const [mode, setMode] = useState<PayMode>("payout");
+  const [recipient, setRecipient] = useState(initial?.to ?? "");
+  const [amount, setAmount] = useState(initial?.amount ?? "");
+  const [reason, setReason] = useState(initial?.reason ?? "");
+  const [giftMint, setGiftMint] = useState(NAMEABLE[0]?.mint ?? "");
+  const [giftQty, setGiftQty] = useState("");
   const [constraint, setConstraint] = useState<string[]>([]);
   const [quote, setQuote] = useState<QuoteView | null>(null);
   const [busy, setBusy] = useState<null | "quoting" | "signing">(null);
@@ -49,11 +62,15 @@ export function PayForm({ owner }: { owner: string }) {
       const res = await fetch("/api/pay/quote", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          recipient: recipient.trim(),
-          dollars: Number(amount),
-          constraint: constraint.length > 0 ? constraint : null,
-        }),
+        body: JSON.stringify(
+          mode === "named"
+            ? { recipient: recipient.trim(), mode: "named", mint: giftMint, quantity: Number(giftQty) }
+            : {
+                recipient: recipient.trim(),
+                dollars: Number(amount),
+                constraint: constraint.length > 0 ? constraint : null,
+              },
+        ),
       });
       const body = (await res.json()) as QuoteView & { error?: string };
       if (!res.ok) {
@@ -66,7 +83,7 @@ export function PayForm({ owner }: { owner: string }) {
     } finally {
       setBusy(null);
     }
-  }, [recipient, amount, constraint]);
+  }, [recipient, amount, constraint, mode, giftMint, giftQty]);
 
   const release = useCallback(async () => {
     if (!quote) return;
@@ -163,11 +180,39 @@ export function PayForm({ owner }: { owner: string }) {
   const toggle = (mint: string) =>
     setConstraint((c) => (c.includes(mint) ? c.filter((m) => m !== mint) : [...c, mint]));
 
+  const gift = NAMEABLE.find((a) => a.mint === giftMint);
+  const ready =
+    recipient.trim() !== "" &&
+    (mode === "named" ? giftQty !== "" : amount !== "" && reason.trim() !== "");
+
   return (
     <div className="wg-form">
+      <div className="wg-choices" role="group" aria-label="What kind of payment">
+        <button
+          type="button"
+          className={`wg-choice${mode === "payout" ? " on" : ""}`}
+          onClick={() => {
+            setMode("payout");
+            setQuote(null);
+          }}
+        >
+          Release a payout
+        </button>
+        <button
+          type="button"
+          className={`wg-choice${mode === "named" ? " on" : ""}`}
+          onClick={() => {
+            setMode("named");
+            setQuote(null);
+          }}
+        >
+          Send a named slice
+        </button>
+      </div>
+
       <div className="wg-field">
         <label className="wg-label" htmlFor="recipient">
-          Who is being paid
+          {mode === "named" ? "Who it is for" : "Who is being paid"}
         </label>
         <input
           id="recipient"
@@ -187,26 +232,64 @@ export function PayForm({ owner }: { owner: string }) {
         </p>
       </div>
 
-      <div className="wg-field">
-        <label className="wg-label" htmlFor="amount">
-          How much, in dollars of value
-        </label>
-        <input
-          id="amount"
-          className="wg-input is-mono"
-          inputMode="decimal"
-          placeholder="100.00"
-          value={amount}
-          onChange={(e) => {
-            setAmount(e.target.value);
-            setQuote(null);
-          }}
-        />
-        <p className="wg-hint">
-          A payout is denominated in dollars. What it becomes is their policy&rsquo;s decision,
-          not yours.
-        </p>
-      </div>
+      {mode === "payout" ? (
+        <div className="wg-field">
+          <label className="wg-label" htmlFor="amount">
+            How much, in dollars of value
+          </label>
+          <input
+            id="amount"
+            className="wg-input is-mono"
+            inputMode="decimal"
+            placeholder="100.00"
+            value={amount}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setQuote(null);
+            }}
+          />
+          <p className="wg-hint">
+            A payout is denominated in dollars. What it becomes is their policy&rsquo;s
+            decision, not yours.
+          </p>
+        </div>
+      ) : (
+        <div className="wg-field">
+          <span className="wg-label">What, exactly</span>
+          <div className="wg-choices">
+            {NAMEABLE.map((a) => (
+              <button
+                key={a.mint}
+                type="button"
+                className={`wg-choice${giftMint === a.mint ? " on" : ""}`}
+                onClick={() => {
+                  setGiftMint(a.mint);
+                  setQuote(null);
+                }}
+              >
+                <span className={`wg-mix-dot is-${a.kind}`} />
+                {a.symbol}
+              </button>
+            ))}
+          </div>
+          <input
+            id="giftQty"
+            className="wg-input is-mono"
+            inputMode="decimal"
+            placeholder={gift?.unit === "troy-ounce" ? "0.2000 oz" : "1.0000"}
+            value={giftQty}
+            onChange={(e) => {
+              setGiftQty(e.target.value);
+              setQuote(null);
+            }}
+          />
+          <p className="wg-hint">
+            A named gift stays named. Nought point two of an ounce arrives as nought point two
+            of an ounce — their policy is never consulted, because nothing is left for it to
+            decide.
+          </p>
+        </div>
+      )}
 
       <div className="wg-field">
         <label className="wg-label" htmlFor="reason">
@@ -226,6 +309,7 @@ export function PayForm({ owner }: { owner: string }) {
         </p>
       </div>
 
+      {mode === "payout" ? (
       <div className="wg-field">
         <span className="wg-label">Restrict which assets it may become (optional)</span>
         <div className="wg-choices">
@@ -249,6 +333,7 @@ export function PayForm({ owner }: { owner: string }) {
           signed policy, re-normalised across whatever you allow.
         </p>
       </div>
+      ) : null}
 
       {why ? (
         <p className="wg-editor-why is-error">
@@ -278,7 +363,7 @@ export function PayForm({ owner }: { owner: string }) {
         <button
           type="button"
           className="wg-action is-primary"
-          disabled={busy !== null || !recipient.trim() || !amount || !reason.trim()}
+          disabled={busy !== null || !ready}
           onClick={() => void getQuote()}
         >
           {busy === "quoting" ? "Reading their policy…" : "See what will land"}
@@ -318,9 +403,11 @@ function Quote({ quote }: { quote: QuoteView }) {
         </div>
       ))}
       <p className="wg-quote-foot">
-        {quote.policySource === "signed"
-          ? "Split by the policy they signed."
-          : "They have not signed a policy, so this follows the default mix. If they sign one before you release, quote again."}{" "}
+        {quote.policySource === "named"
+          ? "Named, so nothing converted — their policy was not consulted."
+          : quote.policySource === "signed"
+            ? "Split by the policy they signed."
+            : "They have not signed a policy, so this follows the default mix. If they sign one before you release, quote again."}{" "}
         {dustIsVisible
           ? `Token amounts round down, so ${usd(fromBase(dustBase, 6))} of the ${usd(requested)} stays with you rather than being claimed on a receipt.`
           : "Token amounts round down; the receipt records exactly what landed, never the round number."}

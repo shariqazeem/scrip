@@ -305,7 +305,6 @@ describe.runIf(LIVE)("a real payout on devnet", () => {
     const signature = await withRetry("release", () =>
       sendAndConfirmTransaction(conn, tx, [payer], { commitment: "confirmed" }),
     );
-    // eslint-disable-next-line no-console
     console.log(`  released: https://explorer.solana.com/tx/${signature}?cluster=devnet`);
 
     // ── the recipient actually holds it, in their own accounts ──────────────
