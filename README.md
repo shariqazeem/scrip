@@ -14,6 +14,9 @@ Start here:
 | `docs/decisions.md` | what was locked and why — bring a new fact to reopen one |
 | `docs/research.md` | every claim with a source, as of 2026-09-12 |
 | `src/styles/tokens.css` | the single design-token source of truth |
+| `docs/reuse-from-sage.md` | what to port from Sage, and what never to |
+| `docs/strategy.md` | how this wins, and the metrics that are the submission |
+| `docs/build-order.md` | dependency order — there are no versions |
 | `.claude/skills/webgold-ui/` | the UI skill — invoke before building any surface |
 
 Competing in: Stocklana (closes 18 Sep) and Colosseum Crypto World's Fair (closes 12 Oct),

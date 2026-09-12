@@ -13,6 +13,23 @@
 
 ---
 
+## 0. Start here
+
+Read in this order, then say what you are building:
+
+1. this file, sections 1 to 4
+2. `docs/product.md` — the complete product
+3. `docs/architecture.md` — accounts, instructions, the issuer constraints that bind the design
+4. `docs/build-order.md` — dependency order. **Not versions.** The target is the whole product
+5. `docs/reuse-from-sage.md` — exactly what to port from `/Users/macbookair/projects/SAGE`, and what never to
+6. `docs/decisions.md` — settled questions. Reopening one needs a new fact, not a new opinion
+7. `docs/strategy.md` — how this wins, and the metrics that are the submission
+8. `docs/research.md` — every market claim with a source
+
+Before touching any user-facing surface, invoke the **`webgold-ui`** skill.
+
+---
+
 ## 1. The product, in ten seconds
 
 **Web3 made assets programmable. Webgold makes ownership receivable.**
