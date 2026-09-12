@@ -244,4 +244,13 @@ npm run test       # vitest run
 
 ## Known drift
 
-Nothing yet. This file was written before the first commit.
+Recorded as the code was written, per the rule at the top: the code wins, and the difference
+gets written down rather than quietly edited away.
+
+| This file / docs say | The code does | Why |
+| --- | --- | --- |
+| §4 names the account `Reserve` and the tables `reserves`, `allocations`, `payments` | `Book` / `books`, and `payouts` + `transfers` | Every other document — `product.md`, `architecture.md`, `strategy.md` — says **book**, and the product's own copy is "one book". One vocabulary; `architecture.md`'s table names won |
+| `architecture.md` lists BOTH a `books.policy_json` column and a separate `policies` table | the policy lives on `books.policy_json` only | A value declared in two places is the dominant defect shape this repo is built to avoid, and the doc declares it twice. The on-chain `Book` account holds the policy, so the mirror does too |
+| §5 marks `/app/goals` "(v2)" | it is a route from the scaffold, built at build-order step 7 | There are no versions. `build-order.md` settles it |
+| §4 implies the Anchor program sits at the repo root | it is a workspace at `anchor/` | A Rust `target/` at the root would sit inside the Next build's watch path. `anchor/target` is gitignored; the IDL and types the app needs are synced into `src/lib/anchor/` by `scripts/sync-idl.mjs` and committed, with `src/lib/solana/program.test.ts` failing on any drift between the three places the program id is written |
+| §8 lists five commands | plus `npm run anchor:build`, `anchor:test`, `db:generate`, `format` | Additions, not changes |

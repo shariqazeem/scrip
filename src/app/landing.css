@@ -1,0 +1,401 @@
+/**
+ * landing.css — the public front door. Scoped under `.wg-landing` so it can never touch an
+ * app surface.
+ *
+ * EVERY value here is a token from src/styles/tokens.css or an alias of one. Sage's landing
+ * declared its own palette (~20 raw hexes) and drifted from the system within a month; the
+ * aliases below are the whole adaptation and there is no second palette.
+ */
+
+.wg-landing {
+  /* aliases — naming what the token MEANS on this surface, never a new value */
+  --brass: var(--accent);
+  --brass-strong: var(--accent-strong);
+  --wash: var(--accent-soft);
+  --line: var(--border);
+  --line-strong: var(--border-strong);
+  --pad-x: clamp(20px, 5vw, 80px);
+  --maxw: 1160px;
+
+  background: var(--bg);
+  /* the warm reading ink, not the app chrome ink */
+  color: var(--ink-warm);
+  min-height: 100vh;
+  overflow-x: clip;
+}
+.wg-landing a {
+  color: inherit;
+  text-decoration: none;
+}
+.wg-landing :focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+.wg-landing .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+}
+
+/* ── shared section frame ───────────────────────────────────────────────── */
+.wg-sec {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: var(--s-10) var(--pad-x);
+}
+.wg-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: var(--s-4);
+}
+.wg-h2 {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--tracking-h2);
+  font-weight: 600;
+  margin: 0 0 var(--s-4);
+}
+.wg-lede {
+  font-size: var(--fs-lead);
+  line-height: var(--lh-lead);
+  letter-spacing: var(--tracking-lead);
+  color: var(--ink-muted);
+  max-width: 62ch;
+  margin: 0;
+}
+
+/* ── public nav ─────────────────────────────────────────────────────────── */
+.wg-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-4) var(--pad-x);
+  background: var(--scrim-header);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.wg-nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-warm);
+  margin-right: auto;
+}
+.wg-nav-link {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  transition: color var(--dur-1) var(--ease-out);
+}
+.wg-nav-link:hover {
+  color: var(--ink-warm);
+}
+/* Below 640px the nav is the mark and the one thing a visitor came to do. Measured at
+   375px, the full set ran 390px wide and the CTA wrapped to three lines off the right edge.
+   Nothing is lost: every hidden destination is in the footer, one scroll away. */
+@media (max-width: 640px) {
+  .wg-nav-link {
+    display: none;
+  }
+  .wg-nav {
+    gap: var(--s-3);
+  }
+}
+
+/* ── buttons ────────────────────────────────────────────────────────────── */
+.wg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 44px;
+  padding: 0 var(--s-5);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink-warm);
+  background: var(--surface);
+  /* A button label that wraps is a button that has outgrown its row — it must push the
+     layout, not fold. */
+  white-space: nowrap;
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+.wg-btn:hover {
+  border-color: var(--brass);
+  transform: translateY(-1px);
+}
+.wg-btn.is-primary {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-cta);
+}
+.wg-btn.is-primary:hover {
+  background: var(--brass-strong);
+  border-color: var(--brass-strong);
+  box-shadow: var(--shadow-cta-hover);
+}
+
+/* ── hero ───────────────────────────────────────────────────────────────── */
+.wg-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  gap: var(--s-8);
+  align-items: start;
+  padding-top: var(--s-9);
+  padding-bottom: var(--s-10);
+}
+@media (max-width: 940px) {
+  .wg-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-7);
+  }
+}
+.wg-display {
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tracking-display);
+  font-weight: 600;
+  margin: 0 0 var(--s-5);
+  /* The display size is fluid; the MEASURE has to be too, or the headline towers into six
+     lines at 1440 and reads as a column rather than a sentence. */
+  max-width: 21ch;
+}
+.wg-display em {
+  font-style: normal;
+  color: var(--brass);
+}
+.wg-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-6);
+}
+.wg-hero-note {
+  margin-top: var(--s-5);
+  color: var(--ink-faint);
+  font-size: 0.875rem;
+  max-width: 46ch;
+}
+
+/* ── the ledger card: honest when empty ─────────────────────────────────── */
+.wg-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.wg-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+.wg-card-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.wg-card-body {
+  padding: var(--s-5);
+}
+/**
+ * THE WAITING STATE IS A DESIGNED SURFACE, NOT A SPINNER AND NEVER A SAMPLE ROW.
+ * The landing shows what has settled. Before anything has, it says so in the same voice —
+ * a fabricated row here would be the exact claim a judge can check and disprove.
+ */
+.wg-empty {
+  display: grid;
+  gap: var(--s-3);
+  place-items: center;
+  text-align: center;
+  padding: var(--s-7) var(--s-4);
+  color: var(--ink-faint);
+}
+.wg-empty-mark {
+  color: var(--line-strong);
+}
+.wg-empty-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.wg-empty-note {
+  font-size: 0.875rem;
+  max-width: 34ch;
+  line-height: 1.55;
+}
+
+/* ── the three inlets ───────────────────────────────────────────────────── */
+.wg-band {
+  border-top: 1px solid var(--line);
+}
+.wg-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-5);
+  margin-top: var(--s-7);
+}
+@media (max-width: 860px) {
+  .wg-grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.wg-tile {
+  padding: var(--s-5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.wg-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  background: var(--wash);
+  color: var(--brass);
+  margin-bottom: var(--s-4);
+}
+.wg-tile h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 var(--s-2);
+}
+.wg-tile p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+/* ── the order of the book ──────────────────────────────────────────────── */
+.wg-order {
+  display: grid;
+  gap: 0;
+  margin-top: var(--s-6);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+.wg-order-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr auto;
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+.wg-order-row:last-child {
+  border-bottom: 0;
+}
+.wg-order-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.wg-order-unit {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  color: var(--ink-faint);
+}
+.wg-order-issuer {
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  text-align: right;
+}
+
+/* ── honesty ────────────────────────────────────────────────────────────── */
+.wg-notes {
+  display: grid;
+  gap: var(--s-4);
+  margin-top: var(--s-6);
+  max-width: 78ch;
+}
+.wg-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--warn-border);
+  background: var(--warn-soft);
+  border-radius: var(--r-md);
+  color: var(--ink-warm);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+.wg-note svg {
+  color: var(--warn);
+  margin-top: 3px;
+}
+.wg-note strong {
+  font-weight: 600;
+}
+
+/* ── the one dark act ───────────────────────────────────────────────────── */
+.wg-close {
+  background: var(--ink-warm);
+  color: var(--ink-inverse);
+  border-top: 1px solid var(--border-inverse);
+}
+.wg-close .wg-kicker {
+  color: var(--ink-inverse-muted);
+}
+.wg-close .wg-h2 {
+  max-width: 20ch;
+}
+.wg-close p {
+  color: var(--ink-inverse-muted);
+  font-size: var(--fs-lead);
+  line-height: var(--lh-lead);
+  max-width: 54ch;
+  margin: 0;
+}
+.wg-close .wg-btn {
+  background: var(--bg);
+  border-color: var(--bg);
+  color: var(--ink-warm);
+  margin-top: var(--s-6);
+}
+.wg-close .wg-btn:hover {
+  background: var(--wash);
+  border-color: var(--wash);
+}
+
+/* ── foot ───────────────────────────────────────────────────────────────── */
+.wg-foot {
+  border-top: 1px solid var(--line);
+  padding: var(--s-6) var(--pad-x);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  align-items: center;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  color: var(--ink-faint);
+  font-size: 0.875rem;
+}
+.wg-foot a:hover {
+  color: var(--ink-warm);
+}
+.wg-foot-spacer {
+  margin-left: auto;
+}

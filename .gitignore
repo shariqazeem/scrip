@@ -5,3 +5,12 @@ node_modules/
 var/
 *.log
 .DS_Store
+
+# Anchor build artifacts. The IDL and types the web app needs are synced into
+# src/lib/anchor/ by scripts/sync-idl.mjs and committed; target/ is not.
+anchor/target/
+anchor/.anchor/
+anchor/test-ledger/
+
+# tsc --incremental artifact
+tsconfig.tsbuildinfo

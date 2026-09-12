@@ -1,0 +1,112 @@
+/**
+ * content.css — the reading surface. Warm ink, capped measure, print-like.
+ * Scoped under `.wg-doc`; aliases only, no declared values.
+ */
+
+.wg-doc {
+  --brass: var(--accent);
+  --line: var(--border);
+  --measure: 68ch;
+
+  max-width: 940px;
+  margin: 0 auto;
+  padding: var(--s-8) var(--s-6) var(--s-10);
+  color: var(--ink-warm);
+}
+.wg-doc a {
+  color: var(--brass);
+  text-decoration: none;
+}
+.wg-doc a:hover {
+  text-decoration: underline;
+}
+.wg-doc :focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+.wg-doc-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-warm);
+  margin-bottom: var(--s-7);
+}
+.wg-doc-brand:hover {
+  text-decoration: none;
+}
+.wg-doc-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 var(--s-3);
+}
+.wg-doc h1 {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  letter-spacing: var(--tracking-h1);
+  font-weight: 600;
+  margin: 0 0 var(--s-5);
+  max-width: 22ch;
+}
+.wg-doc h2 {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--tracking-h2);
+  font-weight: 600;
+  margin: var(--s-8) 0 var(--s-4);
+  max-width: var(--measure);
+}
+.wg-doc p,
+.wg-doc li {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink-muted);
+  max-width: var(--measure);
+}
+.wg-doc p {
+  margin: 0 0 var(--s-4);
+}
+.wg-doc .lede {
+  font-size: var(--fs-lead);
+  line-height: var(--lh-lead);
+  letter-spacing: var(--tracking-lead);
+  color: var(--ink-muted);
+}
+.wg-doc ul {
+  margin: 0 0 var(--s-4);
+  padding-left: var(--s-5);
+  list-style: disc;
+}
+.wg-doc li {
+  margin-bottom: var(--s-2);
+}
+.wg-doc strong {
+  color: var(--ink-warm);
+  font-weight: 600;
+}
+.wg-doc-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--warn-border);
+  background: var(--warn-soft);
+  border-radius: var(--r-md);
+  margin: 0 0 var(--s-4);
+  max-width: var(--measure);
+}
+.wg-doc-note svg {
+  color: var(--warn);
+  margin-top: 3px;
+}
+.wg-doc-note p {
+  margin: 0;
+  color: var(--ink-warm);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}

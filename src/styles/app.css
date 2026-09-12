@@ -1,0 +1,170 @@
+/**
+ * app.css — the shelled surfaces: the book, pay, goals, settings, assets, the ledger.
+ *
+ * `.wg-page` is the ONE container class the shell reserves room for (see app-shell.css).
+ * Every shelled page wears it. Aliases only; no value is declared here that is not in
+ * src/styles/tokens.css.
+ */
+
+.wg-page {
+  --line: var(--border);
+  --line-strong: var(--border-strong);
+  --brass: var(--accent);
+  --wash: var(--accent-soft);
+
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: var(--s-7) var(--s-6) var(--s-10);
+  color: var(--ink);
+}
+.wg-page a {
+  color: var(--brass);
+  text-decoration: none;
+}
+.wg-page a:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+.wg-page :focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+.wg-page .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+}
+
+/* ── page header ────────────────────────────────────────────────────────── */
+.wg-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+  padding-bottom: var(--s-5);
+  margin-bottom: var(--s-6);
+  border-bottom: 1px solid var(--line);
+}
+.wg-page-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 var(--s-2);
+}
+/* h2 scale, not h1. On an app surface the NUMBER is the headline — a 50px page title would
+   compete with the balance hero that lands on the book. Long-form surfaces (landing, docs)
+   keep the h1 scale, where the title is the only thing on the screen. */
+.wg-page-title {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--tracking-h2);
+  font-weight: 600;
+  margin: 0;
+}
+.wg-page-sub {
+  margin: var(--s-3) 0 0;
+  color: var(--ink-muted);
+  font-size: 1rem;
+  line-height: 1.55;
+  max-width: 64ch;
+}
+
+/* ── panel ──────────────────────────────────────────────────────────────── */
+.wg-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.wg-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+.wg-panel-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.wg-panel-body {
+  padding: var(--s-5);
+}
+
+/**
+ * THE HONEST EMPTY STATE — designed, never a spinner and never a sample row.
+ * Used wherever a surface has nothing real to show yet. It says what is missing and what
+ * would make it appear, rather than inventing a number to fill the space.
+ */
+.wg-empty {
+  display: grid;
+  gap: var(--s-3);
+  place-items: center;
+  text-align: center;
+  padding: var(--s-8) var(--s-5);
+  color: var(--ink-faint);
+}
+.wg-empty-mark {
+  color: var(--line-strong);
+}
+.wg-empty-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+.wg-empty-note {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  max-width: 44ch;
+  color: var(--ink-muted);
+  margin: 0;
+}
+.wg-empty-actions {
+  display: flex;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+
+/* ── buttons on app surfaces ────────────────────────────────────────────── */
+.wg-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 40px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+.wg-action:hover {
+  border-color: var(--brass);
+  color: var(--ink);
+  text-decoration: none;
+}
+.wg-action.is-primary {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: var(--accent-ink);
+}
+.wg-action.is-primary:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: var(--accent-ink);
+}
