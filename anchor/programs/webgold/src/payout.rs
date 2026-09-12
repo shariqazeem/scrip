@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TransferChecked, transfer_checked};
 
-use crate::WebgoldError;
+use crate::{TOTAL_BPS, WebgoldError};
 
 /// # The payout path — escrow, release, receipt
 ///
@@ -44,6 +44,11 @@ pub const MAX_PAYOUT_LEGS: usize = 8;
 /// The token program is per leg because Webgold's own default mix straddles both: Oro GOLD is
 /// a classic SPL mint and SPYx is Token-2022.
 pub const ACCOUNTS_PER_LEG: usize = 4;
+
+/// With a goal skimming, each leg needs a fifth account: the GOAL's token account, which the
+/// skimmed share is sent to. A leg is then
+///   [mint, source, the recipient's account, that mint's token program, the goal's account]
+pub const ACCOUNTS_PER_LEG_WITH_GOAL: usize = 5;
 
 /// Reasons are free text asserted by the payer. Webgold settles; it does not judge. Bounded
 /// because an account's size has to be knowable before it is created.
@@ -161,6 +166,24 @@ pub struct ReleasePayout<'info> {
     )]
     pub cohort: Account<'info, Cohort>,
     pub system_program: Program<'info, System>,
+    /**
+     * THE RECIPIENT'S GOAL, if they have one taking a share of arrivals.
+     *
+     * Optional, and constrained to the RECIPIENT rather than to the payer or the signer: a
+     * payer cannot point a skim at a goal of their own choosing, and a goal cannot be attached
+     * to somebody who did not create it. When it is absent the whole payout lands with the
+     * recipient, which is what a book with no goal means.
+     *
+     * A payer who simply omits it pays the recipient in full. That is the safe direction to
+     * fail in — the recipient keeps everything — and is why the skim is not enforced by
+     * refusing releases that leave it out.
+     */
+    #[account(
+        mut,
+        seeds = [b"goal", payout.recipient.as_ref(), goal.slug.as_bytes()],
+        bump = goal.bump,
+    )]
+    pub goal: Option<Account<'info, Goal>>,
 }
 
 #[derive(Accounts)]
@@ -204,6 +227,21 @@ pub struct PayoutCancelled {
     pub payout: Pubkey,
     pub payer: Pubkey,
     pub at: i64,
+}
+
+/// The share of one leg that a goal takes, and the share that lands with the recipient.
+///
+/// TRUNCATION SENDS THE REMAINDER TO THE PERSON, NOT THE VAULT. A rounding rule that favoured
+/// the goal would, at the last base unit, divert a fraction the owner did not choose to divert
+/// — small, invisible, and in the wrong direction. The recipient keeps the dust.
+pub fn split_for_goal(amount: u64, skim_bps: u16) -> Result<(u64, u64)> {
+    let skim = (amount as u128)
+        .checked_mul(skim_bps as u128)
+        .ok_or(WebgoldError::PayoutWeightsOverflow)?
+        / TOTAL_BPS as u128;
+    let skim = u64::try_from(skim).map_err(|_| WebgoldError::PayoutWeightsOverflow)?;
+    // Cannot underflow: skim is at most amount, since skim_bps is at most TOTAL_BPS.
+    Ok((amount - skim, skim))
 }
 
 /// Validate the legs of a payout before anything is escrowed.
@@ -416,6 +454,14 @@ pub struct ClaimPayout<'info> {
     )]
     pub cohort: Account<'info, Cohort>,
     pub system_program: Program<'info, System>,
+    /// The CLAIMER's goal, if they have one. Same rule as a release: bound to the person
+    /// receiving, never to the person signing for the escrow.
+    #[account(
+        mut,
+        seeds = [b"goal", claimer.key().as_ref(), goal.slug.as_bytes()],
+        bump = goal.bump,
+    )]
+    pub goal: Option<Account<'info, Goal>>,
 }
 
 #[event]
@@ -473,5 +519,59 @@ mod goal_tests {
         // If a field is ever added that tracks a balance, this construction stops compiling
         // and whoever added it has to read the comment above.
         let _ = goal;
+    }
+}
+
+#[cfg(test)]
+mod skim_tests {
+    use super::*;
+
+    #[test]
+    fn a_goal_takes_its_share_and_the_person_gets_the_rest() {
+        let (to_person, to_goal) = split_for_goal(1_000_000, 1_000).unwrap();
+        assert_eq!(to_goal, 100_000); // 10%
+        assert_eq!(to_person, 900_000);
+        assert_eq!(to_person + to_goal, 1_000_000); // nothing is created or lost
+    }
+
+    #[test]
+    fn no_goal_means_the_whole_payout_lands_with_the_person() {
+        let (to_person, to_goal) = split_for_goal(1_000_000, 0).unwrap();
+        assert_eq!(to_person, 1_000_000);
+        assert_eq!(to_goal, 0);
+    }
+
+    #[test]
+    fn truncation_sends_the_remainder_to_the_person_not_the_vault() {
+        // A rounding rule that favoured the goal would, at the last base unit, divert a
+        // fraction the owner did not choose to divert: small, invisible, and in the wrong
+        // direction. 7 base units at 10% is 0.7 — the goal gets 0, the person gets all 7.
+        let (to_person, to_goal) = split_for_goal(7, 1_000).unwrap();
+        assert_eq!(to_goal, 0);
+        assert_eq!(to_person, 7);
+    }
+
+    #[test]
+    fn the_split_always_adds_back_to_the_whole() {
+        for amount in [1u64, 3, 99, 1_000_001, u64::MAX / 2] {
+            for bps in [0u16, 1, 999, 5_000] {
+                let (a, b) = split_for_goal(amount, bps).unwrap();
+                assert_eq!(a + b, amount, "amount {amount} at {bps}bps");
+            }
+        }
+    }
+
+    #[test]
+    fn the_widest_legal_skim_still_leaves_half_with_the_person() {
+        let (to_person, to_goal) = split_for_goal(1_000_000, MAX_SKIM_BPS).unwrap();
+        assert_eq!(to_goal, 500_000);
+        assert_eq!(to_person, 500_000);
+    }
+
+    #[test]
+    fn a_u64_max_amount_does_not_overflow_the_intermediate() {
+        // The multiply happens in u128 precisely so `amount * 5_000` cannot wrap.
+        let (a, b) = split_for_goal(u64::MAX, MAX_SKIM_BPS).unwrap();
+        assert_eq!(a.checked_add(b), Some(u64::MAX));
     }
 }

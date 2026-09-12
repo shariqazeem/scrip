@@ -874,3 +874,53 @@
     justify-items: stretch;
   }
 }
+
+/* ── goals ───────────────────────────────────────────────────────────────── */
+.wg-goals {
+  display: grid;
+  gap: var(--s-4);
+}
+.wg-goal {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: start;
+  padding: var(--s-5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+.wg-goal-head {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-4);
+}
+.wg-goal-name {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.wg-goal-head .mono {
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  color: var(--accent-strong);
+}
+.wg-goal-holds {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.wg-goal-meta {
+  margin: 0;
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  color: var(--ink-faint);
+}
+
+/* A skim line inside a quote: the same row shape, marked so it does not read as a sleeve. */
+.wg-quote-leg.wg-quote-skim {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}

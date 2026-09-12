@@ -288,6 +288,9 @@ describe.runIf(LIVE)("a real payout on devnet", () => {
         { pubkey: receipt, isSigner: false, isWritable: true },
         { pubkey: cohort, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        // No goal is skimming. Anchor's convention for an omitted optional account is the
+        // program's own id — and getting it wrong does not error, it shifts every leg by one.
+        { pubkey: PROGRAM_ID, isSigner: false, isWritable: false },
         ...legs.flatMap((leg) => [
           { pubkey: leg.mint, isSigner: false, isWritable: false },
           { pubkey: ata(payout, leg.mint, leg.program), isSigner: false, isWritable: true },
@@ -351,6 +354,7 @@ describe.runIf(LIVE)("a real payout on devnet", () => {
         { pubkey: receiptPda(releaseId, recipient.publicKey), isSigner: false, isWritable: true },
         { pubkey: cohortPda(releaseId, recipient.publicKey), isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: PROGRAM_ID, isSigner: false, isWritable: false },
       ],
       data: coder.encode("release_payout", {}),
     });
@@ -448,6 +452,8 @@ describe.runIf(LIVE)("a sponsored first position on devnet", () => {
           { pubkey: receiptPda(claimRelease, claimer.publicKey), isSigner: false, isWritable: true },
           { pubkey: cohortPda(claimRelease, claimer.publicKey), isSigner: false, isWritable: true },
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          // No goal: the claimer has not set one.
+          { pubkey: PROGRAM_ID, isSigner: false, isWritable: false },
           { pubkey: leg.mint, isSigner: false, isWritable: false },
           { pubkey: ata(payout, leg.mint, leg.program), isSigner: false, isWritable: true },
           { pubkey: ata(claimer.publicKey, leg.mint, leg.program), isSigner: false, isWritable: true },
@@ -492,6 +498,7 @@ describe.runIf(LIVE)("a sponsored first position on devnet", () => {
         { pubkey: receiptPda(claimRelease, claimer.publicKey), isSigner: false, isWritable: true },
         { pubkey: cohortPda(claimRelease, claimer.publicKey), isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: PROGRAM_ID, isSigner: false, isWritable: false },
       ],
       data: coder.encode("claim_payout", {}),
     });
@@ -631,6 +638,164 @@ describe.runIf(LIVE)("a goal vault on devnet", () => {
     await expect(
       sendAndConfirmTransaction(conn, tx, [payer], { commitment: "confirmed" }),
     ).rejects.toThrow();
+  }, 300_000);
+});
+
+describe.runIf(LIVE)("a goal skimming a real payout on devnet", () => {
+  const SLUG = `runway-${Date.now() % 100000}`;
+  let saver: Keypair;
+  let skimNonce: bigint;
+  let skimRelease: Uint8Array;
+
+  beforeAll(async () => {
+    payer = loadKeypair(KEY_PATH);
+    saver = Keypair.generate();
+    skimNonce = BigInt(Date.now()) + 2n;
+    skimRelease = Uint8Array.from(Array.from({ length: 32 }, (_, i) => (i * 13 + Date.now()) % 247));
+
+    // The saver needs a little SOL to sign for their own goal.
+    await withRetry("fund saver", () =>
+      sendAndConfirmTransaction(
+        conn,
+        new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: payer.publicKey,
+            toPubkey: saver.publicKey,
+            lamports: 0.05e9,
+          }),
+        ),
+        [payer],
+        { commitment: "confirmed" },
+      ),
+    );
+
+    // The SAVER sets their own goal. A payer cannot create one for somebody else.
+    await withRetry("set saver goal", () =>
+      sendAndConfirmTransaction(
+        conn,
+        new Transaction().add({
+          programId: PROGRAM_ID,
+          keys: [
+            { pubkey: goalPda(saver.publicKey, SLUG), isSigner: false, isWritable: true },
+            { pubkey: saver.publicKey, isSigner: true, isWritable: true },
+            { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          ],
+          data: coder.encode("set_goal", {
+            slug: SLUG,
+            name: "Three months of runway",
+            target_base: new BN("9000000000"),
+            skim_bps: 2500,
+          }),
+        }),
+        [saver],
+        { commitment: "confirmed" },
+      ),
+    );
+  }, 300_000);
+
+  it("takes exactly its share, and the recipient keeps the rest", async () => {
+    /**
+     * Saving at the moment value arrives. The payer releases 100,000 base units; the saver's
+     * goal takes 25% and the saver keeps 75%. Both destinations are checked against the chain
+     * afterwards, because "the skim is applied" is a claim about somebody's money.
+     */
+    const payout = payoutPda(payer.publicKey, skimNonce);
+    const goal = goalPda(saver.publicKey, SLUG);
+    const leg = { mint: goldMint.publicKey, amount: 100_000n, program: TOKEN_PROGRAM_ID };
+
+    const fundTx = new Transaction()
+      .add(
+        createAssociatedTokenAccountIdempotentInstruction(
+          payer.publicKey,
+          ata(payout, leg.mint, leg.program),
+          payout,
+          leg.mint,
+          leg.program,
+        ),
+      )
+      .add({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: payout, isSigner: false, isWritable: true },
+          { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          { pubkey: saver.publicKey, isSigner: false, isWritable: false },
+          { pubkey: leg.mint, isSigner: false, isWritable: false },
+          { pubkey: ata(payer.publicKey, leg.mint, leg.program), isSigner: false, isWritable: true },
+          { pubkey: ata(payout, leg.mint, leg.program), isSigner: false, isWritable: true },
+          { pubkey: leg.program, isSigner: false, isWritable: false },
+        ],
+        data: coder.encode("fund_payout", {
+          nonce: new BN(skimNonce.toString()),
+          release_id: Array.from(skimRelease),
+          value_base: new BN("434900000"),
+          grams_e8: new BN("311034768"),
+          reason: "a month of work",
+          legs: [{ mint: leg.mint, amount: new BN(leg.amount.toString()) }],
+        }),
+      });
+    await withRetry("fund skim payout", () =>
+      sendAndConfirmTransaction(conn, fundTx, [payer], { commitment: "confirmed" }),
+    );
+
+    const releaseTx = new Transaction()
+      .add(
+        createAssociatedTokenAccountIdempotentInstruction(
+          payer.publicKey,
+          ata(saver.publicKey, leg.mint, leg.program),
+          saver.publicKey,
+          leg.mint,
+          leg.program,
+        ),
+        createAssociatedTokenAccountIdempotentInstruction(
+          payer.publicKey,
+          ata(goal, leg.mint, leg.program),
+          goal,
+          leg.mint,
+          leg.program,
+        ),
+      )
+      .add({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: payout, isSigner: false, isWritable: true },
+          { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+          { pubkey: receiptPda(skimRelease, saver.publicKey), isSigner: false, isWritable: true },
+          { pubkey: cohortPda(skimRelease, saver.publicKey), isSigner: false, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          { pubkey: goal, isSigner: false, isWritable: true },
+          { pubkey: leg.mint, isSigner: false, isWritable: false },
+          { pubkey: ata(payout, leg.mint, leg.program), isSigner: false, isWritable: true },
+          { pubkey: ata(saver.publicKey, leg.mint, leg.program), isSigner: false, isWritable: true },
+          { pubkey: leg.program, isSigner: false, isWritable: false },
+          { pubkey: ata(goal, leg.mint, leg.program), isSigner: false, isWritable: true },
+        ],
+        data: coder.encode("release_payout", {}),
+      });
+    await withRetry("release with skim", () =>
+      sendAndConfirmTransaction(conn, releaseTx, [payer], { commitment: "confirmed" }),
+    );
+
+    const toSaver = await withRetry("saver balance", () =>
+      getAccount(conn, ata(saver.publicKey, leg.mint, leg.program), "confirmed", leg.program),
+    );
+    const toGoal = await withRetry("goal balance", () =>
+      getAccount(conn, ata(goal, leg.mint, leg.program), "confirmed", leg.program),
+    );
+
+    expect(toGoal.amount).toBe(25_000n); // 25%
+    expect(toSaver.amount).toBe(75_000n);
+    // Nothing created, nothing lost.
+    expect(toSaver.amount + toGoal.amount).toBe(leg.amount);
+
+    // And the receipt still records the WHOLE arrival — the skim is where the value went,
+    // not a reduction in what was received.
+    const info = await withRetry("skim receipt", () =>
+      conn.getAccountInfo(receiptPda(skimRelease, saver.publicKey), "confirmed"),
+    );
+    const r = decodeReceipt(info!.data);
+    expect(r.legs[0]!.amount).toBe(leg.amount);
+    expect(r.valueBase).toBe(434_900_000n);
   }, 300_000);
 });
 

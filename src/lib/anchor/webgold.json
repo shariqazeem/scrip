@@ -216,6 +216,37 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "goal",
+          "docs": [
+            "The CLAIMER's goal, if they have one. Same rule as a release: bound to the person",
+            "receiving, never to the person signing for the escrow."
+          ],
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  111,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "claimer"
+              },
+              {
+                "kind": "account",
+                "path": "goal.slug",
+                "account": "Goal"
+              }
+            ]
+          }
         }
       ],
       "args": []
@@ -559,6 +590,37 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "goal",
+          "docs": [
+            "* THE RECIPIENT'S GOAL, if they have one taking a share of arrivals.\n     *\n     * Optional, and constrained to the RECIPIENT rather than to the payer or the signer: a\n     * payer cannot point a skim at a goal of their own choosing, and a goal cannot be attached\n     * to somebody who did not create it. When it is absent the whole payout lands with the\n     * recipient, which is what a book with no goal means.\n     *\n     * A payer who simply omits it pays the recipient in full. That is the safe direction to\n     * fail in — the recipient keeps everything — and is why the skim is not enforced by\n     * refusing releases that leave it out."
+          ],
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  111,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payout.recipient",
+                "account": "Payout"
+              },
+              {
+                "kind": "account",
+                "path": "goal.slug",
+                "account": "Goal"
+              }
+            ]
+          }
         }
       ],
       "args": []
@@ -958,111 +1020,116 @@
     },
     {
       "code": 6004,
+      "name": "PayoutWeightsOverflow",
+      "msg": "A payout amount overflowed while a goal's share was being worked out."
+    },
+    {
+      "code": 6005,
       "name": "LegWeightZero",
       "msg": "A leg cannot have a weight of zero — remove it instead."
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "LegMintDefault",
       "msg": "A leg cannot name the default address as its mint."
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "LegDuplicated",
       "msg": "The same mint appears twice in this mix."
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "DriftBandTooWide",
       "msg": "The drift band cannot be wider than 50%."
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "NotTheOwner",
       "msg": "Only the owner of this book can change it."
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "PayoutEmpty",
       "msg": "A payout must move at least one asset."
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "PayoutTooManyLegs",
       "msg": "A payout may carry at most 8 legs."
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "PayoutLegZero",
       "msg": "A payout leg cannot be for zero — remove it instead."
     },
     {
-      "code": 6012,
+      "code": 6013,
       "name": "PayoutValueZero",
       "msg": "A payout must carry a value greater than zero."
     },
     {
-      "code": 6013,
+      "code": 6014,
       "name": "ReasonTooLong",
       "msg": "That reason is longer than 200 characters."
     },
     {
-      "code": 6014,
+      "code": 6015,
       "name": "LegAccountsMismatch",
       "msg": "The accounts supplied do not match the legs of this payout."
     },
     {
-      "code": 6015,
+      "code": 6016,
       "name": "LegMintMismatch",
       "msg": "A token account does not hold the mint this leg names."
     },
     {
-      "code": 6016,
+      "code": 6017,
       "name": "LegWrongOwner",
       "msg": "A token account is not owned by the account this leg requires."
     },
     {
-      "code": 6017,
+      "code": 6018,
       "name": "EscrowNotUnderRule",
       "msg": "Escrow must be held by the payout account and nowhere else."
     },
     {
-      "code": 6018,
+      "code": 6019,
       "name": "WrongRecipient",
       "msg": "That destination does not belong to this payout's recipient."
     },
     {
-      "code": 6019,
+      "code": 6020,
       "name": "AlreadyReleased",
       "msg": "This payout has already been released."
     },
     {
-      "code": 6020,
+      "code": 6021,
       "name": "WrongTokenProgram",
       "msg": "That token program does not own the mint this leg names."
     },
     {
-      "code": 6021,
+      "code": 6022,
       "name": "NotClaimable",
       "msg": "This payout names a recipient, so it cannot be claimed."
     },
     {
-      "code": 6022,
+      "code": 6023,
       "name": "GoalSlugLength",
       "msg": "A goal's slug must be between 1 and 32 characters."
     },
     {
-      "code": 6023,
+      "code": 6024,
       "name": "GoalNameLength",
       "msg": "A goal's name must be between 1 and 64 characters."
     },
     {
-      "code": 6024,
+      "code": 6025,
       "name": "SkimTooLarge",
       "msg": "A goal cannot skim more than half of an inbound payout."
     },
     {
-      "code": 6025,
+      "code": 6026,
       "name": "GoalPaysOnlyItsOwner",
       "msg": "A goal can only ever pay its own owner."
     }

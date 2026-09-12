@@ -61,14 +61,22 @@ function legAccounts(
   allocation: Allocation,
   from: (asset: Asset) => PublicKey,
   to: (asset: Asset) => PublicKey,
+  goal?: PublicKey,
 ) {
   return allocation.legs.flatMap((leg) => [
     { pubkey: new PublicKey(leg.asset.mint), isSigner: false, isWritable: false },
     { pubkey: from(leg.asset), isSigner: false, isWritable: true },
     { pubkey: to(leg.asset), isSigner: false, isWritable: true },
     { pubkey: tokenProgramFor(leg.asset), isSigner: false, isWritable: false },
+    // The fifth slot exists only when a goal is skimming. The program reads the stride from
+    // whether the optional goal account is present, so these two must agree or every leg is
+    // read one account out of step.
+    ...(goal ? [{ pubkey: ataFor(goal, leg.asset), isSigner: false, isWritable: true }] : []),
   ]);
 }
+
+/** The recipient's goal, when one is taking a share of what arrives. */
+export type SkimmingGoal = { readonly address: string; readonly skimBps: number };
 
 export type FundedPayout = {
   readonly instructions: readonly TransactionInstruction[];
@@ -159,13 +167,26 @@ export function releasePayoutIxs(args: {
   allocation: Allocation;
   nonce: bigint;
   releaseId: Uint8Array;
+  /** The RECIPIENT's goal, when one is taking a share. Omitted means they keep everything. */
+  goal?: SkimmingGoal | null;
 }): Outcome<{ instructions: readonly TransactionInstruction[]; receipt: PublicKey }> {
-  const { payer, recipient, allocation, nonce, releaseId } = args;
+  const { payer, recipient, allocation, nonce, releaseId, goal } = args;
   if (releaseId.length !== 32) return held("A release id must be 32 bytes.");
   const payout = payoutPda(payer, nonce);
   const receipt = receiptPda(releaseId, recipient);
 
-  const creates = allocation.legs.map((leg) =>
+  let goalKey: PublicKey | undefined;
+  if (goal) {
+    try {
+      goalKey = new PublicKey(goal.address);
+    } catch {
+      return held("That goal's address could not be read.");
+    }
+  }
+
+  // Both destinations' token accounts, created by the PAYER. A recipient who has never held
+  // the asset does not have to do anything at all to be paid, and neither does their goal.
+  const creates = allocation.legs.flatMap((leg) => [
     createAssociatedTokenAccountIdempotentInstruction(
       payer,
       ataFor(recipient, leg.asset),
@@ -173,7 +194,18 @@ export function releasePayoutIxs(args: {
       new PublicKey(leg.asset.mint),
       tokenProgramFor(leg.asset),
     ),
-  );
+    ...(goalKey
+      ? [
+          createAssociatedTokenAccountIdempotentInstruction(
+            payer,
+            ataFor(goalKey, leg.asset),
+            goalKey,
+            new PublicKey(leg.asset.mint),
+            tokenProgramFor(leg.asset),
+          ),
+        ]
+      : []),
+  ]);
 
   const ix = new TransactionInstruction({
     programId: WEBGOLD_PROGRAM_ID,
@@ -183,10 +215,13 @@ export function releasePayoutIxs(args: {
       { pubkey: receipt, isSigner: false, isWritable: true },
       { pubkey: cohortPda(releaseId, recipient), isSigner: false, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      // Anchor's convention for an omitted optional account is the program's own id.
+      { pubkey: goalKey ?? WEBGOLD_PROGRAM_ID, isSigner: false, isWritable: Boolean(goalKey) },
       ...legAccounts(
         allocation,
         (asset) => ataFor(payout, asset),
         (asset) => ataFor(recipient, asset),
+        goalKey,
       ),
     ],
     data: coder.encode("release_payout", {}),

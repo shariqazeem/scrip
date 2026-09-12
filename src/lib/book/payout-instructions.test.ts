@@ -178,10 +178,65 @@ describe("release_payout", () => {
   it("moves from the escrow's accounts to the recipient's", () => {
     expect(built.ok).toBe(true);
     if (!built.ok) return;
-    const ix = built.value.instructions[2]!;
+    const ix = built.value.instructions.at(-1)!;
     const payout = payoutPda(payer, NONCE);
-    expect(ix.keys[6]!.pubkey.equals(ataFor(payout, GOLD))).toBe(true);
-    expect(ix.keys[7]!.pubkey.equals(ataFor(recipient, GOLD))).toBe(true);
+    // payout, payer, receipt, cohort, system, goal-slot, then four per leg.
+    const leg0 = 6;
+    expect(ix.keys[leg0 + 1]!.pubkey.equals(ataFor(payout, GOLD))).toBe(true);
+    expect(ix.keys[leg0 + 2]!.pubkey.equals(ataFor(recipient, GOLD))).toBe(true);
+  });
+
+  it("fills the optional goal slot with the program id when nobody is skimming", () => {
+    // Anchor's convention for an omitted optional account. Getting this wrong does not error
+    // — it shifts every leg by one account, and the program reads the wrong destinations.
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const ix = built.value.instructions.at(-1)!;
+    expect(ix.keys[5]!.pubkey.equals(WEBGOLD_PROGRAM_ID)).toBe(true);
+    expect(ix.keys[5]!.isWritable).toBe(false);
+    // Four accounts per leg, two legs.
+    expect(ix.keys).toHaveLength(6 + 8);
+  });
+
+  it("adds a FIFTH account per leg when a goal is taking a share", () => {
+    /**
+     * The program reads its stride from whether the optional goal account is present, so this
+     * list and that decision have to agree exactly. If they drift, every leg is read one
+     * account out of step — which does not fail cleanly, it moves the wrong tokens.
+     */
+    const goal = Keypair.generate().publicKey;
+    const withGoal = releasePayoutIxs({
+      payer,
+      recipient,
+      allocation: mixed,
+      nonce: NONCE,
+      releaseId,
+      goal: { address: goal.toBase58(), skimBps: 1000 },
+    });
+    expect(withGoal.ok).toBe(true);
+    if (!withGoal.ok) return;
+    const ix = withGoal.value.instructions.at(-1)!;
+    expect(ix.keys[5]!.pubkey.equals(goal)).toBe(true);
+    expect(ix.keys[5]!.isWritable).toBe(true);
+    expect(ix.keys).toHaveLength(6 + 10); // five per leg, two legs
+    // The fifth slot of the first leg is the GOAL's token account for that mint.
+    expect(ix.keys[6 + 4]!.pubkey.equals(ataFor(goal, GOLD))).toBe(true);
+  });
+
+  it("creates the goal's token accounts too, paid for by the payer", () => {
+    const goal = Keypair.generate().publicKey;
+    const withGoal = releasePayoutIxs({
+      payer,
+      recipient,
+      allocation: mixed,
+      nonce: NONCE,
+      releaseId,
+      goal: { address: goal.toBase58(), skimBps: 1000 },
+    });
+    expect(withGoal.ok).toBe(true);
+    if (!withGoal.ok) return;
+    // Two creates per leg (recipient and goal), plus the program instruction.
+    expect(withGoal.value.instructions).toHaveLength(5);
   });
 
   it("gives every payout in one release the same receipt namespace", () => {

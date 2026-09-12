@@ -193,10 +193,6 @@ pub mod webgold {
             WebgoldError::NotClaimable
         );
         let legs = ctx.accounts.payout.legs.clone();
-        require!(
-            ctx.remaining_accounts.len() == legs.len() * ACCOUNTS_PER_LEG,
-            WebgoldError::LegAccountsMismatch
-        );
 
         let clock = Clock::get()?;
         let payer = ctx.accounts.payout.payer;
@@ -207,12 +203,20 @@ pub mod webgold {
         let signer_seeds: &[&[&[u8]]] = &[seeds];
         let payout_key = ctx.accounts.payout.key();
 
+        let skim_bps = ctx.accounts.goal.as_ref().map(|g| g.skim_bps).unwrap_or(0);
+        let goal_key = ctx.accounts.goal.as_ref().map(|g| g.key());
+        let stride = if goal_key.is_some() { ACCOUNTS_PER_LEG_WITH_GOAL } else { ACCOUNTS_PER_LEG };
+        require!(
+            ctx.remaining_accounts.len() == legs.len() * stride,
+            WebgoldError::LegAccountsMismatch
+        );
+
         for (i, leg) in legs.iter().enumerate() {
-            let mint = InterfaceAccount::<Mint>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG])?;
+            let mint = InterfaceAccount::<Mint>::try_from(&ctx.remaining_accounts[i * stride])?;
             let from =
-                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 1])?;
+                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * stride + 1])?;
             let to =
-                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 2])?;
+                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * stride + 2])?;
 
             require_keys_eq!(mint.key(), leg.mint, WebgoldError::LegMintMismatch);
             require_keys_eq!(from.mint, leg.mint, WebgoldError::LegMintMismatch);
@@ -223,15 +227,43 @@ pub mod webgold {
             // somebody who never received it.
             require_keys_eq!(to.owner, recipient, WebgoldError::WrongRecipient);
 
-            move_leg(
-                &ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 3],
-                &from,
-                &to,
-                &mint,
-                ctx.accounts.payout.to_account_info(),
-                leg.amount,
-                Some(signer_seeds),
-            )?;
+            let (to_recipient, to_goal) = split_for_goal(leg.amount, skim_bps)?;
+            let token_program = &ctx.remaining_accounts[i * stride + 3];
+
+            if to_recipient > 0 {
+                move_leg(
+                    token_program,
+                    &from,
+                    &to,
+                    &mint,
+                    ctx.accounts.payout.to_account_info(),
+                    to_recipient,
+                    Some(signer_seeds),
+                )?;
+            }
+            if let Some(goal_key) = goal_key {
+                if to_goal > 0 {
+                    let goal_account = InterfaceAccount::<TokenAccount>::try_from(
+                        &ctx.remaining_accounts[i * stride + 4],
+                    )?;
+                    require_keys_eq!(goal_account.mint, leg.mint, WebgoldError::LegMintMismatch);
+                    // The skim can only ever reach the recipient's OWN goal vault.
+                    require_keys_eq!(
+                        goal_account.owner,
+                        goal_key,
+                        WebgoldError::GoalPaysOnlyItsOwner
+                    );
+                    move_leg(
+                        token_program,
+                        &from,
+                        &goal_account,
+                        &mint,
+                        ctx.accounts.payout.to_account_info(),
+                        to_goal,
+                        Some(signer_seeds),
+                    )?;
+                }
+            }
         }
 
         let payout = &mut ctx.accounts.payout;
@@ -356,10 +388,6 @@ pub mod webgold {
             WebgoldError::NotClaimable
         );
         let legs = ctx.accounts.payout.legs.clone();
-        require!(
-            ctx.remaining_accounts.len() == legs.len() * ACCOUNTS_PER_LEG,
-            WebgoldError::LegAccountsMismatch
-        );
 
         let clock = Clock::get()?;
         let payer = ctx.accounts.payout.payer;
@@ -370,12 +398,20 @@ pub mod webgold {
         let signer_seeds: &[&[&[u8]]] = &[seeds];
         let payout_key = ctx.accounts.payout.key();
 
+        let skim_bps = ctx.accounts.goal.as_ref().map(|g| g.skim_bps).unwrap_or(0);
+        let goal_key = ctx.accounts.goal.as_ref().map(|g| g.key());
+        let stride = if goal_key.is_some() { ACCOUNTS_PER_LEG_WITH_GOAL } else { ACCOUNTS_PER_LEG };
+        require!(
+            ctx.remaining_accounts.len() == legs.len() * stride,
+            WebgoldError::LegAccountsMismatch
+        );
+
         for (i, leg) in legs.iter().enumerate() {
-            let mint = InterfaceAccount::<Mint>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG])?;
+            let mint = InterfaceAccount::<Mint>::try_from(&ctx.remaining_accounts[i * stride])?;
             let from =
-                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 1])?;
+                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * stride + 1])?;
             let to =
-                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 2])?;
+                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * stride + 2])?;
 
             require_keys_eq!(mint.key(), leg.mint, WebgoldError::LegMintMismatch);
             require_keys_eq!(from.mint, leg.mint, WebgoldError::LegMintMismatch);
@@ -386,15 +422,42 @@ pub mod webgold {
             // not where they asked for it to go.
             require_keys_eq!(to.owner, claimer, WebgoldError::WrongRecipient);
 
-            move_leg(
-                &ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 3],
-                &from,
-                &to,
-                &mint,
-                ctx.accounts.payout.to_account_info(),
-                leg.amount,
-                Some(signer_seeds),
-            )?;
+            let (to_claimer, to_goal) = split_for_goal(leg.amount, skim_bps)?;
+            let token_program = &ctx.remaining_accounts[i * stride + 3];
+
+            if to_claimer > 0 {
+                move_leg(
+                    token_program,
+                    &from,
+                    &to,
+                    &mint,
+                    ctx.accounts.payout.to_account_info(),
+                    to_claimer,
+                    Some(signer_seeds),
+                )?;
+            }
+            if let Some(goal_key) = goal_key {
+                if to_goal > 0 {
+                    let goal_account = InterfaceAccount::<TokenAccount>::try_from(
+                        &ctx.remaining_accounts[i * stride + 4],
+                    )?;
+                    require_keys_eq!(goal_account.mint, leg.mint, WebgoldError::LegMintMismatch);
+                    require_keys_eq!(
+                        goal_account.owner,
+                        goal_key,
+                        WebgoldError::GoalPaysOnlyItsOwner
+                    );
+                    move_leg(
+                        token_program,
+                        &from,
+                        &goal_account,
+                        &mint,
+                        ctx.accounts.payout.to_account_info(),
+                        to_goal,
+                        Some(signer_seeds),
+                    )?;
+                }
+            }
         }
 
         let payout = &mut ctx.accounts.payout;
@@ -692,6 +755,8 @@ pub enum WebgoldError {
     PolicyWeightsWrong,
     #[msg("Mix weights overflowed while being added up.")]
     PolicyWeightsOverflow,
+    #[msg("A payout amount overflowed while a goal's share was being worked out.")]
+    PayoutWeightsOverflow,
     #[msg("A leg cannot have a weight of zero — remove it instead.")]
     LegWeightZero,
     #[msg("A leg cannot name the default address as its mint.")]

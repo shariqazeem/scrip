@@ -4,6 +4,7 @@ import { allocate, named } from "@/lib/allocator";
 import { ASSETS, assetByMint } from "@/lib/assets/registry";
 import { connection } from "@/lib/book/read-book";
 import { readPolicyOf } from "@/lib/book/read-book";
+import { readActiveGoal } from "@/lib/book/read-goals";
 import { toQuoteView } from "@/lib/pay/quote";
 import { defaultPolicy } from "@/lib/policy";
 import type { Price } from "@/lib/pyth/price";
@@ -91,8 +92,11 @@ export async function POST(req: NextRequest) {
     const gift = named(asset.mint, amount, price.value, now);
     if (!gift.ok) return NextResponse.json({ error: gift.why }, { status: 422 });
     // "named" rather than "signed" or "default": no policy was consulted, and saying either
-    // of the others would claim a decision nobody made.
-    return NextResponse.json(toQuoteView(recipient, gift.value, "named"));
+    // of the others would claim a decision nobody made. A goal still skims it, though — a
+    // gift is an arrival like any other.
+    return NextResponse.json(
+      toQuoteView(recipient, gift.value, "named", await activeGoal(recipient)),
+    );
   }
 
   const requestedBase = BigInt(Math.round((dollars as number) * 1e6));
@@ -117,8 +121,19 @@ export async function POST(req: NextRequest) {
   if (!allocation.ok) return NextResponse.json({ error: allocation.why }, { status: 422 });
 
   return NextResponse.json(
-    toQuoteView(recipient, allocation.value, signed ? "signed" : "default"),
+    toQuoteView(
+      recipient,
+      allocation.value,
+      signed ? "signed" : "default",
+      await activeGoal(recipient),
+    ),
   );
+}
+
+/** The recipient's active goal, flattened for the wire. Null when nothing is skimming. */
+async function activeGoal(recipient: string) {
+  const goal = await readActiveGoal(recipient);
+  return goal ? { address: goal.address, name: goal.name, skimBps: goal.skimBps } : null;
 }
 
 function bad(message: string) {

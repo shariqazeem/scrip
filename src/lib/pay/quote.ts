@@ -40,15 +40,23 @@ export type QuoteView = {
    * was left for one to decide — saying "default" there would claim a decision nobody made.
    */
   readonly policySource: "signed" | "default" | "named";
+  /**
+   * The recipient's active goal, when one is taking a share of what arrives. The payer sees
+   * it before they sign: a payout that is 25% diverted is a different payout, and hiding that
+   * would make the receipt read as a surprise.
+   */
+  readonly goal: { readonly address: string; readonly name: string; readonly skimBps: number } | null;
 };
 
 export function toQuoteView(
   recipient: string,
   allocation: Allocation,
   policySource: QuoteView["policySource"],
+  goal: QuoteView["goal"] = null,
 ): QuoteView {
   return {
     recipient,
+    goal,
     requestedBase: allocation.requestedBase.toString(),
     valueBase: allocation.valueBase.toString(),
     gramsE8: allocation.gramsE8.toString(),

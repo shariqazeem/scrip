@@ -138,6 +138,10 @@ export function PayForm({
         allocation: allocation.value,
         nonce: funded.value.nonce,
         releaseId,
+        // The RECIPIENT's goal, read from the chain when the quote was made and shown to the
+        // payer before they signed. Omitting it pays them in full, which is the safe way for
+        // this to fail — the person keeps everything.
+        goal: quote.goal ? { address: quote.goal.address, skimBps: quote.goal.skimBps } : null,
       });
       if (!released.ok) {
         setWhy(released.why);
@@ -402,7 +406,21 @@ function Quote({ quote }: { quote: QuoteView }) {
           <span className="mono">{usdAligned(fromBase(BigInt(leg.valueBase), 6))}</span>
         </div>
       ))}
+      {quote.goal ? (
+        <div className="wg-quote-leg wg-quote-skim">
+          <span>
+            {quote.goal.name} <span className="wg-editor-sym">their goal</span>
+          </span>
+          <span className="mono">{bps(quote.goal.skimBps)}</span>
+          <span className="mono">
+            {usdAligned((value * quote.goal.skimBps) / 10_000)}
+          </span>
+        </div>
+      ) : null}
       <p className="wg-quote-foot">
+        {quote.goal
+          ? `${quote.goal.skimBps / 100}% of this goes to their goal "${quote.goal.name}" — a vault only they can spend from. The receipt still records the whole arrival, because the skim is where the value went, not a reduction in what they received. `
+          : null}
         {quote.policySource === "named"
           ? "Named, so nothing converted — their policy was not consulted."
           : quote.policySource === "signed"
