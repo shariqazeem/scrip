@@ -73,3 +73,31 @@ The pay rail is deliberately free. It is the growth loop, not a revenue line.
 
 - Sponsor outreach timing: before there are holders, or after?
 - Which equity family and which metal family for v1, given the wrappers differ?
+
+## 2026-09-12 — FINAL LOCK: Webgold, ownership you receive
+
+**Decided by the founder after evaluating every alternative in this thread.** The deciding
+factor was not analysis. It was the only concept he would promote happily and use himself,
+and founder conviction outranks a model's ranking at this point. No further idea search.
+The instruction on record: *"Do not ask another model what to build instead. Ask how to
+build this better."*
+
+**The product.** One book. Grams on the home screen, an equity sleeve one tap inside. Three
+inlets — earn, receive, sponsor — and every arrival carries a named, openable receipt.
+
+**Why each rejected alternative stays rejected:** trading and copy products fail the
+founder-uses-it test; a generic savings account fails the "why not Binance" test; privacy
+as the pitch depends on an issuer flip we do not control (xStocks has Confidential Balances
+initialized but disabled, and it cannot run alongside the transfer hook they also
+reserved); borrowing against the book is a real idea but ships as a later module, not as the
+identity of the app.
+
+**The boundary that keeps this from being Sage:** Webgold settles, it does not judge.
+Payouts carry a reason string; verification lives elsewhere. Sage becomes a customer.
+
+**The number:** keep-rate at thirty days. Instrumented from the first payout, because a
+cohort that was not recorded cannot be measured later.
+
+**Honesty requirements, non-negotiable in copy:** xStocks carry a permanent delegate and a
+pause authority, so the issuer can move, burn or freeze. Self-custody means not our custody.
+Dividends are reinvested, so never show expected income.

@@ -1,88 +1,86 @@
-# Webgold — the product, explained properly
+# Webgold — ownership you receive
 
-## The confusion this document removes
+## The line
 
-We rotated through five ideas before locking this one. If you are reading the history and
-feel lost, here is the whole thing in one paragraph:
+**Web3 made assets programmable. Webgold makes ownership receivable.**
 
-> **Webgold is an account.** You put USDC in. It becomes a real portfolio — the stock
-> market plus gold and silver — that sits in **your own wallet**, not ours. The account
-> keeps that portfolio honest through dividends and splits, earns on it where it safely
-> can, lets you pay another person straight into their account, and prints a public
-> receipt for every single move. That is it. Everything else is a later module.
+One account. Grams of gold on the home screen, silver beside them, a slice of the market
+one tap inside. Everything that lands carries a memory: how it arrived, from whom, for
+what, with a link anyone can open.
 
-## Who it is for, concretely
+## The product in one paragraph
 
-A person who already holds a Solana wallet. Their net worth is SOL, a couple of tokens,
-and USDC. Every asset they own moves together, and the "safe" one loses a few percent of
-its purchasing power every year. They cannot open a brokerage account without a residency,
-a bank and a KYC flow they will never complete. They have no interest in becoming a
-trader, and no product currently asks them to be anything else.
+Value enters a Webgold book three ways and leaves as ownership, never as a number in
+someone else's ledger. You **earn** it, because a payer released a payout in gold and the
+market instead of a stablecoin. You **receive** it, because someone sent or you requested a
+named slice. Or it is **sponsored**, because an issuer funded a first position for a new
+book. The assets sit in the recipient's own wallet. Every arrival is a receipt.
 
-That person does not need a better chart. They need somewhere for the money to live.
+## Why this is not a wallet and not an exchange
 
-## The four things the account does
+An exchange is a place to buy and park. A wallet is a place to hold a number. Neither can
+do the one thing this does: **make value arrive as ownership with a reason attached.**
 
-1. **Holds.** A default mix across an equity sleeve and a metal sleeve, fixed so that
-   nobody has to have an opinion. Positions land in the user's own token accounts.
-2. **Stays correct.** Dividends and splits rebase tokenized-stock balances. The account
-   tracks multiplier-adjusted quantity and basis so returns and cost basis stay true. Most
-   products in this category will get this wrong; see `architecture.md`.
-3. **Earns where it can.** Gold leasing yield, equity lending yield. Low single digits,
-   stated honestly, never the headline.
-4. **Pays.** Send value to another person and it arrives in their account as the same real
-   assets, with a receipt. If they have no account, the link creates one.
+Binance cannot receive a payment on your behalf as a slice of the market. Phantom can move
+a token but cannot tell you that 0.2 grams arrived for the pull request you shipped on
+Tuesday. That named arrival is the product, and it is only possible because a share became
+a token that anyone can build on.
 
-## What we are deliberately not building
+## The three inlets
 
-| Not this | Why |
-| --- | --- |
-| Trading terminal, perps, pair trading | The founder is not a trader, and the venues exist |
-| Copy trading, PnL cards, leaderboards | Requires a trader graph we do not have; Dub already took the category |
-| Permissionless index/ETF factory | Contested (Symmetry 350+ baskets, Reserve DTFs), and Index Coop fell from ~$44M to ~$14M |
-| Yield vault ("deposit for APY") | Superform and apys both shipped it in the same week |
-| Trading agent under a mandate | Lost twice already, on two different chains |
-| Invoicing / payroll / B2B compensation | Reads as Deel; spends the pitch on tax and compliance |
-| SDK with no app on top | Infrastructure that looks like infrastructure |
+**Earn.** A payer escrows a payout denominated in the mix. A rule releases it. Slices land
+in wallets with a receipt naming what the work was. Webgold does not judge the work — see
+the boundary below — it settles it in ownership.
 
-## The wedge, stated so it can be executed
+**Receive.** Request or send a named slice: a gram for a birthday, a slice for a favour, a
+share for a milestone. QR, link, or Blink. The difference from a raw wallet transfer is the
+name and the memory. It is an occasion, not a transaction.
 
-**Sponsored first position.** A new holder's first slice of gold or the market is funded by
-an issuer, not by us. They must hold it inside the account. The account is what they keep.
+**Sponsor.** A first gram or first slice for a new book, funded by an issuer budget or, in
+week one, by us. This is an acquisition device, never the identity of the app, and it does
+not lead the home page.
 
-The mechanic is employer matching, which is the best-evidenced acquisition device in
-consumer finance: plans with automatic enrollment run 94% participation against 64% for
-voluntary ones. No crypto product has copied it. The budget already exists on the other
-side of the table — Kraken runs xPoints, Jupiter has run six-figure xStocks reward
-programs, and issuers compete for holders.
+## What we do not build as the product
 
-Bootstrap order: seed the first cohort ourselves so there is something real to show, then
-convert to issuer money before the Colosseum deadline.
+Charts. Leagues. Copy trading. Agent trading. A generic deposit box. Confidential balances
+as the pitch. Any of those can hang off the book later; none of them is the thing.
 
-## Why people come back without a prize
+## The boundary that keeps this from being Sage
 
-Three reasons, in order of strength:
+**Webgold moves money. It does not decide who deserves it.**
 
-- **Their money lives there.** A balance is a reason to return that costs nothing to
-  maintain.
-- **It grows and it pays.** A visible balance that moves, plus small periodic yield.
-- **They were paid into it.** Every payment creates a new account holder who did not have
-  to decide to invest.
+A payout has a payer, a set of recipients, amounts, and a reason string. Whether that
+reason was verified by an AI judge, approved by a human, or simply asserted is outside
+Webgold entirely. That boundary does three things: it keeps the build small, it means
+Webgold is useful to anyone paying anyone, and it makes Sage a **customer** of Webgold
+rather than a thing we are rebuilding. Sage keeps the verification; Webgold owns the
+settlement and the book.
 
-## The metrics that will decide both competitions
+## Goal vaults
 
-Not vanity. These are the numbers to instrument on day one, because they are the submission:
+A named goal sits on the book and skims a percentage of every inbound payout: a laptop,
+three months of runway, a wedding. This is the brief's "savings that sweep into stocks",
+inverted. Saving starts at the moment income arrives, not at whatever is left over, which
+is the only version that has ever worked at scale.
 
-- reserves opened, and how many were funded by a sponsor versus self-funded
-- total value held, and 30-day hold rate (the single best signal that this is savings and
-  not farming)
-- payments settled, and distinct recipients
-- receipts published
-- week-over-week returning accounts
+## The number that decides both competitions
 
-## The founder's own loop
+**Keep-rate: the share of what was paid out that is still held thirty days later.**
 
-The founder is user zero, the way he is on Sage. His own operating treasury sits in a
-Webgold reserve instead of decaying as USDC, payouts go out of it, and the receipts get
-posted publicly. That is honest dogfooding, not subsidy — the product's growth engine is
-the sponsored position, not his wallet.
+It cannot be faked, it is the difference between a payout and a farm, and it is the single
+best evidence that people were paid in something they actually wanted. It must be
+instrumented on day one, because a cohort you did not record cannot be measured later.
+
+Alongside it: books opened, grams and shares outstanding, payouts settled, distinct
+recipients, receipts published, and one issuer conversation.
+
+## v1, end to end
+
+1. Fund a payout in gold plus one equity sleeve.
+2. Release it to a set of wallets.
+3. Each recipient sees a book in grams, with a receipt naming what it was for.
+4. They send or request a named slice of their own.
+5. The receipt gets posted publicly.
+
+That is Stocklana answered without a slide: a real use, working end to end, and native to
+Solana because none of it is possible where a share cannot leave the broker.
