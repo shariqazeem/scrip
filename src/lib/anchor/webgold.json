@@ -23,31 +23,461 @@
     "on the asset SET. Verification happens somewhere else, or nowhere. The recipient's own",
     "signed policy decides what the value becomes — weights come from that policy, prices",
     "from Pyth, routing from Jupiter. Software executes a rule here; it never exercises",
-    "discretion over someone's money.",
-    "",
-    "Accounts and instructions arrive in dependency order (see docs/build-order.md): the book",
-    "and its policy first, then funded and released payouts with their receipts, then named",
-    "sends, sponsorships and goal vaults."
+    "discretion over someone's money."
   ],
   "instructions": [
     {
-      "name": "ping",
+      "name": "close_book",
       "docs": [
-        "A build-order placeholder so the workspace compiles and the IDL is real from day one.",
-        "Replaced by  at build-order step 2."
+        "Close a book and return its rent to the owner.",
+        "",
+        "Safe precisely because the program never held anything: closing a book cannot strand",
+        "an asset, because the assets were never here. They are in the owner's token accounts",
+        "and are untouched by this."
       ],
       "discriminator": [
-        173,
-        0,
-        94,
-        236,
-        73,
-        133,
-        225,
-        153
+        216,
+        209,
+        72,
+        159,
+        209,
+        206,
+        135,
+        66
       ],
-      "accounts": [],
+      "accounts": [
+        {
+          "name": "book",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  111,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "book"
+          ]
+        }
+      ],
       "args": []
+    },
+    {
+      "name": "open_book",
+      "docs": [
+        "Open a book. One per owner, at a deterministic address anyone can derive.",
+        "",
+        "The book holds the signed policy and the lifetime counters. It never holds an asset,",
+        "and there is no instruction here that could make it hold one."
+      ],
+      "discriminator": [
+        179,
+        61,
+        78,
+        135,
+        182,
+        178,
+        205,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "book",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  111,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "Policy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_policy",
+      "docs": [
+        "Replace the mix policy. Only the owner may, and only with one that validates.",
+        "",
+        "THE POLICY IS THE ONLY PLACE A WEIGHT CAN COME FROM. There is deliberately no",
+        "instruction that lets an operator, a model or this program choose a weight for",
+        "somebody. That absence is the product."
+      ],
+      "discriminator": [
+        40,
+        133,
+        12,
+        157,
+        235,
+        202,
+        2,
+        132
+      ],
+      "accounts": [
+        {
+          "name": "book",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  111,
+                  111,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "book"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "Policy"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Book",
+      "discriminator": [
+        121,
+        34,
+        121,
+        35,
+        91,
+        62,
+        85,
+        222
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BookClosed",
+      "discriminator": [
+        82,
+        77,
+        120,
+        113,
+        7,
+        80,
+        29,
+        41
+      ]
+    },
+    {
+      "name": "BookOpened",
+      "discriminator": [
+        191,
+        148,
+        160,
+        228,
+        141,
+        67,
+        194,
+        64
+      ]
+    },
+    {
+      "name": "PolicySet",
+      "discriminator": [
+        126,
+        246,
+        69,
+        48,
+        9,
+        240,
+        226,
+        52
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PolicyEmpty",
+      "msg": "A mix policy must have at least one leg."
+    },
+    {
+      "code": 6001,
+      "name": "PolicyTooManyLegs",
+      "msg": "A mix policy may hold at most 8 legs."
+    },
+    {
+      "code": 6002,
+      "name": "PolicyWeightsWrong",
+      "msg": "Mix weights must add up to exactly 100%."
+    },
+    {
+      "code": 6003,
+      "name": "PolicyWeightsOverflow",
+      "msg": "Mix weights overflowed while being added up."
+    },
+    {
+      "code": 6004,
+      "name": "LegWeightZero",
+      "msg": "A leg cannot have a weight of zero — remove it instead."
+    },
+    {
+      "code": 6005,
+      "name": "LegMintDefault",
+      "msg": "A leg cannot name the default address as its mint."
+    },
+    {
+      "code": 6006,
+      "name": "LegDuplicated",
+      "msg": "The same mint appears twice in this mix."
+    },
+    {
+      "code": 6007,
+      "name": "DriftBandTooWide",
+      "msg": "The drift band cannot be wider than 50%."
+    },
+    {
+      "code": 6008,
+      "name": "NotTheOwner",
+      "msg": "Only the owner of this book can change it."
+    }
+  ],
+  "types": [
+    {
+      "name": "Book",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "opened_at",
+            "type": "i64"
+          },
+          {
+            "name": "lifetime_received",
+            "docs": [
+              "Lifetime USD value received, in 6-decimal base units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "lifetime_sent",
+            "docs": [
+              "Lifetime USD value sent, in 6-decimal base units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "policy",
+            "type": {
+              "defined": {
+                "name": "Policy"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BookClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "book",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BookOpened",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "book",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          },
+          {
+            "name": "legs",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "Leg"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Leg",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Policy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "legs",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "Leg"
+                }
+              }
+            }
+          },
+          {
+            "name": "drift_bps",
+            "docs": [
+              "How far a leg may drift from its target before a rebalance is due, in basis points."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "updated_at",
+            "docs": [
+              "Set by the program from the clock, never by the caller. Any value passed in is",
+              "overwritten — a timestamp a caller can choose is a timestamp that proves nothing."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PolicySet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "book",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          },
+          {
+            "name": "legs",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "Leg"
+                }
+              }
+            }
+          }
+        ]
+      }
     }
   ]
 }

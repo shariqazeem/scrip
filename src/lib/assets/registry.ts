@@ -32,6 +32,39 @@ export type Issuer = {
   readonly url: string;
 };
 
+/**
+ * WHERE A PRICE COMES FROM — pinned per asset, because "the price" is a different question
+ * for a token that rebases than for one that does not.
+ *
+ * `basis` says what one unit of the feed's price BUYS:
+ *
+ *   "raw"      one whole RAW token. Pyth's `Crypto.SPYX/USD` prices the xStocks token as it
+ *              trades, which already includes the multiplier — on 2026-09-12 SPYX/USD ÷
+ *              SPY/USD came to 1.00567 against a live multiplier of 1.00571, the difference
+ *              being only that the SPY feed was six hours staler.
+ *   "adjusted" one share-equivalent. Pyth's `Equity.US.SPY/USD` prices the underlying share,
+ *              so it must be multiplied by the ADJUSTED quantity.
+ *
+ * Both paths must produce the same value, and `valuer.test.ts` asserts it. That agreement is
+ * the strongest single check that the multiplier handling is right: if the two disagree by
+ * more than feed latency explains, either our multiplier is wrong or a feed is stale, and
+ * both are things to hold on rather than paint.
+ */
+export type PriceFeed = {
+  /** Pyth's canonical feed id (hex, no 0x). The stable identifier. */
+  readonly feedId: string;
+  /**
+   * The on-chain price account we read. Found by scanning the Pyth receiver program for
+   * accounts carrying this feed id whose write authority is the account itself — the
+   * continuously-updated sponsored feed rather than a one-shot somebody's transaction posted.
+   * Pinned rather than rediscovered on every read, and checked by the live battery.
+   */
+  readonly account: string;
+  readonly basis: "raw" | "adjusted";
+  /** What to show a reader who asks where a number came from. */
+  readonly label: string;
+};
+
 export type Asset = {
   readonly symbol: string;
   readonly name: string;
@@ -60,6 +93,10 @@ export type Asset = {
   readonly transferFee: boolean;
   /** One sentence, shown on the asset row. Says the thing a judge would otherwise find. */
   readonly disclosure: string;
+  /** How this asset is priced. */
+  readonly price: PriceFeed;
+  /** An independent second feed, when one exists. Used to check the first, never to replace it. */
+  readonly priceCrossCheck?: PriceFeed;
 };
 
 /** One troy ounce in fine grams. The definition, not an approximation. */
@@ -149,6 +186,14 @@ export const ASSETS: readonly Asset[] = [
       "Allocated metal: one troy ounce per token. The mint has no freeze authority and no " +
       "permanent delegate, so once it is in your wallet nobody can move or freeze it. " +
       "Redemption and vaulting follow Oro's own terms.",
+    price: {
+      feedId: "765d2ba906dbc32ca17cc11f5310a89e9ee1f6420508c63861f2f8ba4ee34bb2",
+      account: "2UK6JWZKvqFwU7mAt76TePbtNn99MPzKMqZNq4DEPbCa",
+      // One token is one troy ounce and the mint does not rebase, so raw and adjusted are
+      // the same quantity here. "raw" is stated rather than implied.
+      basis: "raw",
+      label: "Pyth Metal.XAU/USD",
+    },
   },
   {
     symbol: "SPYx",
@@ -170,6 +215,21 @@ export const ASSETS: readonly Asset[] = [
       "through a mint-level multiplier rather than paid. The issuer holds a permanent " +
       "delegate and a pause authority, so it can move, burn or freeze this token. " +
       "Self-custody here means not our custody.",
+    price: {
+      feedId: "2817b78438c769357182c04346fddaad1178c82f4048828fe0997c3c64624e14",
+      account: "jf8MarLKgBte4f3NWufbNpGRCuBfJLhuZPuFigvSQR2",
+      // Prices the xStocks token itself, which already carries the multiplier — and is the
+      // freshest of the two feeds by hours, because it is pushed continuously while the
+      // underlying equity feed is pushed around market hours.
+      basis: "raw",
+      label: "Pyth Crypto.SPYX/USD",
+    },
+    priceCrossCheck: {
+      feedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5",
+      account: "CRDaGwcVnKdRNRtx6fjHtvrBgKM5U55AhbqBWhtPMDA",
+      basis: "adjusted",
+      label: "Pyth Equity.US.SPY/USD",
+    },
   },
   {
     symbol: "GLDx",
@@ -192,6 +252,11 @@ export const ASSETS: readonly Asset[] = [
       "A fund share that tracks gold, not gold. One token is one share of SPDR Gold Shares, " +
       "not one ounce of metal, and Webgold will never display it in grams. Issuer permanent " +
       "delegate and pause authority apply.",
+    // DELIBERATELY UNPRICED. The obvious shortcut is to point this at Pyth's XAU/USD, and
+    // that is exactly the mislabelling the product forbids: GLDx is a share of the SPDR fund
+    // at ~$398, not an ounce of metal at ~$4,365. Until a feed for the fund share itself is
+    // pinned, the valuer holds on this row and says so. An empty `account` means unpriced.
+    price: { feedId: "", account: "", basis: "adjusted", label: "no fund-share feed pinned" },
   },
   {
     symbol: "SLVon",
@@ -214,6 +279,10 @@ export const ASSETS: readonly Asset[] = [
       "A fund share that tracks silver, not silver. This is why silver is not a default " +
       "sleeve: no allocated-silver token on Solana has real depth, so there are no honest " +
       "ounces to show. A pause authority applies.",
+    // Unpriced for the same reason as GLDx: Pyth's XAG/USD is the price of an ounce of
+    // silver, and this is a share of a fund that holds some. Pointing one at the other is
+    // the mislabelling this whole row exists to avoid.
+    price: { feedId: "", account: "", basis: "adjusted", label: "no fund-share feed pinned" },
   },
   {
     symbol: "USDC",
@@ -232,6 +301,12 @@ export const ASSETS: readonly Asset[] = [
     transferFee: false,
     disclosure:
       "Dollars waiting to be allocated. Circle holds a freeze authority over this mint.",
+    price: {
+      feedId: "eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+      account: "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX",
+      basis: "raw",
+      label: "Pyth Crypto.USDC/USD",
+    },
   },
 ];
 

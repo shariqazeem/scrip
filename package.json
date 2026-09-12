@@ -15,7 +15,9 @@
     "format:check": "prettier --check .",
     "anchor:build": "cd anchor && anchor build && cd .. && node scripts/sync-idl.mjs",
     "anchor:test": "cd anchor && anchor test",
-    "test:registry": "REGISTRY_LIVE=1 vitest run src/lib/assets/registry.live.test.ts"
+    "test:registry": "REGISTRY_LIVE=1 vitest run src/lib/assets/registry.live.test.ts",
+    "test:valuer": "VALUER_LIVE=1 vitest run src/lib/valuer.live.test.ts",
+    "test:live": "npm run test:registry && npm run test:valuer"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
