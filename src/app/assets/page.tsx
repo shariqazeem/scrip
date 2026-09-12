@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
-import { Info, ShieldAlert, Snowflake } from "lucide-react";
-import { PageFrame } from "@/components/app/page-frame";
+import { Gift, Info, ShieldAlert, Snowflake } from "lucide-react";
+import { EmptyState, PageFrame } from "@/components/app/page-frame";
+import { ClaimButton } from "@/components/app/claim-button";
+import { readSponsored } from "@/lib/book/read-sponsorships";
+import { currentOwner } from "@/lib/session/server";
+import { fromBase, grams, short, usd } from "@/lib/format";
 import {
   ASSETS,
   type Asset,
@@ -47,7 +51,11 @@ const defaultBps = new Map(DEFAULT_POLICY_BPS.map((l) => [l.symbol, l.bps]));
  * No price renders here. Prices come from the valuer (build-order step 2), and until they do,
  * a number on this page would be one we cannot derive from chain state.
  */
-export default function AssetsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AssetsPage() {
+  const [owner, sponsored] = await Promise.all([currentOwner(), readSponsored()]);
+
   return (
     <PageFrame
       eyebrow="Assets"
@@ -62,6 +70,58 @@ export default function AssetsPage() {
             stops a gold fund being called a gram stops a silver fund being called an ounce.
           </span>
         </p>
+
+        <div className="wg-panel">
+          <div className="wg-panel-head">
+            <span className="wg-panel-title">Sponsored first positions</span>
+            <span className="mono">first come, one per wallet</span>
+          </div>
+          {!sponsored.ok ? (
+            <EmptyState
+              icon={<Gift size={22} strokeWidth={1.6} />}
+              title="Sponsored positions could not be read just now"
+              note={sponsored.why}
+            />
+          ) : sponsored.value.length === 0 ? (
+            <EmptyState
+              icon={<Gift size={22} strokeWidth={1.6} />}
+              title="Nobody is sponsoring a first position right now"
+              note="An issuer funds grams into a book that does not exist yet, and whoever claims it becomes the holder. When one is open it appears here — real, claimable, and never a placeholder."
+            />
+          ) : (
+            <div className="wg-rows">
+              {sponsored.value.map((s) => (
+                <article key={s.address} className="wg-row">
+                  <div className="wg-row-id">
+                    <span className="wg-row-sym">
+                      {Number(s.gramsE8) > 0
+                        ? grams(Number(s.gramsE8) / 1e8)
+                        : usd(fromBase(s.valueBase, 6))}
+                    </span>
+                    <span className="wg-row-name">{s.legs.map((l) => l.symbol).join(" · ")}</span>
+                    <span className="mono wg-row-issuer">from {short(s.sponsor)}</span>
+                  </div>
+                  <p className="wg-row-issuer">
+                    {s.reason}
+                    <br />
+                    Worth {usd(fromBase(s.valueBase, 6))} at the stamp it was funded with. It
+                    lands in your own wallet, and nobody has to decide to become an investor
+                    first.
+                  </p>
+                  <div className="wg-row-meta">
+                    <ClaimButton
+                      owner={owner}
+                      sponsor={s.sponsor}
+                      nonce={s.nonce}
+                      releaseIdHex={s.releaseId}
+                      legs={s.legs.map((l) => ({ mint: l.mint }))}
+                    />
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="wg-panel">
           <div className="wg-panel-head">

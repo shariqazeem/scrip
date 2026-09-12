@@ -9,9 +9,15 @@ import {
 } from "@solana/spl-token";
 import { PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
 import type { Allocation } from "@/lib/allocator";
-import type { Asset } from "@/lib/assets/registry";
+import { type Asset, assetByMint } from "@/lib/assets/registry";
 import { type Outcome, held, ok } from "@/lib/outcome";
-import { WEBGOLD_IDL, WEBGOLD_PROGRAM_ID, cohortPda, payoutPda, receiptPda } from "@/lib/solana/program";
+import {
+  WEBGOLD_IDL,
+  WEBGOLD_PROGRAM_ID,
+  cohortPda,
+  payoutPda,
+  receiptPda,
+} from "@/lib/solana/program";
 
 /**
  * ESCROW, RELEASE, CANCEL — built client-side, signed by the payer, and nothing else.
@@ -251,4 +257,94 @@ export function cancelPayoutIx(args: {
     ],
     data: coder.encode("cancel_payout", {}),
   });
+}
+
+/**
+ * Claim a sponsored first position. The CLAIMER signs, and becomes the recipient.
+ *
+ * They pay rent for their own receipt, which is a few thousandths of a SOL and is what keeps
+ * a sponsor from being drained by account-creation spam. One claim per wallet per campaign is
+ * enforced by the account model rather than by a check: the receipt lives at
+ * [b"receipt", release_id, claimer], so a second attempt tries to create an account that
+ * already exists and the runtime refuses it.
+ */
+export function claimPayoutIxs(args: {
+  claimer: PublicKey;
+  sponsor: PublicKey;
+  nonce: bigint;
+  releaseId: Uint8Array;
+  legs: ReadonlyArray<{ mint: string; program: "spl-token" | "token-2022" }>;
+  goal?: SkimmingGoal | null;
+}): Outcome<{ instructions: readonly TransactionInstruction[]; receipt: PublicKey }> {
+  const { claimer, sponsor, nonce, releaseId, legs, goal } = args;
+  if (releaseId.length !== 32) return held("A release id must be 32 bytes.");
+  if (legs.length === 0) return held("This position holds nothing to claim.");
+
+  const payout = payoutPda(sponsor, nonce);
+  const receipt = receiptPda(releaseId, claimer);
+
+  let goalKey: PublicKey | undefined;
+  if (goal) {
+    try {
+      goalKey = new PublicKey(goal.address);
+    } catch {
+      return held("That goal's address could not be read.");
+    }
+  }
+
+  const resolved = legs.map((l) => {
+    const asset = assetByMint(l.mint);
+    return { mint: new PublicKey(l.mint), asset, program: l.program === "token-2022" ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID };
+  });
+
+  const ataOf = (owner: PublicKey, mint: PublicKey, program: PublicKey) =>
+    PublicKey.findProgramAddressSync(
+      [owner.toBuffer(), program.toBuffer(), mint.toBuffer()],
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+    )[0];
+
+  const creates = resolved.flatMap((l) => [
+    createAssociatedTokenAccountIdempotentInstruction(
+      claimer,
+      ataOf(claimer, l.mint, l.program),
+      claimer,
+      l.mint,
+      l.program,
+    ),
+    ...(goalKey
+      ? [
+          createAssociatedTokenAccountIdempotentInstruction(
+            claimer,
+            ataOf(goalKey, l.mint, l.program),
+            goalKey,
+            l.mint,
+            l.program,
+          ),
+        ]
+      : []),
+  ]);
+
+  const ix = new TransactionInstruction({
+    programId: WEBGOLD_PROGRAM_ID,
+    keys: [
+      { pubkey: payout, isSigner: false, isWritable: true },
+      { pubkey: claimer, isSigner: true, isWritable: true },
+      { pubkey: receipt, isSigner: false, isWritable: true },
+      { pubkey: cohortPda(releaseId, claimer), isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      { pubkey: goalKey ?? WEBGOLD_PROGRAM_ID, isSigner: false, isWritable: Boolean(goalKey) },
+      ...resolved.flatMap((l) => [
+        { pubkey: l.mint, isSigner: false, isWritable: false },
+        { pubkey: ataOf(payout, l.mint, l.program), isSigner: false, isWritable: true },
+        { pubkey: ataOf(claimer, l.mint, l.program), isSigner: false, isWritable: true },
+        { pubkey: l.program, isSigner: false, isWritable: false },
+        ...(goalKey
+          ? [{ pubkey: ataOf(goalKey, l.mint, l.program), isSigner: false, isWritable: true }]
+          : []),
+      ]),
+    ],
+    data: coder.encode("claim_payout", {}),
+  });
+
+  return ok({ instructions: [...creates, ix], receipt });
 }
