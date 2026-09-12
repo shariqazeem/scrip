@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "NEXT_DIST_DIR=.next-build next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
@@ -21,8 +21,12 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
+    "@noble/curves": "^1.9.7",
     "@solana/spl-token": "^0.4.9",
+    "@solana/wallet-standard-features": "^1.5.0",
     "@solana/web3.js": "^1.98.0",
+    "@wallet-standard/app": "^1.1.1",
+    "@wallet-standard/features": "^1.1.1",
     "better-sqlite3": "^12.11.1",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.21.0",

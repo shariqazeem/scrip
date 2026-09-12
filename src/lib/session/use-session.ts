@@ -1,28 +1,42 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 /**
- * THE IDENTITY SEAM.
+ * THE IDENTITY SEAM FOR THE CHROME.
  *
- * Both sign-in doors — a browser wallet and a Privy email that mints an embedded Solana
- * wallet — resolve to the same thing: an owner pubkey. Every surface asks this hook and
- * nothing else, so when the doors land, one module changes and no page does.
+ * Both sign-in doors — a browser wallet, and an email sign-in that mints an embedded Solana
+ * wallet — resolve to the same thing: an owner pubkey, carried in one httpOnly cookie. This
+ * hook exists only for components that live in the ROOT layout, where reading the cookie
+ * directly would make every page dynamic, landing included. Everything that needs the owner
+ * for DATA reads it on the server via `currentOwner()`.
  *
- * `loading` is a distinct state from `owner: null` on purpose. "Still asking" is not
- * "signed out", and rendering them identically is how a signed-in owner sees "Sign in" on
- * their own book for the half-second before the session answers. Nothing is claimed until
- * the answer arrives.
+ * `loading` is a distinct state from `owner: null` on purpose. "Still asking" is not "signed
+ * out", and rendering them identically is how a signed-in owner sees "Sign in" on their own
+ * book for the half-second before the answer arrives. Nothing is claimed until it does.
  */
 export type Session = {
-  /** true while the session is still being resolved. Never render a verdict during this. */
-  loading: boolean;
-  /** base58 owner pubkey, or null when nobody is signed in. */
-  owner: string | null;
+  readonly loading: boolean;
+  readonly owner: string | null;
 };
 
-const SIGNED_OUT: Session = { loading: false, owner: null };
-
 export function useSession(): Session {
-  // No door is wired yet, and this says so rather than pretending otherwise. When the
-  // wallet and Privy doors land they replace this body; the type is the contract.
-  return SIGNED_OUT;
+  const [session, setSession] = useState<Session>({ loading: true, owner: null });
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/session/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { owner: null }))
+      .then((d: { owner: string | null }) => {
+        if (alive) setSession({ loading: false, owner: d.owner ?? null });
+      })
+      // A failed fetch means we do not know, and "we do not know" resolves to signed out
+      // rather than to a spinner that never ends.
+      .catch(() => alive && setSession({ loading: false, owner: null }));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return session;
 }

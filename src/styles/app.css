@@ -290,3 +290,218 @@
   display: grid;
   gap: var(--s-5);
 }
+
+/* ── the sign-in doors ───────────────────────────────────────────────────
+   Written in Webgold's own system rather than pulled from a wallet-adapter UI package,
+   which would ship a second palette into a product whose whole design rule is that there
+   is exactly one. */
+.wg-doors {
+  display: grid;
+  gap: var(--s-3);
+  justify-items: stretch;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.wg-door {
+  justify-content: center;
+  height: 46px;
+}
+.wg-door-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-sm);
+  flex: none;
+}
+.wg-doors-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  text-align: center;
+}
+.wg-doors-error {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--err);
+  text-align: center;
+}
+
+/* ── the balance hero ────────────────────────────────────────────────────
+   The one dark surface on an app page. Grams are the headline; dollars are a caption,
+   because the product's claim is that you own a thing, not that you hold a number. */
+.wg-hero-book {
+  background: var(--ink-warm);
+  color: var(--ink-inverse);
+  border-radius: var(--r-lg);
+  padding: var(--s-7) var(--s-6);
+  margin-bottom: var(--s-5);
+}
+.wg-hero-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-inverse-muted);
+  margin: 0 0 var(--s-3);
+}
+.wg-hero-grams {
+  font-family: var(--font-mono);
+  font-size: clamp(2.2rem, 1.4rem + 3.4vw, 3.4rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.wg-hero-grams .wg-unit {
+  font-size: 0.42em;
+  letter-spacing: 0;
+  color: var(--ink-inverse-muted);
+  margin-left: 0.35em;
+  font-weight: 500;
+}
+.wg-hero-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin: var(--s-5) 0 0;
+  color: var(--ink-inverse-muted);
+  font-size: 0.875rem;
+}
+.wg-hero-sub .mono {
+  color: var(--ink-inverse);
+}
+
+/* ── position rows ───────────────────────────────────────────────────────── */
+.wg-pos {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr);
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+.wg-pos:last-child {
+  border-bottom: 0;
+}
+.wg-pos-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wg-pos-sym {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.wg-pos-issuer {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+.wg-pos-qty,
+.wg-pos-val {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  letter-spacing: var(--tracking-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.wg-pos-qty {
+  color: var(--ink);
+}
+.wg-pos-val {
+  color: var(--ink-muted);
+}
+.wg-pos-note {
+  grid-column: 1 / -1;
+  margin: var(--s-2) 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--warn);
+}
+@media (max-width: 640px) {
+  .wg-pos {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .wg-pos-val {
+    grid-column: 2;
+  }
+}
+
+/* ── a held notice: what we could not see, and why ───────────────────────── */
+.wg-held {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--warn-border);
+  background: var(--warn-soft);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+.wg-held svg {
+  color: var(--warn);
+  margin-top: 3px;
+}
+.wg-held ul {
+  margin: var(--s-2) 0 0;
+  padding-left: var(--s-5);
+  list-style: disc;
+}
+.wg-held li {
+  margin-bottom: var(--s-1);
+}
+
+/* ── the policy strip ────────────────────────────────────────────────────── */
+.wg-mix {
+  display: flex;
+  height: 8px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: var(--bg);
+  margin-bottom: var(--s-4);
+}
+.wg-mix-seg {
+  height: 100%;
+}
+.wg-mix-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+.wg-mix-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  margin-right: 6px;
+}
+
+/**
+ * MIX SEGMENTS ARE TONES OF ONE ACCENT, NOT A CHART PALETTE.
+ *
+ * The obvious move is a colour per sleeve, and it is the move that turns a savings document
+ * into a dashboard. Green and red are reserved for money outcomes and may never be used as
+ * series colours, and there is exactly one accent — so the sleeves separate by TONE, in the
+ * order a book reads them: metal in gold, the market in ink, funds muted, cash as a hairline.
+ */
+.wg-mix-seg.is-metal,
+.wg-mix-dot.is-metal {
+  background: var(--accent);
+}
+.wg-mix-seg.is-equity,
+.wg-mix-dot.is-equity {
+  background: var(--ink);
+}
+.wg-mix-seg.is-fund,
+.wg-mix-dot.is-fund {
+  background: var(--ink-faint);
+}
+.wg-mix-seg.is-cash,
+.wg-mix-dot.is-cash {
+  background: var(--border-strong);
+}
