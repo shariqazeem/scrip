@@ -10,67 +10,45 @@
 
 ## 1. The product, in ten seconds
 
-**You have USDC sitting in a Solana wallet. You are never going to open a brokerage
-account. Webgold turns that balance into a real portfolio — the stock market, gold and
-silver — held in your own wallet, accounted for correctly, earning where it can, and
-payable to any other person.**
+**Web3 made assets programmable. Webgold makes ownership receivable.**
 
-One line for a judge: **the account where crypto money becomes real assets.**
+One book. Grams of gold on the home screen, silver beside them, a slice of the market one
+tap inside. Value enters three ways and always arrives as ownership in the recipient's own
+wallet, never as a number in someone else's ledger:
 
-It is **not** a trading terminal, **not** a robo-advisor, **not** a yield farm, **not** a
-leaderboard, **not** an SDK with no app on top. It is the front door: the place a balance
-lives. Front doors take markets; features get absorbed by wallets.
+- **Earn** — a payer releases a payout denominated in the mix instead of a stablecoin.
+- **Receive** — someone sends, or you request, a named slice.
+- **Sponsor** — an issuer funds a first position for a new book.
 
-### The user
+**Every arrival carries a memory**: how it came, from whom, for what, with an on-chain
+receipt anyone can open. That named arrival is the product. An exchange is a place to buy
+and park; a wallet is a place to hold a number. Neither can tell you that 0.2 grams landed
+for the work you shipped on Tuesday, and neither can receive a payment on your behalf as a
+slice of the market. That is only possible because a share became a token anyone can build
+on.
 
-Someone who already has a Solana wallet and whose entire net worth is one correlated bet:
-SOL, a few tokens, and USDC that loses value every year. They are not a trader. They will
-not learn to be one. They want to stop being 100% crypto and they cannot walk into a
-brokerage.
+**It is not** a trading terminal, a robo-advisor, a leaderboard, a copy-trading product, or
+a deposit box with a yield number on it.
 
-### Why this exists now and could not exist before
+### The boundary that keeps this from being Sage
 
-Three facts had to become true at once, and all three became true in 2026:
+**Webgold settles. It does not judge.** A payout carries a payer, recipients, amounts and a
+reason string. Whether that reason was verified by an AI, approved by a human, or merely
+asserted is outside this system. That keeps the build small, makes Webgold useful to anyone
+paying anyone, and makes Sage a **customer** rather than something we are rebuilding.
 
-- **Equities became tokens.** xStocks (Kraken) carries 700+ names; Ondo Global Markets
-  carries 250+ stocks and ETFs including commodity ETFs. Solana clears roughly 95% of all
-  on-chain tokenized-equity volume.
-- **Metals became tokens with yield.** Oro's GOLD pays 3–4% from real gold leasing
-  (physical, Brinks Dubai, RSM-audited); Matrixdock XAUm, PAXG and XAUT are all on Solana.
-  Gold and silver token market cap on Solana grew **689% in twelve months**.
-- **Fees fell far enough that a $5 position and a fractional send are economic.**
+### The number that decides everything
 
-A brokerage cannot send you a sliver of Apple in five seconds. A bank cannot pay you in
-grams. That is the uncopyable property, and it is the whole company.
+**Keep-rate: the share of what was paid out that is still held thirty days later.** It
+cannot be faked, and it is the difference between a payout and a farm. Instrument it at the
+first release, because a cohort you did not record cannot be measured later.
 
-### The hole in the market
+### Honesty requirements, non-negotiable in copy
 
-Billions in volume, tens of thousands of holders. The category has **traders, not owners**,
-because every front door is a venue (Jupiter, Raydium), a wallet (Phantom), a money market
-(Kamino) or an exchange behind its own KYC (Kraken, Backpack). Nobody owns the holder
-relationship. That seat is open.
-
-### The wedge — how the first thousand holders arrive
-
-**A sponsored first position.** An issuer funds a new holder's first slice of gold or the
-market; the holder must hold it inside the account; the account is what they keep.
-Automatic enrollment lifts retirement-plan participation from 64% to 94%, and employer
-matching is the most proven acquisition device in consumer finance. Nobody in crypto has
-copied it. The money comes from issuer distribution budgets (Kraken's xPoints, Jupiter's
-xStocks rewards), **not** from the founder's wallet. Seed week one personally to have
-something real to point at, then convert to sponsor money.
-
-### Why a wallet cannot absorb this
-
-The honest question a judge will ask is "why not just do three Jupiter swaps?" Four
-answers, and they are the build order:
-
-1. **Correct accounting through corporate actions.** See §3. This is the hard part.
-2. **Yield routing** across lending and leasing, which a wallet will not do.
-3. **Rule-based rebalancing** the user signs once, with a receipt each time.
-4. **The pay-in rail**: being paid into an account, not just holding one.
-
----
+xStocks mints carry a **permanent delegate** and a **pause authority**: the issuer can move,
+burn or freeze. Self-custody here means *not our custody*, not *nobody can touch it*.
+Dividends are **reinvested, not paid**, so never show expected income. Say both plainly
+rather than letting a judge find them.
 
 ## 2. Principles
 
@@ -167,12 +145,13 @@ liquidity only. Do not mix four issuers with four different legal wrappers in v1
 | Route | What it is |
 | --- | --- |
 | `/` | landing |
-| `/assets` | explore: what you can hold, and the sponsored first positions |
-| `/app` | the reserve — balance, positions, activity (shelled) |
-| `/app/pay` | send to a person |
-| `/app/settings` | policy, mix, disclosures |
-| `/receipt/[sig]` | public receipt, anchored to a signature |
-| `/ledger` | public record: reserves opened, payouts settled, volume |
+| `/assets` | what a book can hold, issuer named on every row, sponsored first positions |
+| `/app` | the book — grams, sleeves, arrivals (shelled) |
+| `/app/pay` | fund and release a payout, or send a named slice |
+| `/app/goals` | goal vaults that skim inbound (v2) |
+| `/app/settings` | mix policy, disclosures |
+| `/receipt/[sig]` | the named arrival, public and openable by anyone |
+| `/ledger` | aggregates and the event stream |
 | `/docs/*` | docs |
 
 ---
