@@ -101,3 +101,27 @@ cohort that was not recorded cannot be measured later.
 **Honesty requirements, non-negotiable in copy:** xStocks carry a permanent delegate and a
 pause authority, so the issuer can move, burn or freeze. Self-custody means not our custody.
 Dividends are reinvested, so never show expected income.
+
+## 2026-09-12 — Product law: the three calls, and no Sage dependency
+
+**Gold is metal.** Oro GOLD or Matrixdock XAUm, whichever Jupiter can fill at launch, priced
+against Pyth XAU. GLDx is a fund share and may never be labelled a bar; if listed at all it
+sits under "gold funds", never under grams. **The same test applies to silver** — if the only
+liquid silver on Solana is a tracker, silver moves under funds or leaves the default mix.
+
+**The market sleeve is SPYx.** The receive layer turns income into metal plus the market, not
+a single-name bet. Other xStocks are holdable; NVDAx is a recipient's choice.
+
+**Inbound value follows the recipient's policy**, default 50 gold / 20 silver / 30 SPY. The
+payer may constrain the asset set, never the weights. Named gifts stay named; only
+unspecified value converts.
+
+**Sage is not a payer and not a dependency.** My earlier framing was wrong, for a reason that
+settles it: Sage settles on GOAT, Starknet and Arc, not Solana, so making it pay into Webgold
+would mean rebuilding another product's settlement layer on a third chain. Worse, a pitch that
+needs a second product explained is a weaker pitch. The boundary — Webgold settles, it does
+not judge — stands on its own and is what makes Webgold useful to **any** payer. What carries
+over from Sage is craft, never coupling.
+
+**No versions.** The target is the complete product by 12 October. `docs/build-order.md` is
+dependency order, not a version ladder, and nothing on it is optional.

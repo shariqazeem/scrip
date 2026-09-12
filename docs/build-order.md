@@ -1,7 +1,9 @@
-# Build order
+# Build order (dependency order, not versions)
 
-Sequenced so the hardest correct thing exists before anything that depends on it, and so
-there is a demoable path at the end of every step.
+**The target is the whole product, not a stripped-down first release.** This list is
+dependency order only: a balance cannot be painted before it can be computed, and a receipt
+cannot be written before there is something to receive. Nothing here is optional and nothing
+is deferred to a "later version". Everything ships by 12 October.
 
 ## 0. Scaffold
 Next.js 15 + TS strict, `globals.css` (preflight only) + `tokens.css`, Inter and JetBrains
@@ -34,12 +36,14 @@ Sponsorship records and the claim flow, surfaced on `/assets`. Turn it on once t
 something worth giving a new holder.
 
 ## 7. Goal vaults
-A named goal that skims a percentage of every inbound payout. Saving at the moment of
-income, which is the only version that works.
+A named goal that skims a percentage of every inbound payout, able to spend only back into
+the owner's book or out to the owner. Saving at the moment income arrives, which is the only
+version that has ever worked at scale.
 
 ## 8. Public ledger and landing
 Aggregates and an event stream, fed by real receipts. Never a fabricated row.
 
-## Later, only once the book is real
-Borrow against the book. A work record of what you earned. Alerts. A spend rail.
-Confidential balances, if and when the issuer enables them.
+## Adjacent work, once the book above is complete
+A published book as a work record, and copying a published mix from that page. Borrowing
+against the book. Alerts. A spend rail. Confidential balances, if and when an issuer
+enables them.

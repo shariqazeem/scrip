@@ -4,83 +4,103 @@
 
 **Web3 made assets programmable. Webgold makes ownership receivable.**
 
-One account. Grams of gold on the home screen, silver beside them, a slice of the market
-one tap inside. Everything that lands carries a memory: how it arrived, from whom, for
-what, with a link anyone can open.
+A receive book for real assets on Solana. You do not come here to trade. Value arrives as
+gold, silver and the market because you earned it, were gifted it, or were sponsored into
+it. Every arrival has a memory that lives on chain: who paid, who received, how much in
+grams and in shares, the reason, the transaction. Anyone can open that account forever.
 
-## The product in one paragraph
+Binance is buy-and-park. This is where work becomes ownership.
 
-Value enters a Webgold book three ways and leaves as ownership, never as a number in
-someone else's ledger. You **earn** it, because a payer released a payout in gold and the
-market instead of a stablecoin. You **receive** it, because someone sent or you requested a
-named slice. Or it is **sponsored**, because an issuer funded a first position for a new
-book. The assets sit in the recipient's own wallet. Every arrival is a receipt.
+## The three calls, settled
 
-## Why this is not a wallet and not an exchange
+**Gold is metal.** Grams on the home screen only works if the token is a bar in a vault.
+The book holds Oro GOLD or Matrixdock XAUm, whichever Jupiter can actually fill at launch,
+priced against Pyth XAU. GLDx is a fund share from the same shop as the equity sleeve.
+Convenient, and a lie if you call it grams. If GLDx is ever listed it sits under **gold
+funds**, never under grams.
 
-An exchange is a place to buy and park. A wallet is a place to hold a number. Neither can
-do the one thing this does: **make value arrive as ownership with a reason attached.**
+**The market sleeve is SPYx.** The receive layer turns income into metal plus the market,
+not into a single-name bet. A book can hold other xStocks the way a wallet holds any token,
+and NVDAx is a recipient's choice, never the company's default.
 
-Binance cannot receive a payment on your behalf as a slice of the market. Phantom can move
-a token but cannot tell you that 0.2 grams arrived for the pull request you shipped on
-Tuesday. That named arrival is the product, and it is only possible because a share became
-a token that anyone can build on.
+**Inbound value follows the recipient's book.** A payout is denominated in dollars of value,
+not in the payer's preferred ticker. The vault releases value; the recipient's own policy
+turns it into their mix, defaulting to 50% gold, 20% silver, 30% SPY. A payer may constrain
+the set — "gold only", "no single names" — but never dictates weights. Your book is yours.
+A gift that is explicitly 0.2 grams of gold stays 0.2 grams of gold; named gifts are named,
+and only unspecified payouts convert.
+
+## The book
+
+One home screen, in this order: fine grams of gold, ounces of silver, SPY share-equivalents,
+dollars last. Balances are real tokens in the user's own wallet. Webgold indexes the book; it
+never custodies an idle one.
+
+**Goal vaults** are program accounts that skim a chosen percentage of every inbound payout
+toward a named goal: a laptop, three months of runway, a wedding. They can spend in exactly
+two directions, back into the owner's book or out to the owner, and they have no discretion
+of any kind.
 
 ## The three inlets
 
-**Earn.** A payer escrows a payout denominated in the mix. A rule releases it. Slices land
-in wallets with a receipt naming what the work was. Webgold does not judge the work — see
-the boundary below — it settles it in ownership.
+**Earn.** A payer funds a vault in USDC or in the reserve assets, names recipients or a
+claim path, and sets a reason and optional constraints on the asset set. On release each
+recipient's policy allocates the value, tokens land in their wallet, a receipt account is
+created, and a cohort record is written against the release id so keep-rate at thirty days
+is a query and not a guess.
 
-**Receive.** Request or send a named slice: a gram for a birthday, a slice for a favour, a
-share for a milestone. QR, link, or Blink. The difference from a raw wallet transfer is the
-name and the memory. It is an occasion, not a transaction.
+**Receive.** Request or gift a named amount over a link, a QR or a Blink. The arrival is an
+occasion and carries the same receipt as a campaign payout. A raw wallet transfer with no
+receipt is outside the product.
 
-**Sponsor.** A first gram or first slice for a new book, funded by an issuer budget or, in
-week one, by us. This is an acquisition device, never the identity of the app, and it does
-not lead the home page.
+**Sponsor.** An issuer, or we, fund first grams into empty books. Same receipt type, reason
+reads sponsor, same cohort. This is how new books appear without asking anyone to decide to
+become an investor.
 
-## What we do not build as the product
+## The receipt
 
-Charts. Leagues. Copy trading. Agent trading. A generic deposit box. Confidential balances
-as the pitch. Any of those can hang off the book later; none of them is the thing.
+A program account, never only a database row. It carries the payer, the recipient, the
+mint-by-mint amounts, the gram-equivalent at the Pyth stamp, the reason, the constraint set,
+the release id and the timestamp. **The database is a cache. The chain is the memory.**
 
-## The boundary that keeps this from being Sage
+## The public record
 
-**Webgold moves money. It does not decide who deserves it.**
+A book can be published. What the world sees is earned and received ownership: a work
+record, not a trading scoreboard. Copying a published mix is a button on that page much
+later, and never the home page.
 
-A payout has a payer, a set of recipients, amounts, and a reason string. Whether that
-reason was verified by an AI judge, approved by a human, or simply asserted is outside
-Webgold entirely. That boundary does three things: it keeps the build small, it means
-Webgold is useful to anyone paying anyone, and it makes Sage a **customer** of Webgold
-rather than a thing we are rebuilding. Sage keeps the verification; Webgold owns the
-settlement and the book.
+## Honesty the copy must say, before a judge finds it
 
-## Goal vaults
+- xStocks and similar trackers carry **no voting rights**, an issuer **permanent delegate**
+  and a **pause authority**. The issuer can move, burn or freeze. Self-custody means not our
+  custody, not that nobody can touch it.
+- Dividends are **reinvested through a mint-level scale factor**, never paid as cash.
+  Displayed shares apply that multiplier before any screen paints a number.
+- Physical metal carries the vault and redemption terms of its issuer, stated on the book.
+- **Silver needs the same test as gold.** If the only liquid silver on Solana is a fund
+  tracker rather than metal, then silver either moves under "funds" or leaves the default
+  mix. The rule that kills GLDx-as-grams kills SLVon-as-ounces. Verify before shipping the
+  default 50/20/30.
 
-A named goal sits on the book and skims a percentage of every inbound payout: a laptop,
-three months of runway, a wedding. This is the brief's "savings that sweep into stocks",
-inverted. Saving starts at the moment income arrives, not at whatever is left over, which
-is the only version that has ever worked at scale.
+## What the program does, and does not
 
-## The number that decides both competitions
+Escrows inbound funds. Converts through Jupiter at release. Writes receipt accounts.
+Snapshots cohorts. Enforces goal-vault skims. It never picks an asset for anyone, never
+trades, and never judges work.
 
-**Keep-rate: the share of what was paid out that is still held thirty days later.**
+## Revenue
 
-It cannot be faked, it is the difference between a payout and a farm, and it is the single
-best evidence that people were paid in something they actually wanted. It must be
-instrumented on day one, because a cohort you did not record cannot be measured later.
+Spread on conversion at release. A small take on campaign volume. Sponsor slots for first
+grams. A copy fee on published books, much later. No token.
 
-Alongside it: books opened, grams and shares outstanding, payouts settled, distinct
-recipients, receipts published, and one issuer conversation.
+## The number
 
-## v1, end to end
+**Keep-rate at thirty days: the share of released value still held.** Computed from the
+cohort snapshot taken at release, never reconstructed. It cannot be faked and it is the
+whole difference between a payout and a farm.
 
-1. Fund a payout in gold plus one equity sleeve.
-2. Release it to a set of wallets.
-3. Each recipient sees a book in grams, with a receipt naming what it was for.
-4. They send or request a named slice of their own.
-5. The receipt gets posted publicly.
+## Explicitly out
 
-That is Stocklana answered without a slide: a real use, working end to end, and native to
-Solana because none of it is possible where a share cannot leave the broker.
+A trading terminal. Paid leagues. Agent mandates. x402 as the pitch. Privacy as the pitch.
+Rebuilding a verification engine. Calling GLDx a bar. Mixing four legal wrappers in one
+sentence without saying so.

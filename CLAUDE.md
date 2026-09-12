@@ -5,6 +5,11 @@
 >
 > Written 2026-09-12, before the first line of product code. Everything below marked
 > **(planned)** is intent, not fact. Move it out of "planned" only when it runs.
+>
+> **There is no v1 and no v2.** The target is the complete product described here, built
+> through 12 October. Things are built in dependency order because a balance cannot be
+> painted before it can be computed, and that order is in `docs/build-order.md`. Dependency
+> order is not a version ladder, and nothing on that list is optional.
 
 ---
 
@@ -30,12 +35,28 @@ on.
 **It is not** a trading terminal, a robo-advisor, a leaderboard, a copy-trading product, or
 a deposit box with a yield number on it.
 
-### The boundary that keeps this from being Sage
+### The boundary: Webgold settles, it does not judge
 
-**Webgold settles. It does not judge.** A payout carries a payer, recipients, amounts and a
-reason string. Whether that reason was verified by an AI, approved by a human, or merely
-asserted is outside this system. That keeps the build small, makes Webgold useful to anyone
-paying anyone, and makes Sage a **customer** rather than something we are rebuilding.
+A payout carries a payer, recipients, a dollar value, a reason string and an optional
+constraint on the asset set. Whether that reason was verified by an AI, approved by a human,
+or merely asserted is **outside this system**. Any payer can use it: a person, a company, a
+DAO, a sponsor. This keeps the build small and makes Webgold useful to everyone paying
+anyone, rather than a rail for one other product.
+
+**Webgold is a standalone company, not an add-on.** Nothing in the pitch, the docs or the
+demo requires explaining a second product. What carries over from Sage is craft — the vault
+that cannot overspend, receipt religion, propose-then-release, campaign UX, and the practice
+of paying strangers in public — never a dependency.
+
+### The three calls, settled
+
+- **Gold is metal**, Oro GOLD or Matrixdock XAUm, priced against Pyth XAU. GLDx is a fund
+  share and may never appear under grams.
+- **The market sleeve is SPYx** by default. Other xStocks are held the way a wallet holds
+  any token; single names are a recipient's choice, never the company's.
+- **Inbound value follows the recipient's policy**, defaulting to 50% gold, 20% silver, 30%
+  SPY. A payer may constrain the asset set but never dictates weights. A named gift stays
+  named; only unspecified value converts.
 
 ### The number that decides everything
 

@@ -25,17 +25,20 @@ Two rules that do not bend:
 1. **The program holds assets only while they are under a rule.** An escrowed payout, and
    nothing else. A settled position sits in the recipient's own token account. A pooled
    claim on a basket of tokenized securities would be a fund; direct ownership is not.
-2. **The program never decides who deserves money.** A payout carries a payer, recipients,
-   amounts and a reason string. Verification happens somewhere else, or nowhere.
+2. **The program never decides who deserves money, and never picks an asset.** A payout
+   carries a payer, recipients, a dollar value, a reason string and an optional constraint
+   on the asset set. Verification happens somewhere else, or nowhere. The recipient's own
+   policy decides what the value becomes.
 
 ## The core objects
 
 | Account | Seeds | Holds |
 | --- | --- | --- |
 | `Book` | `[b"book", owner]` | owner, mix policy, opened_at, lifetime received/sent, goals |
-| `Payout` | `[b"payout", payer, nonce]` | escrowed assets, recipients, amounts, reason, release rule |
-| `Receipt` | `[b"receipt", payout, recipient]` | what moved, from whom, why, when, reference |
-| `Goal` (v2) | `[b"goal", book, slug]` | name, target, skim bps, accumulated |
+| `Payout` | `[b"payout", payer, nonce]` | escrowed funds, recipients, value, reason, constraint set, release rule |
+| `Receipt` | `[b"receipt", release_id, recipient]` | payer, recipient, mint-by-mint amounts, gram-equivalent at the Pyth stamp, reason, constraints, release id, timestamp |
+| `Goal` | `[b"goal", book, slug]` | name, target, skim bps, accumulated. Can spend only to the owner's book or out to the owner |
+| `Cohort` | `[b"cohort", release_id, recipient]` | value at release, so keep-rate is a query |
 
 `Receipt` being an on-chain account rather than only an event is deliberate. **The named
 arrival is the product.** A memory that lives only in our database is a memory we can lose
@@ -53,7 +56,8 @@ survives us.
 | `cancel_payout(payout)` | payer | returns escrow, only while unreleased |
 | `send_named(to, legs, note)` | owner | a named transfer with a receipt |
 | `claim_sponsored(sponsorship)` | new owner | the first position |
-| `set_goal(slug, target, skim_bps)` (v2) | owner | the sweep on inbound |
+| `set_goal(slug, target, skim_bps)` | owner | the sweep on inbound |
+| `withdraw_goal(slug)` | owner | back to the book, or out to the owner. Nowhere else |
 
 ## Asset realities that constrain the design
 
@@ -67,12 +71,14 @@ changes what we build.
 | **Transfer Hook** is initialized but disabled | Compliance logic could switch on later and would then run on every transfer. Design transfers so a hook cannot break them |
 | **Confidential Balances** is initialized but disabled, and cannot be active alongside a transfer hook | Encrypted balances are an issuer decision we do not control. Keep the path in the design, never in the pitch |
 | Dividends are **reinvested**, not paid | There is no equity income on chain. Never show an expected dividend |
+| Gold must be **metal**, not a fund tracker | Oro GOLD or Matrixdock XAUm, chosen on which Jupiter can fill at launch, priced against Pyth XAU. GLDx is a fund share and may never appear under grams |
+| **Silver needs the same test** | If the only liquid silver is a tracker, silver moves under funds or leaves the default mix. Verify before shipping 50/20/30 |
 
 ## Off-chain services
 
 | Service | Job |
 | --- | --- |
-| **Allocator** | USDC or a payer's funding → Jupiter quotes per leg → escrow bundle. Refuses outside a Pyth-checked slippage bound |
+| **Allocator** | At release, reads the RECIPIENT's policy, intersects it with the payer's constraint set, quotes each leg on Jupiter, refuses outside a Pyth-checked slippage bound. A named gift skips allocation entirely and lands as named |
 | **Valuer** | Pyth for price, issuer multiplier for quantity. NAV and grams |
 | **Multiplier watcher** | Polls issuer multipliers, reconciles adjusted quantity and basis, publishes a reconciliation receipt |
 | **Receipt indexer** | Mirrors on-chain receipts for fast pages at `/receipt/<sig>` |
@@ -88,8 +94,9 @@ receipts     pda, sig, payout, recipient, legs_json, reason, at
 transfers    sig, from_book, to_owner, legs_json, note, at
 multipliers  mint, value, effective_at, source, seen_at
 sponsorships sponsor, mint, amount_base, claimed_by, claimed_at
-cohorts      recipient, payout, value_at_release_base, measured_at, value_now_base
+cohorts      recipient, release_id, value_at_release_base, measured_at, value_now_base
 goals        book, slug, target_base, skim_bps, accumulated_base
+policies     book, legs_json (default 50 gold / 20 silver / 30 SPY), updated_at
 ```
 
 ## Failure policy
