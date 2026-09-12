@@ -718,3 +718,107 @@
   color: var(--ink-faint);
   line-height: 1.5;
 }
+
+/* ── the public record: aggregates then the stream ───────────────────────── */
+.wg-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+.wg-stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: var(--s-4) var(--s-5);
+}
+.wg-stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 var(--s-2);
+}
+.wg-stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  line-height: 1.1;
+}
+.wg-stat-note {
+  margin: var(--s-2) 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--ink-faint);
+}
+/* A stat that could not be computed says so in the space where the number would be. It is
+   never blank, and it is never a zero standing in for "we do not know". */
+.wg-stat-held {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.wg-events {
+  display: grid;
+}
+.wg-event {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.875rem;
+}
+.wg-event:last-child {
+  border-bottom: 0;
+}
+.wg-event-when,
+.wg-event-value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+.wg-event-value {
+  color: var(--ink);
+  text-align: right;
+}
+.wg-event-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.wg-event-reason {
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wg-event-legs {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  color: var(--ink-muted);
+}
+@media (max-width: 760px) {
+  .wg-event {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .wg-event-when {
+    grid-column: 1 / -1;
+  }
+  .wg-event-legs {
+    grid-column: 1 / -1;
+  }
+}
