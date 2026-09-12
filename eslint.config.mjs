@@ -16,6 +16,10 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      // The build writes beside the serving directory (see next.config.ts). Both are build
+      // output and neither is source. `build-dirs.test.ts` reads this file, .gitignore,
+      // .prettierignore and the build script, and fails if they stop agreeing.
+      ".next-build/**",
       "out/**",
       "build/**",
       "coverage/**",
