@@ -51,21 +51,50 @@ function* tsxFiles(dir: string): Generator<string> {
 
 describe("no page writes a policy weight into its copy", () => {
   it("has no hardcoded percentage beside a sleeve name", () => {
-    const symbols = ["gold", "silver", "spy", "market"];
+    /**
+     * PROXIMITY AND WORD BOUNDARIES, not substring matching.
+     *
+     * The first version looked for a sleeve name anywhere on a line with a percentage on it,
+     * and immediately fired on a docs sentence containing "a 300% return" and the word
+     * "Webgold" — because "webgold" contains "gold". A guard that cries wolf gets deleted, and
+     * then the thing it guarded drifts freely.
+     *
+     * So: the brand is removed first, the sleeve names are matched as whole words, and the
+     * percentage has to sit close enough to be describing that sleeve rather than merely
+     * sharing a sentence with it.
+     */
+    const SLEEVE = /\b(gold|silver|spy|spyx|market)\b/gi;
+    const NEAR = 24;
     const offenders: string[] = [];
     for (const file of tsxFiles(join(root, "src", "app"))) {
       const text = readFileSync(file, "utf8");
-      for (const line of text.split("\n")) {
-        // A percentage literal sitting within a few words of a sleeve name.
+      for (const raw of text.split("\n")) {
+        const line = raw.replace(/webgold/gi, "");
         if (!/\d{1,3}%/.test(line)) continue;
-        const lower = line.toLowerCase();
-        if (symbols.some((s) => lower.includes(s))) {
-          offenders.push(`${file.slice(root.length + 1)}: ${line.trim()}`);
+        for (const m of line.matchAll(SLEEVE)) {
+          const window = line.slice(
+            Math.max(0, m.index - NEAR),
+            m.index + m[0].length + NEAR,
+          );
+          if (/\d{1,3}%/.test(window)) {
+            offenders.push(`${file.slice(root.length + 1)}: ${raw.trim()}`);
+            break;
+          }
         }
       }
     }
     expect(offenders, `derive these from DEFAULT_POLICY_BPS instead:\n${offenders.join("\n")}`)
       .toHaveLength(0);
+  });
+
+  it("still catches a weight written into copy", () => {
+    // The guard has to keep working after being narrowed. This is the shape it exists for.
+    const SLEEVE = /\b(gold|silver|spy|spyx|market)\b/gi;
+    const bad = "The default is 50% gold, 20% silver, 30% SPY.";
+    const hit = [...bad.matchAll(SLEEVE)].some((m) =>
+      /\d{1,3}%/.test(bad.slice(Math.max(0, m.index - 24), m.index + m[0].length + 24)),
+    );
+    expect(hit).toBe(true);
   });
 });
 
