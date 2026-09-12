@@ -399,3 +399,68 @@
 .wg-foot-spacer {
   margin-left: auto;
 }
+
+/* ── the live arrivals on the front door ─────────────────────────────────── */
+.wg-arrivals {
+  display: grid;
+}
+.wg-arrival {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--line);
+  transition: color var(--dur-1) var(--ease-out);
+}
+.wg-arrival:last-of-type {
+  border-bottom: 0;
+}
+.wg-arrival:hover .wg-arrival-reason {
+  color: var(--ink-warm);
+}
+.wg-arrival-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.wg-arrival-who .mono {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+.wg-arrival-reason {
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--dur-1) var(--ease-out);
+}
+.wg-arrival-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink-warm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.wg-arrival-when {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+.wg-arrivals-foot {
+  margin: var(--s-4) 0 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--line);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--ink-faint);
+}
+.wg-arrivals-foot .mono {
+  color: var(--ink-warm);
+}

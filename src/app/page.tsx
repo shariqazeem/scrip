@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { Gift, HandCoins, Info, ScrollText, Sparkles } from "lucide-react";
 import { WebgoldMark } from "@/components/brand/webgold-mark";
+import { fromBase, grams, short, since, usd } from "@/lib/format";
+import { ledgerTotals, recentReceipts } from "@/lib/ledger/indexer";
 import "./landing.css";
+
+/**
+ * Cached for half a minute rather than rendered per request. The ledger card is live, and
+ * "live" on a front door means "recent enough to be true", not "one database read per
+ * visitor" — which is how a landing page becomes the slowest thing in a product.
+ */
+export const revalidate = 30;
 
 /**
  * THE PUBLIC FRONT DOOR.
@@ -15,7 +24,9 @@ import "./landing.css";
  * The live event stream lands here once receipts exist (build-order step 8); the card below is
  * where it mounts.
  */
-export default function LandingPage() {
+export default async function LandingPage() {
+  const [totals, events] = await Promise.all([ledgerTotals(), recentReceipts(4)]);
+
   return (
     <div className="wg-landing">
       <nav className="wg-nav">
@@ -70,14 +81,42 @@ export default function LandingPage() {
             </Link>
           </div>
           <div className="wg-card-body">
-            <div className="wg-empty">
-              <ScrollText size={22} strokeWidth={1.6} className="wg-empty-mark" aria-hidden />
-              <p className="wg-empty-title">Nothing has settled yet</p>
-              <p className="wg-empty-note">
-                This is the real stream, not a sample. The first arrival that settles on chain
-                appears here, with a receipt you can open.
-              </p>
-            </div>
+            {events.length === 0 ? (
+              // THE WAITING STATE IS DESIGNED, AND IT IS NOT A SPINNER. A sample row on the
+              // page whose entire pitch is that every figure can be opened would be the
+              // easiest claim in the product to disprove.
+              <div className="wg-empty">
+                <ScrollText size={22} strokeWidth={1.6} className="wg-empty-mark" aria-hidden />
+                <p className="wg-empty-title">Nothing has settled yet</p>
+                <p className="wg-empty-note">
+                  This is the real stream, not a sample. The first arrival that settles on
+                  chain appears here, with a receipt you can open.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="wg-arrivals">
+                  {events.map((e) => (
+                    <Link key={e.id} href={`/receipt/${e.sig}`} className="wg-arrival">
+                      <span className="wg-arrival-who">
+                        <span className="mono">{short(e.recipient)}</span>
+                        <span className="wg-arrival-reason">{e.reason}</span>
+                      </span>
+                      <span className="wg-arrival-value mono">
+                        {usd(fromBase(BigInt(e.valueBase), 6))}
+                        <span className="wg-arrival-when">{since(e.at)}</span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+                <p className="wg-arrivals-foot">
+                  <span className="mono">{grams(totals.grams)}</span> of gold and{" "}
+                  <span className="mono">{usd(fromBase(totals.valueBase, 6))}</span> of value
+                  received across {totals.recipients} book
+                  {totals.recipients === 1 ? "" : "s"}.
+                </p>
+              </>
+            )}
           </div>
         </aside>
       </header>

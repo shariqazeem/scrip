@@ -17,7 +17,8 @@
     "anchor:test": "cd anchor && anchor test",
     "test:registry": "REGISTRY_LIVE=1 vitest run src/lib/assets/registry.live.test.ts",
     "test:valuer": "VALUER_LIVE=1 vitest run src/lib/valuer.live.test.ts",
-    "test:live": "npm run test:registry && npm run test:valuer"
+    "test:live": "npm run test:registry && npm run test:valuer",
+    "test:devnet": "DEVNET_E2E=1 vitest run tests/devnet-payout.e2e.test.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",

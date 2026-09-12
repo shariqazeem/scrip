@@ -182,6 +182,8 @@ function decodeReceipt(
         symbol: asset?.symbol ?? `${mint.slice(0, 4)}…`,
         name: asset?.name ?? "Unrecognised mint",
         issuer: asset?.issuer.name ?? "Unknown issuer",
+        // 0 is the signal for "we do not know this mint's decimals", and the surface labels
+        // the figure as base units rather than implying a whole-token quantity.
         decimals: asset?.decimals ?? 0,
         amount,
       });

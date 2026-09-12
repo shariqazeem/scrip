@@ -193,9 +193,16 @@ function Foot() {
   );
 }
 
-/** Token base units → a readable quantity, at the mint's own decimals. */
+/**
+ * Token base units → a readable quantity, at the MINT's own decimals.
+ *
+ * A mint the registry has never heard of has no decimals we can trust, so the raw figure is
+ * shown and LABELLED as base units. Printing "160000" unlabelled beside "0.1600" would invite
+ * a reader to take it for a hundred and sixty thousand of something — the receipt would be
+ * accurate and still mislead, which is the same failure as being wrong.
+ */
 function formatQty(amount: bigint, decimals: number): string {
-  if (decimals === 0) return amount.toString();
+  if (decimals === 0) return `${amount.toLocaleString("en-US")} base units`;
   const whole = Number(amount) / 10 ** decimals;
   return whole.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
 }
