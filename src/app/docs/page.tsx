@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Info } from "lucide-react";
-import { WebgoldMark } from "@/components/brand/webgold-mark";
-import "./content.css";
+import { DocFrame } from "@/components/docs/doc-frame";
 
 export const metadata: Metadata = {
   title: "Docs",
@@ -17,19 +16,18 @@ export const metadata: Metadata = {
  */
 export default function DocsPage() {
   return (
-    <main className="wg-doc">
-      <Link href="/" className="wg-doc-brand" aria-label="Webgold home">
-        <WebgoldMark size={20} />
-        webgold
-      </Link>
-
-      <p className="wg-doc-eyebrow">Docs</p>
-      <h1>What Webgold does, and what it refuses to do.</h1>
-      <p className="lede">
-        Webgold is a receive book for real assets on Solana. It settles value into ownership and
-        writes a receipt anyone can open. It does not judge work, pick assets, or hold anything
-        that is not under a rule.
-      </p>
+    <DocFrame
+      here="/docs"
+      eyebrow="Docs"
+      title="What Webgold does, and what it refuses to do."
+      lede={
+        <>
+          Webgold is a receive book for real assets on Solana. It settles value into ownership
+          and writes a receipt anyone can open. It does not judge work, pick assets, or hold
+          anything that is not under a rule.
+        </>
+      }
+    >
 
       <h2>The program holds a rule, not your assets</h2>
       <p>
@@ -109,9 +107,10 @@ export default function DocsPage() {
       </p>
 
       <p>
+        <Link href="/docs/corporate-actions">Why a dividend is not a gain</Link> ·{" "}
         <Link href="/assets">What a book can hold</Link> ·{" "}
         <Link href="/ledger">The public record</Link>
       </p>
-    </main>
+    </DocFrame>
   );
 }

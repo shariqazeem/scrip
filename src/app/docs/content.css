@@ -110,3 +110,85 @@
   font-size: 0.9375rem;
   line-height: 1.55;
 }
+
+/* ── docs nav: four pages, one line ──────────────────────────────────────── */
+.wg-doc-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-7);
+  padding-bottom: var(--s-4);
+  border-bottom: 1px solid var(--line);
+}
+.wg-doc-nav a {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.wg-doc-nav a:hover {
+  text-decoration: none;
+  border-color: var(--brass);
+  color: var(--ink-warm);
+}
+.wg-doc-nav a.on {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--brass);
+}
+
+/* A worked example: the arithmetic, shown rather than described. */
+.wg-doc-worked {
+  max-width: var(--measure);
+  margin: 0 0 var(--s-5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface);
+}
+.wg-doc-worked-head {
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-warm);
+}
+.wg-doc-worked-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.875rem;
+  align-items: baseline;
+}
+.wg-doc-worked-row:last-child {
+  border-bottom: 0;
+}
+.wg-doc-worked-row .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-warm);
+}
+.wg-doc-worked-row.is-verdict {
+  background: var(--accent-soft);
+  color: var(--ink-warm);
+  font-weight: 600;
+}
+.wg-doc code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: var(--tracking-mono);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--ink-warm);
+}
