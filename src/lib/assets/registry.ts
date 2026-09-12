@@ -63,6 +63,19 @@ export type PriceFeed = {
   readonly basis: "raw" | "adjusted";
   /** What to show a reader who asks where a number came from. */
   readonly label: string;
+  /**
+   * How old this price may be and still be used to MOVE MONEY.
+   *
+   * One global bound cannot work, because these feeds do not behave alike. Measured on a
+   * Saturday: USDC 7 seconds old, SPYX/USD 195 seconds, XAU/USD 33,578 seconds — nine hours,
+   * because the metal market is shut. A sixty-second bound applied to all three would make
+   * gold, the product's headline asset, unpayable every weekend; a nine-hour bound applied to
+   * all three would let a stablecoin settle against a price from last night.
+   *
+   * So the bound is per feed, set from what that feed actually does, and a receipt always
+   * records the price age so the stamped value stays checkable rather than merely asserted.
+   */
+  readonly maxSettleAgeSeconds: number;
 };
 
 export type Asset = {
@@ -193,6 +206,14 @@ export const ASSETS: readonly Asset[] = [
       // the same quantity here. "raw" is stated rather than implied.
       basis: "raw",
       label: "Pyth Metal.XAU/USD",
+      /**
+       * 26 hours. The metal feed is pushed around market hours and sat nine hours stale on a
+       * Saturday morning; 26 covers a weekend day plus a margin. Gold moves on the order of
+       * one percent a day, so the worst case here is a stamped value a fraction of a percent
+       * off — and the receipt says how old the price was, which is the part that matters.
+       * Past this the feed is not merely shut, and the payout holds.
+       */
+      maxSettleAgeSeconds: 26 * 3600,
     },
   },
   {
@@ -223,12 +244,18 @@ export const ASSETS: readonly Asset[] = [
       // underlying equity feed is pushed around market hours.
       basis: "raw",
       label: "Pyth Crypto.SPYX/USD",
+      // Pushed continuously — measured at 195 seconds old on a weekend, when the underlying
+      // equity feed was six hours behind. Ten minutes is generous for a feed that fresh.
+      maxSettleAgeSeconds: 600,
     },
     priceCrossCheck: {
       feedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5",
       account: "CRDaGwcVnKdRNRtx6fjHtvrBgKM5U55AhbqBWhtPMDA",
       basis: "adjusted",
       label: "Pyth Equity.US.SPY/USD",
+      // The cross-check feed, pushed around market hours. Never used to settle — it exists to
+      // verify the token feed against the multiplier — so this bound is for completeness.
+      maxSettleAgeSeconds: 26 * 3600,
     },
   },
   {
@@ -256,7 +283,13 @@ export const ASSETS: readonly Asset[] = [
     // that is exactly the mislabelling the product forbids: GLDx is a share of the SPDR fund
     // at ~$398, not an ounce of metal at ~$4,365. Until a feed for the fund share itself is
     // pinned, the valuer holds on this row and says so. An empty `account` means unpriced.
-    price: { feedId: "", account: "", basis: "adjusted", label: "no fund-share feed pinned" },
+    price: {
+      feedId: "",
+      account: "",
+      basis: "adjusted",
+      label: "no fund-share feed pinned",
+      maxSettleAgeSeconds: 0,
+    },
   },
   {
     symbol: "SLVon",
@@ -282,7 +315,13 @@ export const ASSETS: readonly Asset[] = [
     // Unpriced for the same reason as GLDx: Pyth's XAG/USD is the price of an ounce of
     // silver, and this is a share of a fund that holds some. Pointing one at the other is
     // the mislabelling this whole row exists to avoid.
-    price: { feedId: "", account: "", basis: "adjusted", label: "no fund-share feed pinned" },
+    price: {
+      feedId: "",
+      account: "",
+      basis: "adjusted",
+      label: "no fund-share feed pinned",
+      maxSettleAgeSeconds: 0,
+    },
   },
   {
     symbol: "USDC",
@@ -306,6 +345,8 @@ export const ASSETS: readonly Asset[] = [
       account: "Dpw1EAVrSB1ibxiDQyTAW6Zip3J4Btk2x4SgApQCeFbX",
       basis: "raw",
       label: "Pyth Crypto.USDC/USD",
+      // Seven seconds old when measured. A dollar has no excuse to be stale.
+      maxSettleAgeSeconds: 300,
     },
   },
 ];

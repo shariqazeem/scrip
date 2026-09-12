@@ -1,32 +1,60 @@
 import type { Metadata } from "next";
-import { Send } from "lucide-react";
-import { EmptyState, PageFrame } from "@/components/app/page-frame";
+import { PageFrame } from "@/components/app/page-frame";
+import { ConnectWallet } from "@/components/auth/connect";
+import { PayForm } from "@/components/app/pay-form";
+import { currentOwner } from "@/lib/session/server";
+import { clusterConfig } from "@/lib/solana/cluster";
 
 export const metadata: Metadata = { title: "Pay" };
+export const dynamic = "force-dynamic";
 
 /**
- * FUND AND RELEASE — one form, one confirm, one receipt. No step wizard.
+ * FUND AND RELEASE — one form, one confirm, one receipt.
  *
- * A payout carries a payer, recipients, a dollar value, a reason and an optional constraint
- * on the ASSET SET. It never carries weights: the recipient's own policy decides what the
- * value becomes. Built at build-order step 3.
+ * A payout carries a payer, a recipient, a dollar value, a reason and an optional constraint
+ * on the asset SET. It never carries weights: the recipient's own signed policy decides what
+ * the value becomes, and that split is computed on the server precisely so the payer cannot
+ * choose it.
+ *
+ * Whether the reason was verified by a human, a model, or nobody at all is outside this
+ * system. Webgold settles; it does not judge.
  */
-export default function PayPage() {
+export default async function PayPage() {
+  const owner = await currentOwner();
+
+  if (!owner) {
+    return (
+      <PageFrame
+        eyebrow="Pay"
+        title="Release value. It lands as ownership."
+        sub="A payout is denominated in dollars and settles into each recipient's own mix. Sign in with the wallet that will pay."
+      >
+        <div className="wg-panel">
+          <div className="wg-panel-head">
+            <span className="wg-panel-title">Sign in to pay</span>
+          </div>
+          <div className="wg-panel-body">
+            <ConnectWallet />
+          </div>
+        </div>
+      </PageFrame>
+    );
+  }
+
   return (
     <PageFrame
       eyebrow="Pay"
       title="Release value. It lands as ownership."
-      sub="A payout is denominated in dollars and settles into each recipient's own mix. You may restrict the asset set — never the weights. A named gift stays named."
+      sub="You set the amount, the reason, and optionally which assets it may become. Their signed policy sets the proportions. A receipt is written in the same transaction, so there is no state in which value moved and no record of it exists."
     >
       <div className="wg-panel">
         <div className="wg-panel-head">
           <span className="wg-panel-title">New payout</span>
+          <span className="mono">{clusterConfig().label}</span>
         </div>
-        <EmptyState
-          icon={<Send size={22} strokeWidth={1.6} />}
-          title="The pay rail is not wired yet"
-          note="Escrow, release and the on-chain receipt land together, because a payout without an openable receipt is a transfer and this product does not ship those."
-        />
+        <div className="wg-panel-body">
+          <PayForm owner={owner} />
+        </div>
       </div>
     </PageFrame>
   );

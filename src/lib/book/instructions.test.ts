@@ -16,17 +16,38 @@ import { closeBookIx, decodeWebgoldIx, openBookIx, setPolicyIx } from "./instruc
 const owner = Keypair.generate().publicKey;
 
 describe("open_book", () => {
-  it("encodes against the committed IDL and round-trips", () => {
-    const ix = openBookIx(owner, defaultPolicy());
+  it("encodes against the committed IDL and round-trips EVERY field", () => {
+    /**
+     * THE TEST THAT CAUGHT A SILENT ZERO. Anchor's Borsh coder matches the IDL's own field
+     * names and, for a field it cannot find, encodes 0 rather than throwing. Writing
+     * `driftBps` — which is what the TypeScript type calls it — sent `drift_bps: 0` on every
+     * policy, with no error anywhere, and the program accepted it.
+     *
+     * So a round-trip assertion is not ceremony here. Every value that goes into an encoder
+     * comes back out and is compared, because "it encoded without throwing" means nothing.
+     */
+    const policy = defaultPolicy();
+    const ix = openBookIx(owner, policy);
     expect(ix.ok).toBe(true);
     if (!ix.ok) return;
 
     const decoded = decodeWebgoldIx(Buffer.from(ix.value.data));
     expect(decoded?.name).toBe("open_book");
-    const legs = (decoded?.data as { policy: { legs: Array<{ mint: PublicKey; bps: number }> } })
-      .policy.legs;
-    expect(legs.map((l) => l.bps)).toEqual(defaultPolicy().legs.map((l) => l.bps));
-    expect(legs[0]!.mint.toBase58()).toBe(defaultPolicy().legs[0]!.mint);
+    const p = (
+      decoded?.data as {
+        policy: {
+          legs: Array<{ mint: PublicKey; bps: number }>;
+          drift_bps: number;
+          updated_at: { toString(): string };
+        };
+      }
+    ).policy;
+    expect(p.legs.map((l) => l.bps)).toEqual(policy.legs.map((l) => l.bps));
+    expect(p.legs.map((l) => l.mint.toBase58())).toEqual(policy.legs.map((l) => l.mint));
+    expect(p.drift_bps).toBe(policy.driftBps);
+    expect(p.drift_bps).toBeGreaterThan(0);
+    // Set by the program from the clock; a caller-chosen timestamp proves nothing.
+    expect(p.updated_at.toString()).toBe("0");
   });
 
   it("names the book PDA, the owner as signer, and the system program", () => {
@@ -60,6 +81,17 @@ describe("set_policy", () => {
     expect(ix.value.keys[1]!.isSigner).toBe(true);
     expect(ix.value.keys[1]!.isWritable).toBe(false);
     expect(decodeWebgoldIx(Buffer.from(ix.value.data))?.name).toBe("set_policy");
+  });
+
+  it("carries the drift band through, rather than a silent zero", () => {
+    const custom = { ...defaultPolicy(), driftBps: 250 };
+    const ix = setPolicyIx(owner, custom);
+    expect(ix.ok).toBe(true);
+    if (!ix.ok) return;
+    const p = (decodeWebgoldIx(Buffer.from(ix.value.data))?.data as {
+      policy: { drift_bps: number };
+    }).policy;
+    expect(p.drift_bps).toBe(250);
   });
 
   it("carries a different discriminator from open_book", () => {

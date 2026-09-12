@@ -1,4 +1,4 @@
-import { BorshInstructionCoder } from "@coral-xyz/anchor";
+import { BN, BorshInstructionCoder } from "@coral-xyz/anchor";
 import type { Idl } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
 import { type Policy, validatePolicy } from "@/lib/policy";
@@ -24,14 +24,25 @@ import { WEBGOLD_IDL, WEBGOLD_PROGRAM_ID, bookPda } from "@/lib/solana/program";
 
 const coder = new BorshInstructionCoder(WEBGOLD_IDL as Idl);
 
-/** The on-chain shape: legs of (mint, bps), a drift band, and a timestamp the program sets. */
+/**
+ * The on-chain shape: legs of (mint, bps), a drift band, and a timestamp the program sets.
+ *
+ * FIELD NAMES ARE snake_case, AND THIS IS NOT A STYLE CHOICE. Anchor's Borsh coder matches
+ * the IDL's own names, and for a field it cannot find it encodes ZERO rather than throwing.
+ * Written as `driftBps` — which is what the TypeScript type calls it, and what any reasonable
+ * person would write — this silently sent `drift_bps: 0` on every policy: a rebalance band of
+ * nothing, accepted by the program, wrong forever, with no error anywhere. Caught by the
+ * round-trip assertions in `instructions.test.ts`, which is why every encoder in this codebase
+ * has one.
+ */
 function encodePolicy(policy: Policy) {
   return {
     legs: policy.legs.map((l) => ({ mint: new PublicKey(l.mint), bps: l.bps })),
-    driftBps: policy.driftBps,
-    // Overwritten by the program from the clock. Sent as zero because a timestamp the caller
-    // chooses is a timestamp that proves nothing, and the program treats it that way.
-    updatedAt: 0,
+    drift_bps: policy.driftBps,
+    // An i64, so it needs a BN rather than a number — the layout calls `toTwos` on it.
+    // Overwritten by the program from the clock: a timestamp the caller chooses proves
+    // nothing, and the program treats it that way.
+    updated_at: new BN(0),
   };
 }
 

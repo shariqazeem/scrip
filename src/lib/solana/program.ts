@@ -30,3 +30,32 @@ export function bookPda(owner: PublicKey): PublicKey {
     WEBGOLD_PROGRAM_ID,
   )[0];
 }
+
+/** `[b"payout", payer, nonce]` — the escrow, and the only thing the program ever holds. */
+export function payoutPda(payer: PublicKey, nonce: bigint): PublicKey {
+  const n = Buffer.alloc(8);
+  n.writeBigUInt64LE(nonce);
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from(SEED.payout), payer.toBuffer(), n],
+    WEBGOLD_PROGRAM_ID,
+  )[0];
+}
+
+/**
+ * `[b"receipt", release_id, recipient]` — derivable by anyone who knows the release and the
+ * recipient, which is the point: a receipt nobody but us can find is not a public record.
+ */
+export function receiptPda(releaseId: Uint8Array, recipient: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from(SEED.receipt), Buffer.from(releaseId), recipient.toBuffer()],
+    WEBGOLD_PROGRAM_ID,
+  )[0];
+}
+
+/** `[b"cohort", release_id, recipient]` — keep-rate as a query rather than a reconstruction. */
+export function cohortPda(releaseId: Uint8Array, recipient: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from(SEED.cohort), Buffer.from(releaseId), recipient.toBuffer()],
+    WEBGOLD_PROGRAM_ID,
+  )[0];
+}

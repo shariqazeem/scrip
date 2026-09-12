@@ -601,3 +601,120 @@
     grid-column: 1 / -1;
   }
 }
+
+/* ── the pay form: one form, one confirm, one receipt. No step wizard ─────── */
+.wg-form {
+  display: grid;
+  gap: var(--s-5);
+}
+.wg-field {
+  display: grid;
+  gap: var(--s-2);
+}
+.wg-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.wg-hint {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  margin: 0;
+}
+.wg-input {
+  height: 44px;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1rem;
+  width: 100%;
+}
+.wg-input.is-mono {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  letter-spacing: var(--tracking-mono);
+}
+.wg-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+.wg-input::placeholder {
+  color: var(--ink-faint);
+}
+.wg-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.wg-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-family: inherit;
+}
+.wg-choice.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+/* ── the quote: what will actually land ──────────────────────────────────── */
+.wg-quote {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  overflow: hidden;
+}
+.wg-quote-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+.wg-quote-grams {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.wg-quote-leg {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-5);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.875rem;
+  align-items: baseline;
+}
+.wg-quote-leg:last-child {
+  border-bottom: 0;
+}
+.wg-quote-leg .mono {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.wg-quote-foot {
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--line);
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  line-height: 1.5;
+}

@@ -108,6 +108,14 @@ describe("usable — two questions, two answers", () => {
     expect(usable(price(), "settle", nineHours).ok).toBe(false);
   });
 
+  it("takes a per-feed settle bound, because the feeds do not behave alike", () => {
+    // The metal feed sits out the weekend and the stablecoin feed does not. One bound would
+    // be wrong for one of them, in one direction or the other.
+    const nineHours = now + 9 * 3600;
+    expect(usable(price(), "settle", nineHours, 26 * 3600).ok).toBe(true);
+    expect(usable(price(), "settle", nineHours, 300).ok).toBe(false);
+  });
+
   it("stops showing a price once the feed is not merely shut but abandoned", () => {
     expect(usable(price(), "display", now + MAX_AGE_DISPLAY_SECONDS - 1).ok).toBe(true);
     const o = usable(price(), "display", now + MAX_AGE_DISPLAY_SECONDS + 1);

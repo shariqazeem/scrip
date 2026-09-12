@@ -39,7 +39,11 @@ export type Price = {
 
 export type PriceUse = "display" | "settle";
 
-/** A price older than this may not move money. One minute, because money is moving. */
+/**
+ * The default settle bound, for a caller that does not name one. Every asset in the registry
+ * DOES name one, from what its feed actually does — see `PriceFeed.maxSettleAgeSeconds`, and
+ * the measurements behind it. This is the floor for anything that arrives without a bound.
+ */
 export const MAX_AGE_SETTLE_SECONDS = 60;
 
 /**
@@ -113,14 +117,19 @@ export function parsePriceAccount(data: Uint8Array): Outcome<Price> {
  * disagreement about what time it is and a function that cannot be asked about an instant
  * cannot be tested for one.
  */
-export function usable(price: Price, use: PriceUse, now: number): Outcome<Price> {
+export function usable(
+  price: Price,
+  use: PriceUse,
+  now: number,
+  maxSettleAgeSeconds: number = MAX_AGE_SETTLE_SECONDS,
+): Outcome<Price> {
   const age = now - price.publishedAt;
   if (age < -60) {
     // More than a minute in the future is a clock we cannot reason from.
     return held("price feed is stamped in the future");
   }
 
-  const maxAge = use === "settle" ? MAX_AGE_SETTLE_SECONDS : MAX_AGE_DISPLAY_SECONDS;
+  const maxAge = use === "settle" ? maxSettleAgeSeconds : MAX_AGE_DISPLAY_SECONDS;
   if (age > maxAge) {
     return held(
       use === "settle"

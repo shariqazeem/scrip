@@ -46,17 +46,26 @@ describe("the client mirrors the program", () => {
     expect(MAX_DRIFT_BPS).toBe(constant("MAX_DRIFT_BPS"));
   });
 
-  it("names every policy error the program can raise, and invents none", () => {
-    // The program's error enum also carries NotTheOwner, PolicyWeightsOverflow and the like —
-    // failures a client cannot pre-empt because they are about signatures and u32 arithmetic,
-    // not about a mix a person typed. Those are deliberately not mirrored.
-    const enumBody = /pub enum WebgoldError \{([\s\S]*?)\n\}/.exec(RUST)?.[1] ?? "";
-    const variants = [...enumBody.matchAll(/^\s{4}(\w+),/gm)].map((m) => m[1]!);
-    expect(variants.length).toBeGreaterThan(0);
+  it("names every error `Policy::validated` can raise, and invents none", () => {
+    /**
+     * It reads the VALIDATOR'S OWN BODY, not the error enum. The first version of this test
+     * compared against the whole enum and broke the moment the payout instructions landed,
+     * because it was really maintaining a hand-written list of exclusions — which is the
+     * defect shape it exists to prevent, wearing a test's clothes.
+     *
+     * Scanning the function means a rule added to the program forces a rule here, and a rule
+     * belonging to some other instruction is simply not in scope.
+     */
+    const body = /pub fn validated\(self\) -> Result<Self> \{([\s\S]*?)\n    \}/.exec(RUST)?.[1];
+    expect(body, "Policy::validated is no longer where it was").toBeTruthy();
+    const raised = new Set([...body!.matchAll(/WebgoldError::(\w+)/g)].map((m) => m[1]!));
+    expect(raised.size).toBeGreaterThan(4);
 
-    const notMirrored = ["PolicyWeightsOverflow", "NotTheOwner"];
-    const shouldMirror = variants.filter((v) => !notMirrored.includes(v));
-    expect([...POLICY_RULES].sort()).toEqual(shouldMirror.sort());
+    // The ONE exclusion, and it is about arithmetic rather than about a mix somebody typed:
+    // the program accumulates weights in a u32 so eight u16 legs cannot wrap onto the target.
+    // JavaScript numbers have no such wrap, so there is no client-side equivalent to mirror.
+    raised.delete("PolicyWeightsOverflow");
+    expect([...POLICY_RULES].sort()).toEqual([...raised].sort());
   });
 
   it("still has the program enforcing the sum, not only the client", () => {

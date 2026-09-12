@@ -55,11 +55,13 @@ describe("a leg is valued through the basis its feed declares", () => {
     expect(o.ok && o.value.valueBase).toBe(8_698_000_000n); // $8,698
   });
 
-  it("holds a leg whose price is too old to settle against, without blanking it for display", () => {
+  it("holds a leg whose price is past its feed's settle bound, without blanking it for display", () => {
     const holding: Holding = { asset: GOLD, qtyRaw: whole(1, 6), qtyAdjusted: whole(1, 6) };
-    const nineHoursOld = price(4349, 9 * 3600);
-    expect(valueLeg(holding, nineHoursOld, "settle", NOW).ok).toBe(false);
-    expect(valueLeg(holding, nineHoursOld, "display", NOW).ok).toBe(true);
+    const pastBound = price(4349, GOLD.price.maxSettleAgeSeconds + 60);
+    expect(valueLeg(holding, pastBound, "settle", NOW).ok).toBe(false);
+    // …and it is still SHOWN, with its age. A book that blanks is not more honest than one
+    // that says how old its numbers are.
+    expect(valueLeg(holding, pastBound, "display", NOW).ok).toBe(true);
   });
 });
 

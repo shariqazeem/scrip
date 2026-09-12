@@ -213,6 +213,26 @@ export async function loadBook(
 }
 
 /**
+ * A recipient's signed policy, or null when they have not opened a book.
+ *
+ * One account read. `loadBook` does the same thing on the way to doing five other things, and
+ * a payer quoting a payout needs only this — the recipient's balances are none of their
+ * business, and reading them to answer a question about weights would be a surface nobody
+ * asked for.
+ */
+export async function readPolicyOf(
+  conn: Connection,
+  owner: PublicKey,
+): Promise<Policy | null> {
+  const info = await conn.getAccountInfo(bookPda(owner), "confirmed");
+  if (!info || !info.owner.equals(WEBGOLD_PROGRAM_ID)) return null;
+  const decoded = decodeBook(info.data);
+  if (!decoded.ok) return null;
+  const parsed = parsePolicy(decoded.value.policyJson);
+  return parsed.ok ? parsed.value : null;
+}
+
+/**
  * Decode the on-chain `Book` account.
  *
  * Hand-decoded rather than routed through an Anchor client: reading one account should not

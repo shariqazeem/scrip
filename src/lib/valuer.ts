@@ -66,7 +66,7 @@ export function valueLeg(
   use: PriceUse,
   now: number,
 ): Outcome<ValuedLeg> {
-  const check = usable(price, use, now);
+  const check = usable(price, use, now, holding.asset.price.maxSettleAgeSeconds);
   if (!check.ok) return held(`${holding.asset.symbol}: ${check.why}`);
 
   // THE ONE LINE THAT MATTERS. A feed quoted per raw token already carries the multiplier —
