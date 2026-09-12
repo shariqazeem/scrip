@@ -95,6 +95,138 @@ export type Webgold = {
       "args": []
     },
     {
+      "name": "claimPayout",
+      "docs": [
+        "Claim a payout that names no recipient — the sponsored first position.",
+        "",
+        "A payout funded with the default pubkey as its recipient is a CLAIM PATH rather than a",
+        "named payment: an issuer funds first grams into a book that does not exist yet, and",
+        "whoever claims it becomes the recipient. Same escrow, same receipt, same cohort; the",
+        "only difference is who signs and when the recipient is decided.",
+        "",
+        "ONE CLAIM PER PERSON PER CAMPAIGN, ENFORCED BY THE ACCOUNT MODEL RATHER THAN BY A",
+        "CHECK. The receipt lives at [b\"receipt\", release_id, recipient], so a second claim by",
+        "the same wallet in the same release tries to create an account that already exists and",
+        "fails in the runtime. Nothing has to remember who claimed; the address IS the record.",
+        "",
+        "`remaining_accounts` carries four accounts per leg, in leg order:",
+        "[mint, the payout's token account, the claimer's token account, that mint's token program]"
+      ],
+      "discriminator": [
+        127,
+        240,
+        132,
+        62,
+        227,
+        198,
+        146,
+        133
+      ],
+      "accounts": [
+        {
+          "name": "payout",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  121,
+                  111,
+                  117,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payout.payer",
+                "account": "payout"
+              },
+              {
+                "kind": "account",
+                "path": "payout.nonce",
+                "account": "payout"
+              }
+            ]
+          }
+        },
+        {
+          "name": "claimer",
+          "docs": [
+            "The person taking the sponsored position. They pay the rent for their own receipt,",
+            "which is a few thousandths of a SOL and keeps the sponsor from being drained by",
+            "account-creation spam."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "receipt",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payout.release_id",
+                "account": "payout"
+              },
+              {
+                "kind": "account",
+                "path": "claimer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "cohort",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  104,
+                  111,
+                  114,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payout.release_id",
+                "account": "payout"
+              },
+              {
+                "kind": "account",
+                "path": "claimer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "closeBook",
       "docs": [
         "Close a book and return its rent to the owner.",
@@ -438,6 +570,82 @@ export type Webgold = {
       "args": []
     },
     {
+      "name": "setGoal",
+      "docs": [
+        "Create or replace a goal: a named target that skims a share of every inbound payout.",
+        "",
+        "A goal holds value and has NO DISCRETION OF ANY KIND. There is exactly one instruction",
+        "that moves anything out of it, `withdraw_goal`, and it can only send to the owner. No",
+        "third party, no address the owner did not sign for, no exceptions — the absence of a",
+        "second destination is the whole guarantee, and it is enforced by there being no code",
+        "that could do it rather than by a check that could be loosened."
+      ],
+      "discriminator": [
+        36,
+        91,
+        124,
+        161,
+        86,
+        107,
+        200,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "goal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  111,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "arg",
+                "path": "slug"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "slug",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "targetBase",
+          "type": "u64"
+        },
+        {
+          "name": "skimBps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
       "name": "setPolicy",
       "docs": [
         "Replace the mix policy. Only the owner may, and only with one that validates.",
@@ -496,6 +704,68 @@ export type Webgold = {
           }
         }
       ]
+    },
+    {
+      "name": "withdrawGoal",
+      "docs": [
+        "Move everything a goal holds to its owner. The only direction it can spend.",
+        "",
+        "`remaining_accounts` carries four accounts per leg, in any order the caller likes:",
+        "[mint, the goal's token account, the OWNER's token account, that mint's token program]"
+      ],
+      "discriminator": [
+        225,
+        118,
+        237,
+        14,
+        250,
+        204,
+        54,
+        36
+      ],
+      "accounts": [
+        {
+          "name": "goal",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  111,
+                  97,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "goal.slug",
+                "account": "goal"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "goal"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "amounts",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -523,6 +793,19 @@ export type Webgold = {
         64,
         144,
         169
+      ]
+    },
+    {
+      "name": "goal",
+      "discriminator": [
+        163,
+        66,
+        166,
+        245,
+        130,
+        131,
+        207,
+        26
       ]
     },
     {
@@ -577,6 +860,32 @@ export type Webgold = {
         67,
         194,
         64
+      ]
+    },
+    {
+      "name": "goalSet",
+      "discriminator": [
+        190,
+        25,
+        191,
+        35,
+        229,
+        89,
+        29,
+        226
+      ]
+    },
+    {
+      "name": "goalWithdrawn",
+      "discriminator": [
+        106,
+        233,
+        190,
+        130,
+        20,
+        195,
+        25,
+        246
       ]
     },
     {
@@ -737,6 +1046,31 @@ export type Webgold = {
       "code": 6020,
       "name": "wrongTokenProgram",
       "msg": "That token program does not own the mint this leg names."
+    },
+    {
+      "code": 6021,
+      "name": "notClaimable",
+      "msg": "This payout names a recipient, so it cannot be claimed."
+    },
+    {
+      "code": 6022,
+      "name": "goalSlugLength",
+      "msg": "A goal's slug must be between 1 and 32 characters."
+    },
+    {
+      "code": 6023,
+      "name": "goalNameLength",
+      "msg": "A goal's name must be between 1 and 64 characters."
+    },
+    {
+      "code": 6024,
+      "name": "skimTooLarge",
+      "msg": "A goal cannot skim more than half of an inbound payout."
+    },
+    {
+      "code": 6025,
+      "name": "goalPaysOnlyItsOwner",
+      "msg": "A goal can only ever pay its own owner."
     }
   ],
   "types": [
@@ -873,6 +1207,105 @@ export type Webgold = {
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "goal",
+      "docs": [
+        "A named goal that skims a share of every inbound payout.",
+        "",
+        "It can spend in exactly one direction — to its owner — and it has no discretion of any",
+        "kind. That guarantee is not a check somebody could loosen; it is the absence of any code",
+        "that could send anywhere else."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "slug",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "targetBase",
+            "docs": [
+              "What the owner is saving toward, in 6-decimal USD base units. A target, never a limit:",
+              "nothing stops at it and nothing is refused for exceeding it."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "skimBps",
+            "type": "u16"
+          },
+          {
+            "name": "updatedAt",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "goalSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "goal",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "slug",
+            "type": "string"
+          },
+          {
+            "name": "skimBps",
+            "type": "u16"
+          },
+          {
+            "name": "targetBase",
+            "type": "u64"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "goalWithdrawn",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "goal",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "at",
+            "type": "i64"
           }
         ]
       }

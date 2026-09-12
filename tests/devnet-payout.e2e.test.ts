@@ -44,7 +44,7 @@ import {
 } from "@solana/web3.js";
 import { beforeAll, describe, expect, it } from "vitest";
 import idlJson from "../src/lib/anchor/webgold.json";
-import { cohortPda, payoutPda, receiptPda } from "../src/lib/solana/program";
+import { cohortPda, goalPda, payoutPda, receiptPda } from "../src/lib/solana/program";
 
 const LIVE = process.env.DEVNET_E2E === "1";
 const RPC = process.env.DEVNET_RPC || "https://api.devnet.solana.com";
@@ -353,6 +353,280 @@ describe.runIf(LIVE)("a real payout on devnet", () => {
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
       data: coder.encode("release_payout", {}),
+    });
+    await expect(
+      sendAndConfirmTransaction(conn, tx, [payer], { commitment: "confirmed" }),
+    ).rejects.toThrow();
+  }, 300_000);
+});
+
+describe.runIf(LIVE)("a sponsored first position on devnet", () => {
+  let claimer: Keypair;
+  let claimNonce: bigint;
+  let claimRelease: Uint8Array;
+
+  beforeAll(async () => {
+    payer = loadKeypair(KEY_PATH);
+    claimer = Keypair.generate();
+    claimNonce = BigInt(Date.now()) + 1n;
+    claimRelease = Uint8Array.from(Array.from({ length: 32 }, (_, i) => (i * 11 + Date.now()) % 249));
+
+    // The claimer pays rent for their own receipt, so they need a little SOL. In the product
+    // an issuer would airdrop this alongside the sponsorship; here the payer stands in.
+    const fund = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: payer.publicKey,
+        toPubkey: claimer.publicKey,
+        lamports: 0.05e9,
+      }),
+    );
+    await withRetry("fund claimer", () =>
+      sendAndConfirmTransaction(conn, fund, [payer], { commitment: "confirmed" }),
+    );
+  }, 300_000);
+
+  it("is funded with NO named recipient, and claimed by whoever turns up", async () => {
+    /**
+     * The sponsored first position: an issuer funds grams into a book that does not exist
+     * yet, and whoever claims it becomes the recipient. Nobody had to decide to become an
+     * investor — which is the whole wedge.
+     */
+    const payout = payoutPda(payer.publicKey, claimNonce);
+    const leg = { mint: goldMint.publicKey, amount: 50_000n, program: TOKEN_PROGRAM_ID };
+
+    const fundTx = new Transaction()
+      .add(
+        createAssociatedTokenAccountIdempotentInstruction(
+          payer.publicKey,
+          ata(payout, leg.mint, leg.program),
+          payout,
+          leg.mint,
+          leg.program,
+        ),
+      )
+      .add({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: payout, isSigner: false, isWritable: true },
+          { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          // THE DEFAULT PUBKEY IS THE CLAIM PATH. No recipient is named.
+          { pubkey: PublicKey.default, isSigner: false, isWritable: false },
+          { pubkey: leg.mint, isSigner: false, isWritable: false },
+          { pubkey: ata(payer.publicKey, leg.mint, leg.program), isSigner: false, isWritable: true },
+          { pubkey: ata(payout, leg.mint, leg.program), isSigner: false, isWritable: true },
+          { pubkey: leg.program, isSigner: false, isWritable: false },
+        ],
+        data: coder.encode("fund_payout", {
+          nonce: new BN(claimNonce.toString()),
+          release_id: Array.from(claimRelease),
+          value_base: new BN("217450000"),
+          grams_e8: new BN("155517384"),
+          reason: "a first position, on the house",
+          legs: [{ mint: leg.mint, amount: new BN(leg.amount.toString()) }],
+        }),
+      });
+    await withRetry("fund sponsorship", () =>
+      sendAndConfirmTransaction(conn, fundTx, [payer], { commitment: "confirmed" }),
+    );
+
+    const claimTx = new Transaction()
+      .add(
+        createAssociatedTokenAccountIdempotentInstruction(
+          claimer.publicKey,
+          ata(claimer.publicKey, leg.mint, leg.program),
+          claimer.publicKey,
+          leg.mint,
+          leg.program,
+        ),
+      )
+      .add({
+        programId: PROGRAM_ID,
+        keys: [
+          { pubkey: payout, isSigner: false, isWritable: true },
+          { pubkey: claimer.publicKey, isSigner: true, isWritable: true },
+          { pubkey: receiptPda(claimRelease, claimer.publicKey), isSigner: false, isWritable: true },
+          { pubkey: cohortPda(claimRelease, claimer.publicKey), isSigner: false, isWritable: true },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          { pubkey: leg.mint, isSigner: false, isWritable: false },
+          { pubkey: ata(payout, leg.mint, leg.program), isSigner: false, isWritable: true },
+          { pubkey: ata(claimer.publicKey, leg.mint, leg.program), isSigner: false, isWritable: true },
+          { pubkey: leg.program, isSigner: false, isWritable: false },
+        ],
+        data: coder.encode("claim_payout", {}),
+      });
+    await withRetry("claim", () =>
+      sendAndConfirmTransaction(conn, claimTx, [claimer], { commitment: "confirmed" }),
+    );
+
+    const held = await withRetry("claimer balance", () =>
+      getAccount(conn, ata(claimer.publicKey, leg.mint, leg.program), "confirmed", leg.program),
+    );
+    expect(held.amount).toBe(leg.amount);
+
+    // The receipt records the CLAIMER as the recipient, decided at claim rather than at
+    // funding — and the payer as who paid, which is what makes it a sponsorship.
+    const info = await withRetry("claim receipt", () =>
+      conn.getAccountInfo(receiptPda(claimRelease, claimer.publicKey), "confirmed"),
+    );
+    expect(info).toBeTruthy();
+    const r = decodeReceipt(info!.data);
+    expect(r.recipient).toBe(claimer.publicKey.toBase58());
+    expect(r.payer).toBe(payer.publicKey.toBase58());
+    expect(r.reason).toBe("a first position, on the house");
+  }, 300_000);
+
+  it("cannot be claimed twice by the same wallet, and nothing had to remember", async () => {
+    /**
+     * One claim per person per campaign, enforced by the ACCOUNT MODEL rather than by a
+     * check: the receipt lives at [b"receipt", release_id, recipient], so a second claim
+     * tries to create an account that already exists and the runtime refuses it. No ledger of
+     * who claimed, nothing to keep in sync, nothing to get wrong.
+     */
+    const payout = payoutPda(payer.publicKey, claimNonce);
+    const tx = new Transaction().add({
+      programId: PROGRAM_ID,
+      keys: [
+        { pubkey: payout, isSigner: false, isWritable: true },
+        { pubkey: claimer.publicKey, isSigner: true, isWritable: true },
+        { pubkey: receiptPda(claimRelease, claimer.publicKey), isSigner: false, isWritable: true },
+        { pubkey: cohortPda(claimRelease, claimer.publicKey), isSigner: false, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: coder.encode("claim_payout", {}),
+    });
+    await expect(
+      sendAndConfirmTransaction(conn, tx, [claimer], { commitment: "confirmed" }),
+    ).rejects.toThrow();
+  }, 300_000);
+});
+
+describe.runIf(LIVE)("a goal vault on devnet", () => {
+  const SLUG = `laptop-${Date.now() % 100000}`;
+  let stranger: Keypair;
+
+  beforeAll(() => {
+    payer = loadKeypair(KEY_PATH);
+    stranger = Keypair.generate();
+  });
+
+  it("is created, funded, and pays its owner", async () => {
+    const goal = goalPda(payer.publicKey, SLUG);
+
+    const setTx = new Transaction().add({
+      programId: PROGRAM_ID,
+      keys: [
+        { pubkey: goal, isSigner: false, isWritable: true },
+        { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      data: coder.encode("set_goal", {
+        slug: SLUG,
+        name: "A laptop",
+        target_base: new BN("1500000000"),
+        skim_bps: 1000,
+      }),
+    });
+    await withRetry("set goal", () =>
+      sendAndConfirmTransaction(conn, setTx, [payer], { commitment: "confirmed" }),
+    );
+
+    // Put something in it, the way an inbound skim would.
+    const fundTx = new Transaction().add(
+      createAssociatedTokenAccountIdempotentInstruction(
+        payer.publicKey,
+        ata(goal, goldMint.publicKey, TOKEN_PROGRAM_ID),
+        goal,
+        goldMint.publicKey,
+        TOKEN_PROGRAM_ID,
+      ),
+      createMintToInstruction(
+        goldMint.publicKey,
+        ata(goal, goldMint.publicKey, TOKEN_PROGRAM_ID),
+        payer.publicKey,
+        25_000n,
+        [],
+        TOKEN_PROGRAM_ID,
+      ),
+    );
+    await withRetry("fund goal", () =>
+      sendAndConfirmTransaction(conn, fundTx, [payer], { commitment: "confirmed" }),
+    );
+
+    const before = await withRetry("owner before", () =>
+      getAccount(conn, ata(payer.publicKey, goldMint.publicKey, TOKEN_PROGRAM_ID), "confirmed"),
+    );
+
+    const withdrawTx = new Transaction().add({
+      programId: PROGRAM_ID,
+      keys: [
+        { pubkey: goal, isSigner: false, isWritable: true },
+        { pubkey: payer.publicKey, isSigner: true, isWritable: false },
+        { pubkey: goldMint.publicKey, isSigner: false, isWritable: false },
+        { pubkey: ata(goal, goldMint.publicKey, TOKEN_PROGRAM_ID), isSigner: false, isWritable: true },
+        {
+          pubkey: ata(payer.publicKey, goldMint.publicKey, TOKEN_PROGRAM_ID),
+          isSigner: false,
+          isWritable: true,
+        },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ],
+      data: coder.encode("withdraw_goal", { amounts: [new BN("25000")] }),
+    });
+    await withRetry("withdraw goal", () =>
+      sendAndConfirmTransaction(conn, withdrawTx, [payer], { commitment: "confirmed" }),
+    );
+
+    const after = await withRetry("owner after", () =>
+      getAccount(conn, ata(payer.publicKey, goldMint.publicKey, TOKEN_PROGRAM_ID), "confirmed"),
+    );
+    expect(after.amount - before.amount).toBe(25_000n);
+  }, 300_000);
+
+  it("REFUSES to pay anyone but its owner", async () => {
+    /**
+     * The guarantee the whole feature rests on, tested against the chain rather than asserted
+     * in a comment. A goal has one destination, and there is no branch in the program that
+     * could send anywhere else.
+     */
+    const goal = goalPda(payer.publicKey, SLUG);
+    const fundTx = new Transaction().add(
+      createMintToInstruction(
+        goldMint.publicKey,
+        ata(goal, goldMint.publicKey, TOKEN_PROGRAM_ID),
+        payer.publicKey,
+        5_000n,
+        [],
+        TOKEN_PROGRAM_ID,
+      ),
+      createAssociatedTokenAccountIdempotentInstruction(
+        payer.publicKey,
+        ata(stranger.publicKey, goldMint.publicKey, TOKEN_PROGRAM_ID),
+        stranger.publicKey,
+        goldMint.publicKey,
+        TOKEN_PROGRAM_ID,
+      ),
+    );
+    await withRetry("refill goal", () =>
+      sendAndConfirmTransaction(conn, fundTx, [payer], { commitment: "confirmed" }),
+    );
+
+    const tx = new Transaction().add({
+      programId: PROGRAM_ID,
+      keys: [
+        { pubkey: goal, isSigner: false, isWritable: true },
+        { pubkey: payer.publicKey, isSigner: true, isWritable: false },
+        { pubkey: goldMint.publicKey, isSigner: false, isWritable: false },
+        { pubkey: ata(goal, goldMint.publicKey, TOKEN_PROGRAM_ID), isSigner: false, isWritable: true },
+        // A third party, requested by the goal's own owner. Still refused.
+        {
+          pubkey: ata(stranger.publicKey, goldMint.publicKey, TOKEN_PROGRAM_ID),
+          isSigner: false,
+          isWritable: true,
+        },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ],
+      data: coder.encode("withdraw_goal", { amounts: [new BN("5000")] }),
     });
     await expect(
       sendAndConfirmTransaction(conn, tx, [payer], { commitment: "confirmed" }),

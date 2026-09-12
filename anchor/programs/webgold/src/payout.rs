@@ -329,3 +329,149 @@ mod tests {
         assert_eq!(MAX_REASON_LEN, 200);
     }
 }
+
+/// The most characters a goal's slug may carry. It is part of a PDA seed, and a seed is
+/// capped at 32 bytes by the runtime.
+pub const MAX_SLUG_LEN: usize = 32;
+pub const MAX_GOAL_NAME_LEN: usize = 64;
+/// A goal that takes everything is not saving, it is redirection. Half is the ceiling.
+pub const MAX_SKIM_BPS: u16 = 5_000;
+
+/// A named goal that skims a share of every inbound payout.
+///
+/// It can spend in exactly one direction — to its owner — and it has no discretion of any
+/// kind. That guarantee is not a check somebody could loosen; it is the absence of any code
+/// that could send anywhere else.
+#[account]
+#[derive(InitSpace)]
+pub struct Goal {
+    pub owner: Pubkey,
+    pub bump: u8,
+    #[max_len(MAX_SLUG_LEN)]
+    pub slug: String,
+    #[max_len(MAX_GOAL_NAME_LEN)]
+    pub name: String,
+    /// What the owner is saving toward, in 6-decimal USD base units. A target, never a limit:
+    /// nothing stops at it and nothing is refused for exceeding it.
+    pub target_base: u64,
+    pub skim_bps: u16,
+    pub updated_at: i64,
+}
+
+#[derive(Accounts)]
+#[instruction(slug: String)]
+pub struct SetGoal<'info> {
+    #[account(
+        init_if_needed,
+        payer = owner,
+        space = 8 + Goal::INIT_SPACE,
+        seeds = [b"goal", owner.key().as_ref(), slug.as_bytes()],
+        bump,
+    )]
+    pub goal: Account<'info, Goal>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawGoal<'info> {
+    #[account(
+        mut,
+        seeds = [b"goal", owner.key().as_ref(), goal.slug.as_bytes()],
+        bump = goal.bump,
+        has_one = owner @ WebgoldError::NotTheOwner,
+    )]
+    pub goal: Account<'info, Goal>,
+    pub owner: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct ClaimPayout<'info> {
+    #[account(
+        mut,
+        seeds = [b"payout", payout.payer.as_ref(), &payout.nonce.to_le_bytes()],
+        bump = payout.bump,
+    )]
+    pub payout: Account<'info, Payout>,
+    /// The person taking the sponsored position. They pay the rent for their own receipt,
+    /// which is a few thousandths of a SOL and keeps the sponsor from being drained by
+    /// account-creation spam.
+    #[account(mut)]
+    pub claimer: Signer<'info>,
+    #[account(
+        init,
+        payer = claimer,
+        space = 8 + Receipt::INIT_SPACE,
+        seeds = [b"receipt", payout.release_id.as_ref(), claimer.key().as_ref()],
+        bump,
+    )]
+    pub receipt: Account<'info, Receipt>,
+    #[account(
+        init,
+        payer = claimer,
+        space = 8 + Cohort::INIT_SPACE,
+        seeds = [b"cohort", payout.release_id.as_ref(), claimer.key().as_ref()],
+        bump,
+    )]
+    pub cohort: Account<'info, Cohort>,
+    pub system_program: Program<'info, System>,
+}
+
+#[event]
+pub struct GoalSet {
+    pub goal: Pubkey,
+    pub owner: Pubkey,
+    pub slug: String,
+    pub skim_bps: u16,
+    pub target_base: u64,
+    pub at: i64,
+}
+
+#[event]
+pub struct GoalWithdrawn {
+    pub goal: Pubkey,
+    pub owner: Pubkey,
+    pub at: i64,
+}
+
+#[cfg(test)]
+mod goal_tests {
+    use super::*;
+
+    #[test]
+    fn a_goal_cannot_skim_more_than_half() {
+        // A goal that takes everything is not saving, it is redirection.
+        assert_eq!(MAX_SKIM_BPS, 5_000);
+        assert!(MAX_SKIM_BPS < 10_000);
+    }
+
+    #[test]
+    fn a_slug_fits_inside_a_pda_seed() {
+        // The runtime caps a single seed at 32 bytes. A slug longer than that would produce a
+        // goal whose address cannot be derived — an account nobody, including its owner, could
+        // ever find again.
+        assert!(MAX_SLUG_LEN <= 32);
+    }
+
+    #[test]
+    fn a_goal_holds_no_balance_counter() {
+        /**
+         * Deliberately asserted rather than assumed: a Goal has target, skim and name, and NO
+         * accumulated total. What it holds is what its token accounts hold. A counter beside a
+         * balance is two lists that drift, and the one people read would be the wrong one.
+         */
+        let goal = Goal {
+            owner: Pubkey::default(),
+            bump: 0,
+            slug: String::new(),
+            name: String::new(),
+            target_base: 0,
+            skim_bps: 0,
+            updated_at: 0,
+        };
+        // If a field is ever added that tracks a balance, this construction stops compiling
+        // and whoever added it has to read the comment above.
+        let _ = goal;
+    }
+}

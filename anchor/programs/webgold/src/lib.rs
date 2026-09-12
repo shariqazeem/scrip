@@ -184,6 +184,14 @@ pub mod webgold {
         ctx: Context<'_, '_, 'info, 'info, ReleasePayout<'info>>,
     ) -> Result<()> {
         require!(ctx.accounts.payout.released_at == 0, WebgoldError::AlreadyReleased);
+        // A payout with no named recipient is a claim path and belongs to `claim_payout`.
+        // Releasing one here would let the payer choose the recipient AFTER funding, which is
+        // the one thing a claim path exists not to allow.
+        require_keys_neq!(
+            ctx.accounts.payout.recipient,
+            Pubkey::default(),
+            WebgoldError::NotClaimable
+        );
         let legs = ctx.accounts.payout.legs.clone();
         require!(
             ctx.remaining_accounts.len() == legs.len() * ACCOUNTS_PER_LEG,
@@ -321,6 +329,204 @@ pub mod webgold {
         // The escrow's now-empty token accounts outlive this close. Deliberate and harmless:
         // a PDA signs from its seeds, not from an account that exists, so their rent stays
         // reclaimable after the payout account is gone.
+        Ok(())
+    }
+
+    /// Claim a payout that names no recipient — the sponsored first position.
+    ///
+    /// A payout funded with the default pubkey as its recipient is a CLAIM PATH rather than a
+    /// named payment: an issuer funds first grams into a book that does not exist yet, and
+    /// whoever claims it becomes the recipient. Same escrow, same receipt, same cohort; the
+    /// only difference is who signs and when the recipient is decided.
+    ///
+    /// ONE CLAIM PER PERSON PER CAMPAIGN, ENFORCED BY THE ACCOUNT MODEL RATHER THAN BY A
+    /// CHECK. The receipt lives at [b"receipt", release_id, recipient], so a second claim by
+    /// the same wallet in the same release tries to create an account that already exists and
+    /// fails in the runtime. Nothing has to remember who claimed; the address IS the record.
+    ///
+    /// `remaining_accounts` carries four accounts per leg, in leg order:
+    ///   [mint, the payout's token account, the claimer's token account, that mint's token program]
+    pub fn claim_payout<'info>(
+        ctx: Context<'_, '_, 'info, 'info, ClaimPayout<'info>>,
+    ) -> Result<()> {
+        require!(ctx.accounts.payout.released_at == 0, WebgoldError::AlreadyReleased);
+        require_keys_eq!(
+            ctx.accounts.payout.recipient,
+            Pubkey::default(),
+            WebgoldError::NotClaimable
+        );
+        let legs = ctx.accounts.payout.legs.clone();
+        require!(
+            ctx.remaining_accounts.len() == legs.len() * ACCOUNTS_PER_LEG,
+            WebgoldError::LegAccountsMismatch
+        );
+
+        let clock = Clock::get()?;
+        let payer = ctx.accounts.payout.payer;
+        let claimer = ctx.accounts.claimer.key();
+        let nonce = ctx.accounts.payout.nonce.to_le_bytes();
+        let bump = [ctx.accounts.payout.bump];
+        let seeds: &[&[u8]] = &[b"payout", payer.as_ref(), &nonce, &bump];
+        let signer_seeds: &[&[&[u8]]] = &[seeds];
+        let payout_key = ctx.accounts.payout.key();
+
+        for (i, leg) in legs.iter().enumerate() {
+            let mint = InterfaceAccount::<Mint>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG])?;
+            let from =
+                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 1])?;
+            let to =
+                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 2])?;
+
+            require_keys_eq!(mint.key(), leg.mint, WebgoldError::LegMintMismatch);
+            require_keys_eq!(from.mint, leg.mint, WebgoldError::LegMintMismatch);
+            require_keys_eq!(to.mint, leg.mint, WebgoldError::LegMintMismatch);
+            require_keys_eq!(from.owner, payout_key, WebgoldError::EscrowNotUnderRule);
+            // The claimer signed, so this is the one place a destination is trustworthy by
+            // construction — and it is still checked, because a signature proves who asked,
+            // not where they asked for it to go.
+            require_keys_eq!(to.owner, claimer, WebgoldError::WrongRecipient);
+
+            move_leg(
+                &ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 3],
+                &from,
+                &to,
+                &mint,
+                ctx.accounts.payout.to_account_info(),
+                leg.amount,
+                Some(signer_seeds),
+            )?;
+        }
+
+        let payout = &mut ctx.accounts.payout;
+        payout.released_at = clock.unix_timestamp;
+        payout.recipient = claimer;
+        let release_id = payout.release_id;
+        let value_base = payout.value_base;
+        let grams_e8 = payout.grams_e8;
+        let reason = payout.reason.clone();
+
+        let receipt = &mut ctx.accounts.receipt;
+        receipt.payer = payer;
+        receipt.recipient = claimer;
+        receipt.release_id = release_id;
+        receipt.value_base = value_base;
+        receipt.grams_e8 = grams_e8;
+        receipt.reason = reason.clone();
+        receipt.at = clock.unix_timestamp;
+        receipt.bump = ctx.bumps.receipt;
+        receipt.legs = legs;
+        let receipt_key = receipt.key();
+
+        let cohort = &mut ctx.accounts.cohort;
+        cohort.release_id = release_id;
+        cohort.recipient = claimer;
+        cohort.value_at_release_base = value_base;
+        cohort.released_at = clock.unix_timestamp;
+        cohort.bump = ctx.bumps.cohort;
+
+        emit!(PayoutReleased {
+            receipt: receipt_key,
+            payer,
+            recipient: claimer,
+            release_id,
+            value_base,
+            grams_e8,
+            reason,
+            at: clock.unix_timestamp,
+        });
+        Ok(())
+    }
+
+    /// Create or replace a goal: a named target that skims a share of every inbound payout.
+    ///
+    /// A goal holds value and has NO DISCRETION OF ANY KIND. There is exactly one instruction
+    /// that moves anything out of it, `withdraw_goal`, and it can only send to the owner. No
+    /// third party, no address the owner did not sign for, no exceptions — the absence of a
+    /// second destination is the whole guarantee, and it is enforced by there being no code
+    /// that could do it rather than by a check that could be loosened.
+    pub fn set_goal(
+        ctx: Context<SetGoal>,
+        slug: String,
+        name: String,
+        target_base: u64,
+        skim_bps: u16,
+    ) -> Result<()> {
+        require!(!slug.is_empty() && slug.len() <= MAX_SLUG_LEN, WebgoldError::GoalSlugLength);
+        require!(!name.is_empty() && name.len() <= MAX_GOAL_NAME_LEN, WebgoldError::GoalNameLength);
+        // A goal that takes everything is not saving, it is redirection. Half is the ceiling.
+        require!(skim_bps <= MAX_SKIM_BPS, WebgoldError::SkimTooLarge);
+
+        let clock = Clock::get()?;
+        let goal = &mut ctx.accounts.goal;
+        goal.owner = ctx.accounts.owner.key();
+        goal.bump = ctx.bumps.goal;
+        goal.slug = slug;
+        goal.name = name;
+        goal.target_base = target_base;
+        goal.skim_bps = skim_bps;
+        goal.updated_at = clock.unix_timestamp;
+
+        emit!(GoalSet {
+            goal: goal.key(),
+            owner: goal.owner,
+            slug: goal.slug.clone(),
+            skim_bps,
+            target_base,
+            at: clock.unix_timestamp,
+        });
+        Ok(())
+    }
+
+    /// Move everything a goal holds to its owner. The only direction it can spend.
+    ///
+    /// `remaining_accounts` carries four accounts per leg, in any order the caller likes:
+    ///   [mint, the goal's token account, the OWNER's token account, that mint's token program]
+    pub fn withdraw_goal<'info>(
+        ctx: Context<'_, '_, 'info, 'info, WithdrawGoal<'info>>,
+        amounts: Vec<u64>,
+    ) -> Result<()> {
+        require!(
+            ctx.remaining_accounts.len() == amounts.len() * ACCOUNTS_PER_LEG,
+            WebgoldError::LegAccountsMismatch
+        );
+        let clock = Clock::get()?;
+        let owner = ctx.accounts.owner.key();
+        let slug = ctx.accounts.goal.slug.clone();
+        let bump = [ctx.accounts.goal.bump];
+        let seeds: &[&[u8]] = &[b"goal", owner.as_ref(), slug.as_bytes(), &bump];
+        let signer_seeds: &[&[&[u8]]] = &[seeds];
+        let goal_key = ctx.accounts.goal.key();
+
+        for (i, amount) in amounts.iter().enumerate() {
+            require!(*amount > 0, WebgoldError::PayoutLegZero);
+            let mint = InterfaceAccount::<Mint>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG])?;
+            let from =
+                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 1])?;
+            let to =
+                InterfaceAccount::<TokenAccount>::try_from(&ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 2])?;
+
+            require_keys_eq!(from.owner, goal_key, WebgoldError::EscrowNotUnderRule);
+            // THE ONE DESTINATION. There is no branch here that could send anywhere else.
+            require_keys_eq!(to.owner, owner, WebgoldError::GoalPaysOnlyItsOwner);
+            require_keys_eq!(from.mint, mint.key(), WebgoldError::LegMintMismatch);
+            require_keys_eq!(to.mint, mint.key(), WebgoldError::LegMintMismatch);
+
+            move_leg(
+                &ctx.remaining_accounts[i * ACCOUNTS_PER_LEG + 3],
+                &from,
+                &to,
+                &mint,
+                ctx.accounts.goal.to_account_info(),
+                *amount,
+                Some(signer_seeds),
+            )?;
+        }
+
+        emit!(GoalWithdrawn {
+            goal: goal_key,
+            owner,
+            at: clock.unix_timestamp,
+        });
         Ok(())
     }
 }
@@ -520,6 +726,16 @@ pub enum WebgoldError {
     AlreadyReleased,
     #[msg("That token program does not own the mint this leg names.")]
     WrongTokenProgram,
+    #[msg("This payout names a recipient, so it cannot be claimed.")]
+    NotClaimable,
+    #[msg("A goal's slug must be between 1 and 32 characters.")]
+    GoalSlugLength,
+    #[msg("A goal's name must be between 1 and 64 characters.")]
+    GoalNameLength,
+    #[msg("A goal cannot skim more than half of an inbound payout.")]
+    SkimTooLarge,
+    #[msg("A goal can only ever pay its own owner.")]
+    GoalPaysOnlyItsOwner,
 }
 
 #[cfg(test)]
