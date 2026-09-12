@@ -39,8 +39,37 @@ features get absorbed.
 | Issuers in v1 | One equity family, one metal family, both disclosed | Four wrappers with four legal shapes is a v1 that cannot be explained |
 | Name | Webgold | The founder's own note, months old, and it survives past this hackathon |
 
+## 2026-09-12 — Sign-in and ledger privacy (resolved)
+
+**Both doors from day one: browser wallet and Privy email.** A wallet-only product is
+untestable on any device without an extension, which includes the phone and the Safari
+window a judge will open. The email door mints an embedded Solana wallet and the same
+session a wallet sign-in would; the reserve, the policy and the positions are identical
+either way. Nobody is asked which they are before they can see the product.
+
+**The public ledger shows aggregates and an event stream, never a browsable per-person
+balance.** Totals, reserves opened, payments settled, value held. Every receipt stays
+public because it is anchored to a transaction that is already public, and an individual
+reserve page is opt-in for anyone who wants one. Chain data is public; a product should
+not build the surface that makes someone's net worth searchable by name. A savings product
+that leaks balances by default loses the exact user it is for.
+
+## Revenue (v1 intent)
+
+Three lines, in order of how much they matter, and none of them is a management fee — a
+fee on a balance is a drag on the one promise a savings product makes.
+
+1. **Issuer distribution.** Issuers pay per acquired holder. This is the sponsored first
+   position, and it is the only line that is both differentiated and already budgeted on
+   the other side of the table.
+2. **Yield share.** A cut of the yield routed through lending and leasing. The user never
+   sees money leave, and it scales with value held rather than with churn.
+3. **Conversion spread.** A small spread when USDC becomes the mix. The competitive norm
+   (Glider charges 0.30% of automated volume, 0.50% manual, no management fee).
+
+The pay rail is deliberately free. It is the growth loop, not a revenue line.
+
 ## Open questions
 
 - Sponsor outreach timing: before there are holders, or after?
-- Email/embedded wallet on day one (Privy) or wallet-only for v1?
-- Does the public ledger show individual reserves, or only aggregates?
+- Which equity family and which metal family for v1, given the wrappers differ?
