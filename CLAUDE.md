@@ -25,6 +25,9 @@ Read in this order, then say what you are building:
 6. `docs/decisions.md` — settled questions. Reopening one needs a new fact, not a new opinion
 7. `docs/strategy.md` — how this wins, and the metrics that are the submission
 8. `docs/research.md` — every market claim with a source
+9. `docs/state-and-fix-plan.md` — **what actually runs right now**, every defect found by
+   reading the chain and the running app, and the order to fix them in. Written 2026-09-15,
+   after the build order was complete. Start here if you are picking the work up
 
 Before touching any user-facing surface, invoke the **`webgold-ui`** skill.
 
