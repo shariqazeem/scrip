@@ -1,15 +1,11 @@
-# Webgold
+# Scrip
 
 > Canonical spec. When code and this document disagree, **the code wins** — record real
 > drift under "Known drift" at the bottom rather than quietly editing this file.
 >
-> Written 2026-09-12, before the first line of product code. Everything below marked
-> **(planned)** is intent, not fact. Move it out of "planned" only when it runs.
->
-> **There is no v1 and no v2.** The target is the complete product described here, built
-> through 12 October. Things are built in dependency order because a balance cannot be
-> painted before it can be computed, and that order is in `docs/build-order.md`. Dependency
-> order is not a version ladder, and nothing on that list is optional.
+> Rewritten 2026-09-15 when Webgold became Scrip. The complete product is
+> `docs/scrip.md`; this file is the short version, the architecture that binds it, and the
+> standing policies. The repository directory is still `webgold`; nothing public says so.
 
 ---
 
@@ -17,259 +13,285 @@
 
 Read in this order, then say what you are building:
 
-1. this file, sections 1 to 4
-2. `docs/product.md` — the complete product
-3. `docs/architecture.md` — accounts, instructions, the issuer constraints that bind the design
-4. `docs/build-order.md` — dependency order. **Not versions.** The target is the whole product
-5. `docs/reuse-from-sage.md` — exactly what to port from `/Users/macbookair/projects/SAGE`, and what never to
-6. `docs/decisions.md` — settled questions. Reopening one needs a new fact, not a new opinion
-7. `docs/strategy.md` — how this wins, and the metrics that are the submission
-8. `docs/research.md` — every market claim with a source
-9. `docs/current-state.md` — **what currently exists and what it does when you run it**,
-   observed 2026-09-15 rather than taken from the spec. No plan and no recommendations
+1. this file
+2. `docs/scrip.md` — the complete product: the rule, the intake, the program, the keeper,
+   keep-rate, the words, the definition of done
+3. `docs/SCRIP-COMPANY-PLAN.md` — the second transformation (2026-09-16): Scrip as a
+   company that pays in ownership. It supersedes `docs/scrip.md`'s design section,
+   presentation section and roadmap: the product map, the organisation side, grants, the
+   floor, "There is no opening bell", the operating plan, the order by leverage
+4. `docs/decisions.md` — settled questions. Reopening one needs a new fact, not a new opinion
+5. `docs/build-order.md` — dependency order and where it stands
+6. `docs/research.md` — every market and behavioural claim with a source
+7. `docs/current-state.md` — what exists and what it does when you run it, observed
 
-Before touching any user-facing surface, invoke the **`webgold-ui`** skill.
+Before touching any user-facing surface, invoke the **`scrip-ui`** skill.
 
 ---
 
 ## 1. The product, in ten seconds
 
-**Web3 made assets programmable. Webgold makes ownership receivable.**
+**Scrip is a rule on your wallet: a slice of every dollar that lands becomes stock, in the
+same wallet, with a receipt.**
 
-One book. Grams of gold on the home screen, silver beside them, a slice of the market one
-tap inside. Value enters three ways and always arrives as ownership in the recipient's own
-wallet, never as a number in someone else's ledger:
+The recipient sets a rate once — 10% by default — on the Solana address they already use.
+Payers keep sending USDC to that address exactly as they do today and never open Scrip.
+Within seconds of an arrival, the slice is S&P 500 in the recipient's own token account, a
+permanent receipt is written, and the chain records at 7 and 30 days whether it is still
+held. Pausing the rule is a token-program `revoke`, which the program cannot prevent.
 
-- **Earn** — a payer releases a payout denominated in the mix instead of a stablecoin.
-- **Receive** — someone sends, or you request, a named slice.
-- **Sponsor** — an issuer funds a first position for a new book.
+> Set a rate once. A slice of every USDC that lands in this wallet becomes S&P 500 in the
+> same wallet. The payer just sent dollars.
 
-**Every arrival carries a memory**: how it came, from whom, for what, with an on-chain
-receipt anyone can open. That named arrival is the product. An exchange is a place to buy
-and park; a wallet is a place to hold a number. Neither can tell you that 0.2 grams landed
-for the work you shipped on Tuesday, and neither can receive a payment on your behalf as a
-slice of the market. That is only possible because a share became a token anyone can build
-on.
+The positioning line, everywhere the product is explained to a person:
 
-**It is not** a trading terminal, a robo-advisor, a leaderboard, a copy-trading product, or
-a deposit box with a yield number on it.
+> You're already getting paid. Investing shouldn't take another decision.
 
-### The boundary: Webgold settles, it does not judge
+**Widened on 2026-09-16 to "get paid in ownership."** The rule is the person's side. The
+organisation's side is the same program paying a person, a team or a grant in stock: one
+signature, one receipt per line with its reason, an escrow the payer cannot spend. Scrip is
+the first organisation on it: its bounties are paid in stock through `@scrip`.
 
-A payout carries a payer, recipients, a dollar value, a reason string and an optional
-constraint on the asset set. Whether that reason was verified by an AI, approved by a human,
-or merely asserted is **outside this system**. Any payer can use it: a person, a company, a
-DAO, a sponsor. This keeps the build small and makes Webgold useful to everyone paying
-anyone, rather than a rail for one other product.
+**Five objects.** A rule (rate, asset, optional floor and cap) on the recipient's own USDC
+account, held in a `Book` they own, enforced by the program, driven by permissionless
+keepers. A receipt — a permanent on-chain account written in the same transaction as the
+conversion, at `/receipt/<signature>`, measured at 7 and 30 days; five kinds: sweep, pay,
+gift, grant, vest. A pay link, `/pay/<handle>` — the intake for attributed payments. A grant
+— stock bought once into an escrow that vests on a schedule to a recipient, by keepers. A
+public ledger — every receipt, keep-rate, and the floor: every stub as it prints.
 
-**Webgold is a standalone company, not an add-on.** Nothing in the pitch, the docs or the
-demo requires explaining a second product. What carries over from Sage is craft — the vault
-that cannot overspend, receipt religion, propose-then-release, campaign UX, and the practice
-of paying strangers in public — never a dependency.
+**Words on surfaces.** The `Book` account is a person's **register** and an organisation's
+**page** in every sentence a user reads; the code keeps `Book`. A receipt is a **stub** when
+drawn. The chrome says **Pay in stock**, never "send".
 
-### The three calls, settled
+**It is not** a trading terminal, a robo-advisor, a lender, a card, a social feed, a
+launchpad, or a brokerage. It never decides amounts: the rate is the owner's, the price is
+Jupiter's route bounded by Pyth, the timing is arrival. It gives no advice. It never holds
+an asset across a slot. Gold is one option among several; it is not in the hero, the
+default, or the pitch.
 
-- **Gold is metal** — **Oro GOLD**, `GoLDppdjB1vDTPSGxyMJFqdnj134yH6Prg9eqsGDiw6A`, priced
-  against Pyth XAU. Chosen over Matrixdock XAUm by the rule the law already set, "whichever
-  Jupiter can actually fill": ~$372k of depth against XAUm's ~$43k. It is also a plain SPL
-  mint with **no freeze authority and no permanent delegate**. GLDx is a fund share and may
-  never appear under grams.
-- **The market sleeve is SPYx** by default. Other xStocks are held the way a wallet holds
-  any token; single names are a recipient's choice, never the company's.
-- **Inbound value follows the recipient's policy**, defaulting to **70% gold, 30% SPY**. A
-  payer may constrain the asset set but never dictates weights. A named gift stays named;
-  only unspecified value converts. *(Was 50/20/30. Silver failed the metal test it was
-  required to pass — no allocated-silver token on Solana has real depth — so it left the
-  default and the metal weight absorbed it. Evidence and the founder's decision:
-  `docs/decisions.md`, 2026-09-12.)*
-
-### The number that decides everything
-
-**Keep-rate: the share of what was paid out that is still held thirty days later.** It
-cannot be faked, and it is the difference between a payout and a farm. Instrument it at the
-first release, because a cohort you did not record cannot be measured later.
-
-### Honesty requirements, non-negotiable in copy
-
-xStocks mints carry a **permanent delegate** and a **pause authority**: the issuer can move,
-burn or freeze. Self-custody here means *not our custody*, not *nobody can touch it*.
-Dividends are **reinvested, not paid**, so never show expected income. Say both plainly
-rather than letting a judge find them.
-
-**But the disclosure is per-row, never a banner.** Verified on chain 2026-09-12: Oro GOLD has
-*no* freeze authority and *no* permanent delegate, so a blanket warning would be false about
-the gold sleeve — and a false warning is the kind of lazy honesty that reads as dishonesty the
-moment somebody checks. Each asset row states what is true of that mint.
+**The number that decides everything: keep-rate.** The share of what was converted that is
+still held, measured on chain at 7 and 30 days from raw units. It cannot be faked, because
+the denominator is the receipt's own `amount_raw` and the numerator is a balance the program
+read from the recipient's own token account, by whoever called for the measurement.
 
 ## 2. Principles
 
-> **The account is the product; the receipt is the proof.**
-
-1. **Non-custodial by construction.** Constituents sit in the user's own token accounts.
-   The program holds policy and emits receipts. It never holds the assets. A pooled claim
-   would make this a fund; direct ownership does not.
-2. **No model, no operator, and no program ever decides how much.** Weights come from a
-   policy the user signed. Prices come from Pyth. Routing comes from Jupiter. Software
-   executes a rule; it never exercises discretion over someone's money.
-3. **Every money moment prints a receipt** at `/receipt/<signature>`, readable by anyone,
-   anchored to a real transaction. Nothing is claimed that cannot be opened.
+1. **Non-custodial by construction.** The owner's USDC and the owner's stock sit in token
+   accounts the owner controls. The program holds the rule and writes receipts. Pausing is a
+   `revoke` the program cannot prevent.
+2. **No model, no operator, and no program ever decides how much.** The rate is the owner's.
+   The price bound is Pyth's, net of confidence. The route is the keeper's, inside the
+   owner's tolerance. The timing is arrival.
+3. **Every money moment prints a receipt** anyone can open, anchored to a real transaction.
 4. **Never show a number we cannot derive from chain state.** No simulated balances, no
-   projected returns presented as returns, no fabricated activity.
-5. **Savings-grade, not stable.** Gold and equities fall. The UI says so plainly. We are
-   not competing with USDC for the cash position; we are competing for the idle position.
+   projected returns, no fabricated activity. A worked example is labelled arithmetic.
+5. **Savings-grade, not stable.** Equities fall. The UI says so.
 
----
+## 3. Honesty requirements, non-negotiable in copy
 
-## 3. The hard part — corporate actions (build this first)
-
-xStocks handles dividends and splits with an **on-chain multiplier that rebases balances**,
-published before each ex-date and activated at 00:30 UTC the day after. Ondo does the
-equivalent on Solana through Scaled UI.
-
-**This breaks naive accounting.** Store raw token balances and compute returns from them,
-and a dividend reads as a gain, a 4-for-1 split reads as a 300% return, and cost basis is
-silently wrong from that day forward. Every basket, vault and "portfolio" product shipped
-in this cohort will get it wrong, because the issuer APIs expose multipliers precisely
-because apps get it wrong.
-
-Webgold stores **multiplier-adjusted quantity and cost basis**, reconciles on every
-multiplier change, and publishes the reconciliation as a receipt. It is unglamorous, it is
-verifiable, and it is the moat a seven-day competitor cannot fake.
-
----
+- Every xStock carries a **permanent delegate** and a **pause authority**: the issuer can
+  move, burn or freeze. Self-custody here means *not our custody*. Not offered to US
+  persons; the owner attests eligibility at `open_book`.
+- **Dividends are reinvested, not paid**, through a mint-level multiplier. Never show
+  expected income.
+- **The rule sees the net increase since the last sweep, never gross inbound.** The tagline
+  may say "every dollar that lands"; the sentence beneath it, everywhere, is *Scrip invests a
+  slice of your wallet's USDC inflows.*
+- **Disclosure is per row, never a banner.** Oro GOLD has no freeze authority and no
+  permanent delegate; a blanket warning would be false about it.
 
 ## 4. Architecture
 
-### On-chain — the `webgold` Anchor program (planned)
+### The program — `anchor/programs/scrip`, deployed to devnet
 
-The program is the **rule and the record**, never the vault.
+Anchor 0.31.1. The instruction set is exactly what is listed; anything not listed does not
+exist. The program never CPIs Jupiter: swaps are top-level instructions in the same
+transaction, and the program makes the transaction atomic around them with instruction
+introspection.
 
 | Account | Seeds | Holds |
 | --- | --- | --- |
-| `Reserve` | `[b"reserve", owner]` | owner, policy, version, opened_at, lifetime funded/paid |
-| `Policy` (inline) | — | target weights `(mint, bps)[]`, drift band bps, rebalance cadence |
+| `Book` | `["book", owner]` | owner, slug, asset, usdc_mint, the two Pyth feed ids, terms_version, the `Rule` (enabled, rate, escalation, floor, cap, min_inbound, tolerance, watermark, enabled_unix, sweeps), `pending`. Also the token delegate address; float lamports above rent |
+| `Handle` | `["handle", slug]` | owner, `kind` (Person or Org) |
+| `Payout` | `["payout", payer, release_id]` | the escrow's owner: payer, recipient, claimant, kind (Settle = pay, Sponsor = gift), reason_hash, declared_usdc, asset, min_out_raw, `run_id`. Exists exactly while open |
+| `Grant` | `["grant", payer, grant_id]` | payer, recipient, asset, reason_hash, declared_usdc, total_raw, released_raw, release_cap_raw, start/cliff/duration, state (Open, Active, Revoked), vests, float. The escrow's owner while it vests |
+| `Receipt` | `["receipt", book_or_payout_or_grant, release_id]` | kind (Sweep, Pay, Gift, Grant, Vest), recipient, payer, submitter, book, release_id, `run_id`, reason_hash, basis_usdc, rate_bps, paid_usdc, asset, amount_raw, price stamp, slot, unix, measured_7d, measured_30d |
 
-Instructions: `open_reserve(policy)`, `set_policy(policy)`, `record_allocation(legs)`,
-`record_payment(recipient, legs)`, `close_reserve`. Each emits an event that becomes a
-receipt row. Swaps execute against Jupiter from the user's own associated token accounts,
-in the same transaction where possible.
+Instructions: `open_book(slug, terms_version, kind)`, `set_asset`, `close_book`,
+`enable_rule`, `set_rule`, `disable_rule`, `sync_watermark`, `withdraw_float`,
+`begin_sweep`, `finish_sweep`, `fund_payout(…, run_id)`, `release_payout`, `claim_payout`,
+`cancel_payout`, `open_grant`, `seal_grant`, `vest`, `revoke_grant`, `close_grant`,
+`measure_receipt`. Depositing float is a plain system transfer to the Book or the Grant.
 
-**v2 — bounded delegate.** The user approves the Reserve PDA as an SPL token delegate with
-a cap. The program may then rebalance without a signature, but the instruction can *only*
-swap between whitelisted mints, *only* toward the signed policy weights, *only* inside a
-Pyth-bounded price, and can *never* transfer to a third party. That is the same shape as
-Sage's mandate: the policy proposes, the program disposes.
+**The grant** — `[memo, open_grant, jupiter…, seal_grant]` in one transaction the payer
+signs: the escrow is bought at once, then sealed with the float that pays for its vests.
+`vest(release_id)` is permissionless: anyone may release what the schedule allows (linear
+after a cliff, up to ten years), a Vest receipt is written to the recipient with the grant's
+reason, and the caller is repaid the tip and the receipt's rent from the grant's float. A
+Grant receipt records the purchase. `revoke_grant` caps releases at what has vested and
+returns the rest to the payer; `close_grant` returns rent and float once nothing is owed.
+Dividends reinvest into the escrow through the mint's multiplier while it vests.
 
-### Off-chain services
+**The sweep** — `[compute, begin_sweep, jupiter…, finish_sweep]`. `begin_sweep` requires
+top level, exactly one `begin_sweep` in the transaction, and a `finish_sweep` for the same
+book and release id at a later index; then computes the slice from on-chain state and moves
+exactly that much USDC through the delegate to the keeper. `finish_sweep` requires the
+owner's cash unchanged, a fully verified Pyth price for one of the book's two feeds under
+600 s old with a confidence band under 1%, and a delta on the owner's asset account at or
+above the min-out (through the live scaled-UI multiplier when the feed prices a share);
+writes the receipt; repays the keeper the tip, the receipt's rent and any ATA rent from the
+float. Any failure reverts everything, delegate transfer included.
 
-| Service | Job |
+**The registry** is compiled in (`registry.rs`) and mirrored in `src/lib/assets/registry.ts`;
+a test reads both. The `devnet` feature accepts any asset and prices it by the SOL/USD and
+USDC/USD feeds, which are pushed on devnet; the mainnet build refuses anything not on the
+table and any pay-in mint but USDC.
+
+### Off-chain
+
+| Piece | Job |
 | --- | --- |
-| **Allocator** | amount + policy → Jupiter quote per leg → transaction bundle |
-| **Valuer** | Pyth 24/7 equity and metal feeds → NAV, time-weighted return |
-| **Corporate-action watcher** | polls issuer multipliers, detects changes before ex-date, reconciles basis, writes the receipt |
-| **Yield router** (v2) | eligible equity legs → Kamino; gold leg → Oro staking |
-| **Pay rail** | sender tx (convert + transfer), claim link when the recipient has no account yet |
-| **Receipt writer** | every action → row + public page |
+| **Keeper** (`src/keeper/`) | watches every Book with the rule on; syncs the watermark after a spend; posts a fully verified Pyth update from Hermes when the on-chain one is stale; quotes Jupiter; submits the atomic sweep; vests every active Grant on a cadence (`KEEPER_VEST_HOURS`, first and final vests at once); reports health |
+| **Intake builder** (`src/lib/intake/build.ts`) | one versioned transaction the payer signs: memo, fund, Jupiter into the escrow, release |
+| **Indexer** (`src/lib/ledger/indexer.ts`) | mirrors receipts and books into the cache, incrementally with a cursor; attributes sweeps from transfer history; refreshes measurements |
+| **Crank** (`src/lib/ledger/crank.ts`) | calls `measure_receipt` at 7 and 30 days |
+| **Relayer** (`/api/claim/tx`, `/api/relay`, `/api/send`) | fee-sponsors claims so an empty wallet can take a first position; relays signed transactions that touch the program |
+| **Organisation side** (`src/lib/org/`, `src/lib/grant/`) | `orgView`/`runView` over the cache; `resolveRecipient` (handle or address); the grant builder (memo, open, route, seal); the run builder signs many intakes with one `signAll` |
+| **The floor** (`src/lib/floor/`, `/api/floor/stream`) | every receipt as it prints, the share that landed while the NYSE was closed, the corporate actions, over SSE |
+| **Notify** (`src/lib/notify/telegram.ts`) | one Telegram message per receipt to a linked chat, when a bot token is configured |
 
-### Data model (SQLite via drizzle + better-sqlite3, same as Sage)
+### Data model — SQLite via drizzle, one file per cluster (`var/scrip.<cluster>.db`)
 
-`reserves`, `positions` (qty_raw, qty_adjusted, cost_basis_base, multiplier_at_entry),
-`allocations`, `payments`, `multipliers` (mint, value, effective_at, source, seen_at),
-`receipts`, `sponsorships`.
+`books` (with `kind`), `receipts` (the account plus the signature, the verified memo, the
+`run_id`, and attribution), `grants`, `runs`, `multipliers` (every rebase ever seen),
+`cursors`, `intakes`, `telegram_links`. A cache of the chain, never a ledger of record.
 
 ### Stack
 
-Next.js 15 (App Router, RSC by default, `"use client"` only at interactive leaves),
-TypeScript strict (no `any`, no `@ts-ignore`), Solana web3.js + Anchor, Jupiter for
-routing, Pyth for valuation, Privy for email/embedded wallets, drizzle + better-sqlite3,
-Vitest for the core (allocation math, multiplier reconciliation, policy validation).
-
-### Assets in v1
-
-One equity sleeve and one metal sleeve, from **one issuer family each**, disclosed. Deep
-liquidity only. Do not mix four issuers with four different legal wrappers in v1.
-
----
+Next.js 15 (App Router, RSC by default), TypeScript strict, Solana web3.js + Anchor coders
+(no Provider anywhere), Jupiter for routing, Pyth for the settle bound, Wallet Standard
+(no adapter UI), drizzle + better-sqlite3, Vitest.
 
 ## 5. Routes
 
-| Route | What it is |
-| --- | --- |
-| `/` | landing |
-| `/assets` | what a book can hold, issuer named on every row, sponsored first positions |
-| `/app` | the book — grams, sleeves, arrivals (shelled) |
-| `/app/pay` | fund and release a payout, or send a named slice |
-| `/app/goals` | goal vaults that skim inbound (v2) |
-| `/app/settings` | mix policy, disclosures |
-| `/receipt/[sig]` | the named arrival, public and openable by anyone |
-| `/ledger` | aggregates and the event stream |
-| `/docs/*` | docs |
+**Marketing (dark nav, paper body):** `/` the floor as the front door — the front book
+printing live, the tape, the mechanism, the market band, the paper tear, the record;
+`/people`, `/teams`, `/grants` the three doors; `/company` (the seven firsts, each linked to
+where it happened), `/security` (what a stranger can check, read from the chain),
+`/bounties` (Scrip's own, paid in stock), `/changelog`, `/brand`, `/actions` (corporate
+actions from the mint); `/assets`; `/docs/*`.
 
----
+**Public records (unshelled):** `/@handle` a person's register (opt-in) or an
+organisation's page (people paid, runs, grants vesting); `/pay/[handle]` two ways, in stock
+or in USDC; `/receipt/[sig]`; `/run/[id]` a payroll run, every line a receipt with its
+reason; `/grant/[pda]` a grant and what has vested; `/claim/[payer]/[rid]`; `/ledger`;
+`/keepers`; `/floor` the live tape. Each of `/@handle`, `/run`, `/grant` and `/receipt`
+renders an `opengraph-image`.
+
+**The register (shelled, the owner):** `/app` the moment, live; `/app/rule` one question,
+one signature; `/app/holdings`; `/app/receipts`; `/app/statements` and `/app/statements/[ym]`
+(a month as a document that prints); `/app/settings` (allowance, float, the public page,
+Telegram). `/book/[handle]` redirects to `/@handle`.
+
+**Pay in stock (shelled, the payer):** `/app/org` home; `/app/org/pay` one person, with a
+split; `/app/org/runs` a run from a file, one signature; `/app/org/grants` open, revoke,
+close; `/app/org/people`; `/app/org/settings` (an organisation handle, the public page,
+export). `/app/send` redirects to `/app/org/pay`.
+
+**⌘K** anywhere opens a field that resolves a handle, a receipt signature, a run id, a grant
+address or a page name from its shape.
+
+**API:** `pay/tx`, `pay/watch`, `solana-pay/[handle]`, `rule/tx` (open takes `kind`),
+`rule/status/[owner]`, `book/live/[owner]`, `book/publish`, `market`, `handle/[slug]`,
+`claim/tx`, `relay`, `send`, `org/{pay,run,grant,grant/action,export}`, `me/export`,
+`floor/stream`, `notify/telegram/{route,webhook}`, `session/*`, `maintenance`. Icons and
+the manifest are routes: `/icon`, `/apple-icon`, `/icon-512.png`, `/manifest.webmanifest`.
 
 ## 6. Design system
 
-**One system, ported from Sage's "receipt minimalism" and re-toned.** Calm, premium-light,
-print-like. `src/styles/tokens.css` is the single source of truth for colour, radius,
-shadow, spacing, type and motion. Per-surface stylesheets **alias** tokens
-(`--brass: var(--accent)`); they never redeclare a palette value. No Tailwind utility
-classes anywhere — `globals.css` is the preflight reset and nothing else. No emoji; lucide
-line icons only.
-
-- **Colour.** Paper `#faf8f4`; warm ink `#1a1815`; **burnished gold `#9a6f1e` on every
-  interactive and brand element**. Green `#15803d` and red `#dc2626` are reserved
-  **strictly** for money outcomes (settled vs failed), never as generic accents.
-- **Type.** Inter for UI, JetBrains Mono for data, amounts, addresses and hashes. Tabular
-  numerals everywhere.
-- **Radii.** 6 / 10 / 16, plus `999px` for status chips only.
-- **Shell.** Fixed hover-expand left rail, top-centre mode pill, top-right context pills;
-  sets `html[data-app-shell="on"]` so page content clears the fixed chrome.
-
-Full detail and the port checklist: `docs/design-system.md`, and the `webgold-ui` skill in
-`.claude/skills/`.
-
----
+"There is no opening bell." Two materials by surface: ink (the dark ground) for the floor —
+the front door's opening and close, the tape, the printer, the market band; paper `#f7f5ef`
+for every document — the register, receipts, statements, the pay page. Ink `#14161c`,
+document blue `#2b4acb` on every interactive element, green and red for money outcomes only,
+gold for the GOLD chip only. Instrument Sans for words, IBM Plex Mono for figures, Fraunces
+in exactly two places: the wordmark and a statement's title line. The stub is the one bold
+object and comes in five sizes. Full contract in `src/styles/tokens.css` and the `scrip-ui`
+skill.
 
 ## 7. Standing policies
 
-- **Money-critical code requires tests**: allocation math, multiplier reconciliation,
-  policy validation, payment construction. `lint` + `typecheck` + `test` all green before
-  anything ships.
-- **Two lists that drift is the dominant defect shape** (carried over from Sage). Whenever
-  a value is declared in two places, write the test that reads both.
-- **Never invent a number on a surface.** If it cannot be derived from chain state or a
-  stored receipt, it does not render.
-- **Disclose the issuer.** Every asset row names whose token it is and what wrapper it is.
-
----
+- **Money-critical code requires tests**: the slice formula, the min-out, the introspection
+  guard, the multiplier conversion, the intake builder, the memo hash, keep-rate
+  deduplication. `lint` + `typecheck` + `test` green before anything ships.
+- **Two lists that drift is the dominant defect shape.** Whenever a value is declared in two
+  places, write the test that reads both: the program id (three places), the registry (Rust
+  and TypeScript), the rule constants, the rail and the shell, the docs nav and the pages.
+- **Never invent a number on a surface.**
+- **Disclose the issuer** on every asset row.
+- **Failure returns a value.** `Outcome<T>`; nothing throws for control flow.
 
 ## 8. Commands
 
 ```bash
-npm run dev        # next dev --turbopack
-npm run build
+npm run dev            # next dev --turbopack
+npm run build          # writes .next-build, never over a running server
 npm run lint
-npm run typecheck  # tsc --noEmit, strict
-npm run test       # vitest run
+npm run typecheck
+npm run test           # the offline suite
+npm run anchor:test    # the program's unit tests, both builds
+npm run anchor:build   # mainnet build + IDL sync
+npm run anchor:build:devnet
+npm run test:devnet    # the on-chain battery (19 tests) against the program at NEXT_PUBLIC_SOLANA_RPC
+npm run test:localnet  # the same battery on a local validator with Pyth's accounts cloned (scripts/localnet.sh)
+npm run test:registry  # every mint and pinned feed, read off mainnet
+npm run keeper         # the keeper
+npm run demo:devnet    # setup | land <usd> | sweep | sign | status — the whole moment on devnet
+npm run book           # start | status | publish — a book from a keypair, any cluster
+npm run preflight      # what a deploy would cost and what is missing, read from the chain
 ```
 
 ---
 
 ## Known drift
 
-Recorded as the code was written, per the rule at the top: the code wins, and the difference
-gets written down rather than quietly edited away.
-
 | This file / docs say | The code does | Why |
 | --- | --- | --- |
-| §4 names the account `Reserve` and the tables `reserves`, `allocations`, `payments` | `Book` / `books`, and `payouts` + `transfers` | Every other document — `product.md`, `architecture.md`, `strategy.md` — says **book**, and the product's own copy is "one book". One vocabulary; `architecture.md`'s table names won |
-| `architecture.md` lists BOTH a `books.policy_json` column and a separate `policies` table | the policy lives on `books.policy_json` only | A value declared in two places is the dominant defect shape this repo is built to avoid, and the doc declares it twice. The on-chain `Book` account holds the policy, so the mirror does too |
-| §5 marks `/app/goals` "(v2)" | it is a route from the scaffold, built at build-order step 7 | There are no versions. `build-order.md` settles it |
-| §4 implies the Anchor program sits at the repo root | it is a workspace at `anchor/` | A Rust `target/` at the root would sit inside the Next build's watch path. `anchor/target` is gitignored; the IDL and types the app needs are synced into `src/lib/anchor/` by `scripts/sync-idl.mjs` and committed, with `src/lib/solana/program.test.ts` failing on any drift between the three places the program id is written |
-| §8 lists five commands | plus `npm run anchor:build`, `anchor:test`, `db:generate`, `format` | Additions, not changes |
-| nothing in the docs says which cluster the product runs on | the ASSETS are mainnet-only, and the program is deployed to **devnet** at `3siGeKgHp7pvVVmjbdtBemeirNRPSFHyMXBJu3CXZ3hX` | There is no devnet Oro GOLD. Registering a fake one would be the same category of lie as calling a fund share a gram, so the registry stays mainnet-pinned and the devnet deployment exists to PROVE the program — `npm run test:devnet` runs a real two-leg payout across both token programs against it. The product runs on mainnet the moment a mainnet deploy is funded (~2.3 SOL); `NEXT_PUBLIC_SOLANA_CLUSTER` is the only switch |
-| `architecture.md` says a goal can spend "back into the owner's book, or out to the owner" | it has ONE destination: the owner's wallet | Those two directions are the same address here, because the book IS the owner's wallet — Webgold never custodies one. The spec's phrasing presumes a custodial book. Having one destination is stronger than having two: `withdraw_goal` has no branch that could send anywhere else |
-| §5's route table has no `/app/request` and no `/api/*` | both exist | A request is a link and a QR that open the payer's own form — step 5 needed a surface and the table predates it. `/api/maintenance` runs the watcher, the indexer and the cohort measurement behind a shared secret |
-| §4 lists a `Sponsorship` account | a sponsored position is a `Payout` with no named recipient | It needed no new account type: the claim path reuses the escrow, the receipt and the cohort, and one-claim-per-person falls out of the receipt's PDA seeds for free rather than needing a list of who claimed |
-| §1 said the default mix is 50 gold / 20 silver / 30 SPY | **70 gold / 30 SPY** | Not drift — a founder decision on evidence the law demanded be gathered ("verify before shipping the default 50/20/30"). Silver failed: every silver token on Solana is a fund tracker or a miner. Recorded in `docs/decisions.md`, and the lines above were updated rather than left to contradict the code |
-| §3 and `docs/research.md` describe the multiplier as one value activated at 00:30 UTC | the extension carries TWO values and a timestamp, and the live one is `newMultiplier` once that timestamp passes; the one activation observed on chain is 04:00 UTC | Reading the field named `multiplier` paints every SPYx balance 0.18% short, forever. `src/lib/corporate-actions/multiplier.ts` holds the rule and the evidence |
+| `docs/scrip.md` §5.2 lists `deposit_float` | there is no such instruction; a system transfer to the Book is the deposit | A program-owned account receives lamports from anyone; an instruction would add code with no rule in it |
+| §5.1 gives `Payout` a `state` field | there is none; a Payout exists exactly while it is open | Release, claim and cancel all close it, so a state field could only ever read "open" |
+| §5.1 gives `Receipt` an `Option<PriceStamp>` and `Option<u64>` measurements | fixed-size `PriceStamp` (all-zero feed = none) and `Measurement { at, balance_raw }` (`at == 0` = none) | A fixed layout is what a stranger can decode from an offset; the TypeScript reads the zero as absent |
+| §5.1 names one feed per asset | the Book carries TWO feed ids, `feed_raw` and `feed_adjusted`, and `finish_sweep` applies the multiplier only for the adjusted one | Pyth's `Crypto.SPYX/USD` prices the raw token and is pushed around the clock; `Equity.US.SPY/USD` prices a share in market hours. Accepting either keeps the rule alive on weekends and honest on weekdays |
+| §5.2 has no `sync_watermark` | it exists, permissionless | A sweep that finds nothing to sweep reverts, so a watermark lowered inside `begin_sweep` never persists; without it a spend would hide the next arrival. It can only ever set the watermark to the true balance, and only downward |
+| §5.3 posts the Pyth update inside the sweep transaction | the keeper posts it in preceding transactions, fully verified, then sweeps | Full verification takes several transactions; the atomic post is partially verified and the program refuses partial. The program only needs a fresh, fully verified account to exist |
+| §7.1 has `/claim/<release_id>` | `/claim/<payer>/<release_id>` | A Payout is addressed by payer and release id; the URL carries both. The claim secret stays in the fragment |
+| the docs say `/api/rule/status/<owner>` reads "keeper health" from a service | it reads `KEEPER_HEALTH_URL`, the keeper's own health endpoint | The keeper is a separate process; the app reads what it reports |
+| §6 says Scrip runs two keepers | it does, since 2026-09-18: `scrip-keeper` and `scrip-keeper-2` on the VM, different keys, health on 8787 and 8788, and `KEEPER_HEALTH_URL` takes a comma-separated list so `/keepers` names both | Two keepers racing is the only proof that a keeper is permissionless rather than an operator |
+| §4 "every field read off mainnet" | mint facts, feed ids and depth figures were read on 2026-09-12 and 2026-09-15; only four Pyth accounts are pinned on chain | The other feeds' sponsored accounts were not located without `getProgramAccounts`; the keeper posts its own updates, so a pin is a convenience, not a dependency |
+| the program is "Anchor, mainnet" | deployed to **devnet** at the id in `Anchor.toml`; the mainnet `.so` is built and untested on chain | A mainnet deploy needs 2.98 SOL, measured, and a Hermes API key for the keeper; both are the founder's to fund. `NEXT_PUBLIC_SOLANA_CLUSTER` is the only switch |
+| §7 keeps the cache at `var/paidin.<cluster>.db` | `var/scrip.<cluster>.db` | The name |
+| the docs describe turning on as open, then approve + float + enable | `start` does all four in ONE transaction, one signature | The program never required two; the first UI did. A person answers one question and signs once |
+| nothing in the docs says a book is public | a book is private; `/book/<handle>` exists only after the owner turns it on (`books.published`, off chain, reversible) | Chain data is public, but a savings product should not be the surface that makes somebody's arrivals searchable by name unless they chose it |
+| the docs show the worked example as a table beside a real stub | where no receipt in a registered asset exists, the worked example IS the stub, drawn as the same object and labelled "a worked example, not a receipt" | One object on the front door; never a sample number that reads as a settlement |
+| a mint off the registry is "held" | on devnet it is read from the chain and labelled **stand-in** (symbol, decimals, program from the mint); on mainnet it stays held | The e2e battery and `scripts/devnet-demo.ts` mint stand-ins; every surface that meets one says what it is instead of printing raw units |
+| the mainnet `.so` needs "about 3.3 SOL", or 6 SOL counting the buffer | **2.978378 SOL, measured**. Proved on devnet on 2026-09-19 by funding a throwaway payer with exactly 2.9794 SOL and deploying the real 585,384-byte `scrip-mainnet.so` at `--max-len 585384`: it landed in 18 seconds and left 0.00102232 SOL, and the dumped bytes matched sha256 `92f9cbda…`. The split is 2.974630 programdata rent, 0.000833 program-account rent, 0.002915 base fees (582 transactions, 583 signatures). `--with-compute-unit-price 10000` added 0.000172. The buffer is **not** a second 2.97 SOL: `DeployWithMaxDataLen` moves its lamports into the programdata, so peak equals total | The founder is buying this SOL with liquidated capital, so the figure had to be measured, not estimated. Both rents are a deposit: `solana program close` returned 2.97462956 SOL, twice, in the same test |
+| nothing says what a sweep costs, or who pays it | a sweep costs the **register's float** `KEEPER_TIP` 500,000 lamports plus the receipt's rent 2,519,680 (368 bytes at 5,080), so 0.00302 SOL. The keeper is repaid both and ends each sweep about 489,000 lamports ahead, measured. A register's own rent is 0.002459 and its handle's 0.000864 | The keeper is not a cost centre; it is paid. The cost that scales is the receipt's rent, and it stays spent, because a receipt is permanent |
+| `npm run anchor:build` builds the mainnet program | it also copies it to `anchor/target/deploy/scrip-mainnet.so`, which is the file the runbook deploys and `/security` hashes. Until 2026-09-17 it did not, so that file was three days stale and would have put a pre-grant program on mainnet | A build that does not produce the artefact its runbook names is a trap with one victim |
+| `docs/deploy.md` §6 proved mainnet with `npm run test:devnet` against it | that battery mints its own stand-ins, which the mainnet build refuses by design; §6 is now five ordered steps with real money in small amounts | The refusal is the feature; the proof has to respect it |
+| `docs/scrip.md` §7.1 shows the front door as copy beside one stub | the front door is the product running: a published book (`NEXT_PUBLIC_FRONT_BOOK`) prints live under a printer, with a Solana Pay QR on mainnet, and the market on Solana ticks beside it | The founder's review: "well-built generic". A judge must see money land and stock print without being told about it |
+| nothing in the docs reads a price for display | `src/lib/market` reads Jupiter's price and token APIs (keyless) and the mint's multiplier from mainnet, cached 30 s, for the front door only | Display, never settlement: a sweep still settles against Pyth on chain, and the band says so |
+| §7.1's pay page has one form | two ways: in stock (the intake) or in USDC (a Solana Pay transfer request to the normal address, no Scrip transaction) | "Payers never open Scrip" deserved a button: the USDC way IS that sentence |
+| `/app/request` and `/assets` in the rail | the request page is gone (the pay link takes `?amount=&reason=`); `/assets` stays but leaves the rail; `/keepers` joins it | Fewer pages that are forms; one page that is Solana-native infrastructure |
+| §9 "one moment of motion … nothing fades up on scroll" | the front door is a film: every scene's real object enters when reached, figures roll to their real values, the last sweep replays from its receipt, the tape moves; app surfaces keep the one moment | The founder's third review: "cinematic and motion animated … every scroll should be visually amazing". Motion is spent on real objects and real figures, never on text, and collapses under reduced motion |
+| §9 "no dark close"; one dark surface | the front door opens and closes dark (the floor at night), with `--accent-inverse`, `--ok-inverse`, `--err-inverse`, `--ink-inverse-faint` and `--glow` added to tokens; every document surface stays paper | The paper-and-ink identity read as tasteful and anonymous; the dark opening gives it contrast, and the tear between the two is the stub's own perforation |
+| §7.2 the rule page asks for a wallet first | the question is answered signed out; the wallet is asked for at the moment of signing; the answer survives the popup in session storage | Onboarding: see the value, then sign |
+| nothing in the docs says where Scrip runs | deployed on the founder's VM at `https://scrip.80.225.209.190.sslip.io` (devnet), beside other apps, under pm2 and nginx; `deploy/ecosystem.vm.cjs`, `docs/deploy.md` §0 | The demo has to be reachable from a phone before it can be judged from one |
+| `docs/scrip.md` §7.2 asks for a wallet first; §7.1 has `/book/<handle>`, `/app/send`; no organisation, no grant | `docs/SCRIP-COMPANY-PLAN.md` (2026-09-16) supersedes the design, the presentation and the roadmap: `/@handle` for people and organisations, `/app/org/*` to pay in stock, `Grant` in the program, the floor, the marketing map, Telegram, ⌘K, statements, OG images on every public record | The founder: Scrip becomes a company that pays in ownership; "start now according to the plan, mainnet at the end" |
+| the plan's §5 names `ReceiptKind { Sweep, Settle, Sponsor, Grant, Vest }` and `Handle.kind` | `ReceiptKind { Sweep, Pay, Gift, Grant, Vest }`; the IDL keeps the Payout kinds `Settle`/`Sponsor`, which TypeScript maps to `pay`/`gift` | The words a person reads on a stub; the account layout is what the plan asked for |
+| the plan's §5 has `vest` repay "from the grant's float" and the keeper vest "hourly" | the float is set at `seal_grant` (50,000,000 lamports suggested, refunded at close); the keeper vests on `KEEPER_VEST_HOURS` (default 24), the first and final vests at once | A grant of $50 vesting hourly for a year would spend more in tips than it is worth; a day is the cadence a person can see on their register |
+| the front book on devnet is `@demo`, a person | the grant build is **on devnet** since 2026-09-16 (slot 499,325,517, 581,024 bytes, sha256 `87ab6122…`), and the front book is `@scrip`, an **organisation** opened by `npm run demo:devnet -- setup` with `DEMO_SLUG=scrip DEMO_KIND=org`. The 2026-09-15 `@demo` register and its receipts were written by the old layout and no longer decode; the indexer skips them and the old cache is set aside at `var/old/` | Two account layouts cannot share a cluster. A redeploy is the only way to read the new ones, and the front door must show what the code actually writes |
+| nothing in the docs limits how fast Scrip reads the chain | every server read passes `src/lib/solana/limiter.ts`: one gate per endpoint per process (on `globalThis`, so a dev server's several module copies share it), 4 calls a second and 2 at once on Solana's own endpoints, 100 on a paid one, unlimited on a local validator; rent lookups are cached by size in `src/lib/solana/rent.ts` | The public endpoint answers a burst with 429 and the page then has no number to show. A queue is slow; a refused read would be a wrong number |
+| §9 "one moment of motion"; `<Reveal>` watches with an IntersectionObserver | it is a scroll check: a scene enters when its top crosses the bottom of the window, which is also true of anything scrolled past. An observer missed any scene jumped over, and six were invisible after one flick to the end of the page | Content hidden by default must be revealed by a mechanism that cannot fail to run |
+| nothing in the docs says what happens with JavaScript off | the front door renders whole; the film's hiding lives under `:where(html[data-js])`, stamped in the head before first paint | A crawler, a scripting-off browser and the moment before hydration are all readers |
+| the craft list is "to do" | built: one toast for every money action (`components/toast`), a skeleton per shelled route, `error.tsx` / `not-found.tsx` / `global-error.tsx`, an offline register and an install prompt (`components/app/offline.tsx`, `public/sw.js`), OG cards on `/pay/[handle]` and `/m/@handle/<id>` | Plan §9's "Craft, per page, before it is done" |
+| nothing says how long a bring-up takes | `npm run rehearse` runs the mainnet sequence against a local validator, timed: 88 seconds from nothing to a site printing receipts, every step green (`docs/deploy.md` §6.1) | A deploy day should be a repeat of something already done, not a first attempt |
+
