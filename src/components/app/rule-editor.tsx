@@ -20,6 +20,7 @@ import {
   validateRule,
 } from "@/lib/rule/slice";
 import { signRuleAction } from "./sign-rule";
+import { ExampleStub } from "@/components/stub/stub";
 import "./rule.css";
 import { useTxToast } from "@/components/toast/use-tx-toast";
 
@@ -50,7 +51,7 @@ type View = {
 /** What the page shows before a wallet is connected: the question, answerable, with nothing to sign yet. */
 const SIGNED_OUT: View = { hasBook: false, slug: null, assetMint: null, state: "off", rule: null, usdcBalance: "0", usdcExists: true, delegatedAmount: "0", floatLamports: "0", sweepsCovered: 0, ownerLamports: "0", openCostLamports: "0" };
 
-export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | null; view: View | null; assets: AssetOpt[] }) {
+export function RuleEditor({ owner, view: viewIn, assets, prices = {} }: { owner: string | null; view: View | null; assets: AssetOpt[]; prices?: Record<string, number> }) {
   const router = useRouter();
   const view: View = viewIn ?? SIGNED_OUT;
   const r = view.rule;
@@ -120,6 +121,13 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
   // meets that message once does not come back. Answer it here, before the wallet opens,
   // with the real numbers: rent read off this cluster, plus the float they chose, plus a
   // little for the signature.
+  // Units for the preview stub, from the display price. Never rendered when absent.
+  const assetPrice = prices[assetMint] ?? null;
+  const previewUnits =
+    example.ok && assetPrice !== null && assetPrice > 0
+      ? (Number(example.value.slice) / 1e6 / assetPrice).toFixed(4)
+      : null;
+
   const FEE_HEADROOM = 100_000n;
   const ownerLamports = BigInt(view.ownerLamports || "0");
   const needed = (view.hasBook ? 0n : BigInt(view.openCostLamports || "0")) + floatLamports + FEE_HEADROOM;
@@ -184,6 +192,29 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
             example.why
           )}
         </p>
+        {/*
+          THE OBJECT, BEFORE THE SIGNATURE. The stub is the thing this product makes, and
+          until now a person only met it after committing. Here it reacts to the rate as
+          they move it, so the choice has a picture instead of a sentence. Labelled
+          arithmetic throughout: the units come from Jupiter's display price, and when that
+          cannot be read the stub says so rather than inventing a number.
+        */}
+        {example.ok ? (
+          <div className="sp-q-preview">
+            <ExampleStub
+              landedUsd={500}
+              rateBps={terms.rateBps}
+              units={previewUnits ?? "—"}
+              symbol={asset.symbol}
+              when={slug ? `in @${slug}’s wallet, seconds later` : "in your own wallet, seconds later"}
+              foot={
+                previewUnits
+                  ? `Arithmetic at ${asset.symbol} $${assetPrice!.toLocaleString("en-US", { maximumFractionDigits: 2 })} on Jupiter, for display. Your first real receipt replaces this.`
+                  : "Arithmetic. The price could not be read just now, so the units are left out rather than guessed."
+              }
+            />
+          </div>
+        ) : null}
       </section>
 
       {/* ── the two details that are not defaults ───────────────────────── */}

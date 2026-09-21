@@ -6,6 +6,7 @@ import { SignOut } from "@/components/auth/connect";
 import { ruleAssets } from "@/lib/assets/registry";
 import { loadBook } from "@/lib/book/read-book";
 import { currentOwner } from "@/lib/session/server";
+import { market } from "@/lib/market";
 
 export const metadata: Metadata = { title: "The rule" };
 export const dynamic = "force-dynamic";
@@ -28,6 +29,13 @@ export default async function RulePage() {
     );
   }
   const view = await loadBook(owner);
+  // Jupiter's display price, so the worked example on this page shows real units for the
+  // rate the person is choosing. Display only — a sweep still settles against Pyth on
+  // chain, and the stub's own foot says the figure is arithmetic. A price that cannot be
+  // read leaves the units out rather than inventing one.
+  const prices = new Map<string, number>();
+  const m = await market().catch(() => null);
+  for (const row of m?.rows ?? []) if (row.priceUsd !== null) prices.set(row.mint, row.priceUsd);
   return (
     <PageFrame
       eyebrow="The rule"
@@ -66,6 +74,7 @@ export default async function RulePage() {
             ownerLamports: view.value.ownerLamports.toString(),
             openCostLamports: view.value.openCostLamports.toString(),
           }}
+          prices={Object.fromEntries(prices)}
           assets={[...assets, ...(view.value.asset && !assets.some((a) => a.mint === view.value.asset?.mint) ? [view.value.asset] : [])].map(opt)}
         />
       )}

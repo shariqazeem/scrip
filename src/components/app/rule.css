@@ -275,3 +275,15 @@
 .sp-input-wrap.is-inline .sp-input {
   padding-block: 2px;
 }
+
+/* ── the worked example, beside the question ──────────────────────────────────────────
+   The stub is what this product makes. Until now a person only met it after signing;
+   here it stands next to the rate and redraws as they move it. Full width under 900px so
+   it reads as the object rather than a thumbnail. */
+.sp-q-preview {
+  margin: var(--s-5) 0 var(--s-2);
+  max-width: 460px;
+}
+@media (max-width: 900px) {
+  .sp-q-preview { max-width: none; }
+}

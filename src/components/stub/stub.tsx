@@ -131,11 +131,32 @@ export function GhostStub({ landed, line, symbol, rateBps }: { landed: string; l
 }
 
 /**
- * A WORKED EXAMPLE AT THE DEFAULT RATE, in stub form, and labelled as arithmetic. Shown only
- * where no real receipt in a registered asset exists yet, so the front door still shows the
- * object without inventing a settlement.
+ * A WORKED EXAMPLE, in stub form, labelled as arithmetic.
+ *
+ * Two callers: the front door, where no real receipt in a registered asset exists yet, and
+ * the rule page, where it answers "what would this actually do for me?" BEFORE a signature
+ * rather than after. The rate and the units are props so the rule page can recompute them
+ * as the person moves the rate — the object has to react, or it is a picture of a form.
+ *
+ * The units come from Jupiter's display price, never from a settlement. The foot says so.
  */
-export function ExampleStub() {
+export function ExampleStub({
+  landedUsd = 500,
+  rateBps = 1_000,
+  units = "0.0654",
+  symbol = "SPYx",
+  when = "in the same wallet, seconds later",
+  foot = "Arithmetic at the default rate. The first real receipt replaces this.",
+}: {
+  landedUsd?: number;
+  rateBps?: number;
+  units?: string;
+  symbol?: string;
+  when?: string;
+  foot?: string;
+} = {}) {
+  const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const slice = (landedUsd * rateBps) / 10_000;
   return (
     <article className="stub is-example">
       <div className="stub-head">
@@ -143,23 +164,24 @@ export function ExampleStub() {
         <span>Scrip</span>
       </div>
       <p className="stub-landed">
-        <strong>$500.00</strong> landed
+        <strong>{usd(landedUsd)}</strong> landed
       </p>
-      <p className="stub-became">10% becomes</p>
+      <p className="stub-became">{rateBps / 100}% becomes</p>
       <p className="stub-units">
-        0.0654<span className="sym">SPYx</span>
+        {units}
+        <span className="sym">{symbol}</span>
       </p>
-      <p className="stub-when">in the same wallet, seconds later</p>
+      <p className="stub-when">{when}</p>
       <hr className="stub-rule" />
       <p className="stub-row">
         <span className="k">Stayed USDC</span>
-        <span className="v">$450.00 · spendable, untouched</span>
+        <span className="v">{usd(landedUsd - slice)} · spendable, untouched</span>
       </p>
       <p className="stub-row">
         <span className="k">Still held</span>
         <span className="v is-muted">measured on chain at 7 and 30 days</span>
       </p>
-      <p className="stub-foot">Arithmetic at the default rate. The first real receipt replaces this.</p>
+      <p className="stub-foot">{foot}</p>
     </article>
   );
 }
