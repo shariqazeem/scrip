@@ -40,9 +40,29 @@ export const DEFAULT_TOLERANCE_BPS = 100;
 /** The delegate allowance's default: $1,000. */
 export const DEFAULT_ALLOWANCE_USDC = 1_000_000_000n;
 /** The float's suggested deposit, in lamports. About fourteen sweeps. */
-export const SUGGESTED_FLOAT_LAMPORTS = 50_000_000n;
-/** What one sweep costs the float: tip + receipt rent, ≈ 0.0034 SOL. */
-export const SWEEP_COST_LAMPORTS = 3_400_000n;
+/**
+ * WHAT A SWEEP COSTS THE FLOAT, measured on mainnet on 2026-09-21.
+ *
+ * `begin_sweep` requires the Book to hold `tip + receipt rent + ata rent` above its own
+ * rent, and repays the keeper exactly that. The FIRST sweep is dearer because it creates
+ * the owner's asset account; every one after it does not.
+ *
+ *   KEEPER_TIP        500,000
+ *   receipt rent    2,519,680   368 bytes at 5,080 a byte
+ *   SPYx ATA rent   1,559,560   179 bytes, token-2022
+ *
+ * One constant of 3,400,000 was wrong in both directions: it overstated a later sweep by
+ * 380,320, and understated the first by 1,179,240 — so a float sized for "one sweep" bought
+ * a rule that could never fire, reported only as `float-empty`.
+ */
+export const SWEEP_COST_LAMPORTS = 3_019_680n;
+export const FIRST_SWEEP_LAMPORTS = 4_579_240n;
+/**
+ * What a new register is offered. Covers the first sweep and five more — enough that the
+ * rule visibly works — at about a third of the old 0.05, because the float is the largest
+ * part of the entry price and the one part a person cannot reason about.
+ */
+export const SUGGESTED_FLOAT_LAMPORTS = 20_000_000n;
 
 export type RuleTerms = {
   readonly rateBps: number;
@@ -130,7 +150,14 @@ export function preview(arrivalUsdc: bigint, terms: RuleTerms, balance = 0n): Ou
   });
 }
 
-/** How many sweeps a float of `lamports` pays for, at the stated per-sweep cost. */
-export function sweepsCovered(lamports: bigint): number {
-  return Number(lamports / SWEEP_COST_LAMPORTS);
+/**
+ * How many sweeps a float pays for. `firstDone` is true once the owner's asset account
+ * exists, because that is the only thing that makes the first sweep dearer than the rest.
+ * Rounds down, and never claims one it cannot cover.
+ */
+export function sweepsCovered(lamports: bigint, firstDone = false): number {
+  if (lamports <= 0n) return 0;
+  if (firstDone) return Number(lamports / SWEEP_COST_LAMPORTS);
+  if (lamports < FIRST_SWEEP_LAMPORTS) return 0;
+  return 1 + Number((lamports - FIRST_SWEEP_LAMPORTS) / SWEEP_COST_LAMPORTS);
 }

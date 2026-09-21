@@ -9,7 +9,7 @@ import { readMintMultiplier } from "@/lib/corporate-actions/read-mint";
 import { mulBase } from "@/lib/money";
 import { type Outcome, attempt, held, ok } from "@/lib/outcome";
 import { assetAta, tokenProgramFor, usdcAta } from "@/lib/rule/instructions";
-import { MIN_SLICE, SWEEP_COST_LAMPORTS, effectiveRate } from "@/lib/rule/slice";
+import { FIRST_SWEEP_LAMPORTS, MIN_SLICE, effectiveRate, sweepsCovered } from "@/lib/rule/slice";
 import { cluster } from "@/lib/solana/cluster";
 import { connection } from "@/lib/solana/connection";
 import { SCRIP_PROGRAM_ID, bookPda, handlePda } from "@/lib/solana/program";
@@ -184,6 +184,10 @@ async function readBookView(ownerAddress: string, now: number): Promise<Outcome<
 
   // ── the float and the state ──────────────────────────────────────────────────────────
   const ownerLamports = BigInt(infos[wanted.length - 1]?.lamports ?? 0);
+  // The first sweep is dearer because it creates the owner's asset account. Once that
+  // account exists every later sweep costs less, so how far a float stretches depends on it.
+  const assetIndex = asset ? assets.findIndex((a) => a.mint === asset.mint) : -1;
+  const assetAtaExists = assetIndex >= 0 ? infos[1 + assetIndex] !== null : false;
   // What `start` must pay before a lamport of float: the Book and the Handle it creates.
   // 356 and 42 bytes, read off mainnet on 2026-09-21; `rentFor` caches by size.
   const openCostLamports = (await rentFor(conn, 356)) + (await rentFor(conn, 42));
@@ -206,7 +210,7 @@ async function readBookView(ownerAddress: string, now: number): Promise<Outcome<
     openCostLamports,
     state,
     rateNowBps,
-    sweepsCovered: Number((floatLamports > 0n ? floatLamports : 0n) / SWEEP_COST_LAMPORTS),
+    sweepsCovered: sweepsCovered(floatLamports > 0n ? floatLamports : 0n, assetAtaExists),
     holdings,
     holds: [...new Set(holds)],
   });
@@ -222,7 +226,7 @@ export function ruleState(book: Book | null, usdc: BookView["usdc"], pda: string
   if (usdc.delegate === null || usdc.delegatedAmount === 0n) return "paused";
   if (usdc.delegate !== pda) return "delegate-replaced";
   if (usdc.delegatedAmount < MIN_SLICE) return "allowance-exhausted";
-  if (floatLamports < SWEEP_COST_LAMPORTS) return "float-empty";
+  if (floatLamports < FIRST_SWEEP_LAMPORTS) return "float-empty";
   return "on";
 }
 

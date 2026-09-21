@@ -270,7 +270,11 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
                     <input className="sp-input is-mono" inputMode="decimal" value={floatSol} onChange={(e) => setFloatSol(e.target.value.replace(/[^0-9.]/g, ""))} />
                   </span>
                 </span>
-                <span className="note">SOL on your Book that pays for each permanent receipt and the keeper&rsquo;s tip: about {sweepsCovered(floatLamports)} sweeps. Withdrawable any time.</span>
+                <span className="note">
+                  Every arrival writes a receipt that lives on chain forever, and whoever submits it is paid a tip. This
+                  covers about <span className="mono">{sweepsCovered(floatLamports)}</span> of them. Nothing here is
+                  invested and nothing is ours — it sits on your own register and you can withdraw it any time.
+                </span>
               </label>
             </>
           ) : null}
@@ -384,7 +388,7 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
           {!owner
             ? `Connecting is a signature, not a transaction; nothing moves. Then one signature opens your book at @${slug || "yourname"}, approves your own Book as delegate for ${usd(Number(allowance || 0))}, deposits ${sol(floatLamports)} of float, and turns the rule on. Whatever USDC is there becomes the watermark; only what lands from then on is income.`
             : !view.hasBook
-            ? `One signature: opens your book at @${slug || "yourname"}, approves your own Book as delegate for ${usd(Number(allowance || 0))}, deposits ${sol(floatLamports)} of float, turns the rule on. Your current ${usdc(BigInt(view.usdcBalance))} is the watermark; only what lands from now is income.`
+            ? `Starting costs ${sol(needed)}: ${sol(BigInt(view.openCostLamports))} of rent that comes back if you ever close the register, and ${sol(floatLamports)} that pays for your first ${sweepsCovered(floatLamports)} receipts. One signature opens your register at @${slug || "yourname"}, approves your own Book as delegate for ${usd(Number(allowance || 0))}, and turns the rule on. Your current ${usdc(BigInt(view.usdcBalance))} is the watermark; only what lands from now is income.`
             : enabled
               ? `A new rate resets the watermark to today’s ${usdc(BigInt(view.usdcBalance))}; what already landed is not taxed. Allowance left ${usdc(BigInt(view.delegatedAmount))}; float ${sol(BigInt(view.floatLamports))}, about ${view.sweepsCovered} sweeps.`
               : `One signature: approve, float, on. Your current ${usdc(BigInt(view.usdcBalance))} becomes the watermark.`}{" "}

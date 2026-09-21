@@ -1,21 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_MIN_INBOUND,
-  ESCALATION_PERIOD_SECONDS,
-  FEED_MAX_AGE_SECONDS,
-  MAX_CONF_BPS,
-  MAX_RATE_BPS,
-  MAX_TOLERANCE_BPS,
-  MIN_SLICE,
-  MIN_TOLERANCE_BPS,
-  computeSlice,
-  effectiveRate,
-  preview,
-  sweepsCovered,
-  validateRule,
-} from "./slice";
+import { DEFAULT_MIN_INBOUND, ESCALATION_PERIOD_SECONDS, FEED_MAX_AGE_SECONDS, FIRST_SWEEP_LAMPORTS, MAX_CONF_BPS, MAX_RATE_BPS, MAX_TOLERANCE_BPS, MIN_SLICE, MIN_TOLERANCE_BPS, SUGGESTED_FLOAT_LAMPORTS, SWEEP_COST_LAMPORTS, computeSlice, effectiveRate, preview, sweepsCovered, validateRule } from "./slice";
 
 /**
  * THE MIRROR IS HELD TO THE ORIGINAL. This file reads `rule.rs` and compares every constant,
@@ -120,7 +106,37 @@ describe("preview", () => {
     const p = preview(500_000_000n, { rateBps: 1_000, escalateBps: 0, floorUsdc: 0n, capUsdc: 5_000_000_000n, toleranceBps: 100 });
     expect(p.ok && p.value.slice).toBe(50_000_000n);
   });
-  it("covers about fourteen sweeps with the suggested float", () => {
-    expect(sweepsCovered(50_000_000n)).toBe(14);
+  it("counts what 0.05 SOL really buys, which is not what the old constant said", () => {
+    // This asserted 14, computed from a flat 3,400,000 a sweep. Measured on mainnet the
+    // first sweep costs 4,579,240 (it creates the asset account) and every later one
+    // 3,019,680, so the same float buys SIXTEEN. The old figure was wrong in both
+    // directions at once, and understated the only sweep that can fail for being unaffordable.
+    expect(sweepsCovered(50_000_000n)).toBe(16);
+  });
+});
+
+describe("sweepsCovered", () => {
+  it("refuses to promise a first sweep the float cannot pay for", () => {
+    // 3,400,000 was the old constant. A float that size buys NOTHING before the asset
+    // account exists, which is the case for every new register.
+    expect(sweepsCovered(3_400_000n)).toBe(0);
+    expect(sweepsCovered(FIRST_SWEEP_LAMPORTS - 1n)).toBe(0);
+    expect(sweepsCovered(FIRST_SWEEP_LAMPORTS)).toBe(1);
+  });
+
+  it("counts the cheaper sweeps once the asset account exists", () => {
+    expect(sweepsCovered(SWEEP_COST_LAMPORTS, true)).toBe(1);
+    expect(sweepsCovered(SWEEP_COST_LAMPORTS * 3n, true)).toBe(3);
+    // The first is dearer, so the same float buys fewer from a standing start.
+    expect(sweepsCovered(SWEEP_COST_LAMPORTS * 3n)).toBe(2);
+  });
+
+  it("the suggested float covers the first sweep and five more", () => {
+    expect(sweepsCovered(SUGGESTED_FLOAT_LAMPORTS)).toBe(6);
+  });
+
+  it("is zero, never negative, for an empty float", () => {
+    expect(sweepsCovered(0n)).toBe(0);
+    expect(sweepsCovered(-1n)).toBe(0);
   });
 });
