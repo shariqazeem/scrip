@@ -20,22 +20,29 @@ export const dynamic = "force-dynamic";
 export default async function RulePage() {
   const owner = await currentOwner();
   const assets = ruleAssets();
+
+  // Jupiter's display price, so the worked example shows real units for the rate the person
+  // is choosing. Display only — a sweep still settles against Pyth on chain, and the stub's
+  // own foot says the figure is arithmetic. A price that cannot be read leaves the units out
+  // rather than inventing one.
+  //
+  // Read BEFORE the signed-out branch, and passed to both. The signed-out page is the one a
+  // stranger meets first, and it is the whole point of answering the question before asking
+  // for a wallet — so it is the last page that should be missing the number.
+  const prices = new Map<string, number>();
+  const m = await market().catch(() => null);
+  for (const row of m?.rows ?? []) if (row.priceUsd !== null) prices.set(row.mint, row.priceUsd);
+  const priceProps = Object.fromEntries(prices);
+
   if (!owner) {
     // The question first, the wallet second: choose a rate before anything asks for a signature.
     return (
       <PageFrame eyebrow="The rule" title="The share of your income you never want to think about again." sub="A habit, not a trading setting. Payers keep sending USDC to the address you already use; a slice of every inflow becomes stock in this wallet, with a receipt.">
-        <RuleEditor owner={null} view={null} assets={assets.map(opt)} />
+        <RuleEditor owner={null} view={null} assets={assets.map(opt)} prices={priceProps} />
       </PageFrame>
     );
   }
   const view = await loadBook(owner);
-  // Jupiter's display price, so the worked example on this page shows real units for the
-  // rate the person is choosing. Display only — a sweep still settles against Pyth on
-  // chain, and the stub's own foot says the figure is arithmetic. A price that cannot be
-  // read leaves the units out rather than inventing one.
-  const prices = new Map<string, number>();
-  const m = await market().catch(() => null);
-  for (const row of m?.rows ?? []) if (row.priceUsd !== null) prices.set(row.mint, row.priceUsd);
   return (
     <PageFrame
       eyebrow="The rule"
@@ -74,7 +81,7 @@ export default async function RulePage() {
             ownerLamports: view.value.ownerLamports.toString(),
             openCostLamports: view.value.openCostLamports.toString(),
           }}
-          prices={Object.fromEntries(prices)}
+          prices={priceProps}
           assets={[...assets, ...(view.value.asset && !assets.some((a) => a.mint === view.value.asset?.mint) ? [view.value.asset] : [])].map(opt)}
         />
       )}
