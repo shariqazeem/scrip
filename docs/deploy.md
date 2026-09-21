@@ -27,8 +27,8 @@ hosts other apps under pm2 and nginx; Scrip sits beside them, untouched:
 | URL | `https://scrip.80.225.209.190.sslip.io` (nginx → 127.0.0.1:3300, Let's Encrypt via certbot) |
 | Code | `/home/ubuntu/scrip`, synced with rsync from the repo (no git on the box); `.next-build` built there with Node 22 (nvm) |
 | Processes | pm2 `scrip-web` (`next start -p 3300`) and `scrip-keeper` (tsx, sourcing `.env.local`); both saved in pm2's list |
-| Cluster | **devnet**, the grant build since 2026-09-16 — `@scrip` (an organisation) on the front door, the deployer key as keeper, relayer and crank, health on :8787 |
-| Cache | `/home/ubuntu/scrip/var/scrip.devnet.db`, copied from the founder's machine after a WAL checkpoint |
+| Cluster | **mainnet-beta since 2026-09-21** — `@scrip` (an organisation) on the front door, program `Fbp8fBdC…A16gj`. One key per service: `keeper1.json` and `keeper2.json` for the two keepers, `service.json` for the relayer and crank. The upgrade authority is **not on this box** and never will be. Health on :8787 and :8788 |
+| Cache | `/home/ubuntu/scrip/var/scrip.mainnet-beta.db`, copied from the founder's machine after a WAL checkpoint. The devnet env is kept at `.env.local.devnet.bak` |
 | Env | `/home/ubuntu/scrip/.env.local` (mode 600): cluster, site URL, front book, the devnet pay-in mint, session and maintenance secrets, key paths |
 | Config | `deploy/ecosystem.vm.cjs` in the repo is the pm2 file installed as `ecosystem.config.cjs` |
 
