@@ -24,7 +24,7 @@ hosts other apps under pm2 and nginx; Scrip sits beside them, untouched:
 
 | | |
 | --- | --- |
-| URL | `https://scrip.80.225.209.190.sslip.io` (nginx → 127.0.0.1:3300, Let's Encrypt via certbot) |
+| URL | **`https://scrip.work`** since 2026-09-21 (also `www.scrip.work`, and `scrip.80.225.209.190.sslip.io` kept on the same certificate). nginx → 127.0.0.1:3300, Let's Encrypt via certbot, expires 20 Dec 2026. `NEXT_PUBLIC_SITE_URL` is the name every OG card and Solana Pay link is built from, so it is a rebuild, not a restart |
 | Code | `/home/ubuntu/scrip`, synced with rsync from the repo (no git on the box); `.next-build` built there with Node 22 (nvm) |
 | Processes | pm2 `scrip-web` (`next start -p 3300`) and `scrip-keeper` (tsx, sourcing `.env.local`); both saved in pm2's list |
 | Cluster | **mainnet-beta since 2026-09-21** — `@scrip` (an organisation) on the front door, program `Fbp8fBdC…A16gj`. One key per service: `keeper1.json` and `keeper2.json` for the two keepers, `service.json` for the relayer and crank. The upgrade authority is **not on this box** and never will be. Health on :8787 and :8788 |
