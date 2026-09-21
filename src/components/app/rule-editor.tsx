@@ -243,7 +243,7 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
       {/* ── what the rule may do: defaults, folded ──────────────────────── */}
       <details className="sp-q-advanced">
         <summary>
-          What the rule may do <span className="mono">· allowance {usd(Number(allowance || 0))} · float {sol(floatLamports)} · cap {cap ? usd(Number(cap)) : "none"} · floor {floor ? usd(Number(floor)) : "none"} · tolerance {fmtBps(toleranceBps)}</span>
+          What the rule may do <span className="mono">· allowance {usd(Number(allowance || 0))} · cap {cap ? usd(Number(cap)) : "none"} · floor {floor ? usd(Number(floor)) : "none"} · tolerance {fmtBps(toleranceBps)}</span>
         </summary>
         <div className="sp-q-advanced-body">
           {!enabled ? (
@@ -260,20 +260,6 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
                   The most the delegate may move in total before you approve again. The delegate is your own Book&rsquo;s address: it can move USDC only
                   through a sweep the program verifies, only into {asset.symbol}, only into your own account, never to a third party. Revoking it is one
                   instruction on the token program; Scrip cannot stop you.
-                </span>
-              </label>
-              <label className="sp-q-row">
-                <span className="k">Float</span>
-                <span className="v">
-                  <span className="sp-input-wrap">
-                    <span className="sp-input-prefix">◎</span>
-                    <input className="sp-input is-mono" inputMode="decimal" value={floatSol} onChange={(e) => setFloatSol(e.target.value.replace(/[^0-9.]/g, ""))} />
-                  </span>
-                </span>
-                <span className="note">
-                  Every arrival writes a receipt that lives on chain forever, and whoever submits it is paid a tip. This
-                  covers about <span className="mono">{sweepsCovered(floatLamports)}</span> of them. Nothing here is
-                  invested and nothing is ours — it sits on your own register and you can withdraw it any time.
                 </span>
               </label>
             </>
@@ -365,6 +351,44 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
             </button>
           </div>
         )}
+        {/*
+          WHAT THIS COSTS — one block, always visible, never a setting buried in a panel.
+          Float used to sit under "what the rule may do" beside cap, floor and tolerance,
+          which are genuine policy choices a person makes about their own money. Float is
+          not a policy: it is prepayment for receipts this register will write. Asking for
+          it as a decision invented a question nobody can answer, and it is the single thing
+          that stops a new wallet from starting. It is still adjustable, because someone
+          short of SOL needs the lever — but it reads as a price, not a choice.
+        */}
+        {!view.hasBook && owner !== null ? (
+          <div className="sp-q-cost">
+            <p className="sp-q-cost-head">
+              What this costs <span className="mono">{sol(needed)}</span>
+            </p>
+            <p className="sp-q-cost-row">
+              <span className="mono">{sol(BigInt(view.openCostLamports))}</span> rent for your register and its handle —{" "}
+              <strong>it comes back</strong> if you ever close the register.
+            </p>
+            <p className="sp-q-cost-row">
+              <span className="sp-input-wrap is-inline">
+                <span className="sp-input-prefix">◎</span>
+                <input
+                  className="sp-input is-mono"
+                  inputMode="decimal"
+                  aria-label="Prepaid for receipts, in SOL"
+                  value={floatSol}
+                  onChange={(e) => setFloatSol(e.target.value.replace(/[^0-9.]/g, ""))}
+                />
+              </span>{" "}
+              prepaid for your first <span className="mono">{sweepsCovered(floatLamports)}</span> receipts. Every arrival
+              writes one that lives on chain forever, and whoever submits it is paid a tip.
+            </p>
+            <p className="sp-q-cost-foot">
+              Nothing here is invested and none of it is ours: it sits on your own register, and you can withdraw what is
+              unspent at any time.
+            </p>
+          </div>
+        ) : null}
         {short > 0n ? (
           <p className="sp-why is-err">
             <TriangleAlert size={14} strokeWidth={2} aria-hidden /> Not enough SOL. This needs{" "}

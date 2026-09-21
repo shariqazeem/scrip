@@ -217,3 +217,61 @@
   font-size: var(--fs-body);
   font-weight: 600;
 }
+
+/* ── what this costs ──────────────────────────────────────────────────────────────────
+   The price of starting, as a price: one total, two lines that explain it, and the one
+   sentence people actually want (none of it is ours). It sits directly above the button
+   so nobody signs without having read it, and so nobody hunts for it in a panel. */
+.sp-q-cost {
+  margin: var(--s-6) 0 var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 10px);
+  background: var(--surface);
+}
+.sp-q-cost-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-3);
+  font-size: var(--fs-body);
+  color: var(--ink);
+}
+.sp-q-cost-head .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-units-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.sp-q-cost-row {
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+  color: var(--ink-muted);
+}
+.sp-q-cost-row .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.sp-q-cost-row strong {
+  font-weight: 500;
+  color: var(--ink);
+}
+.sp-q-cost-foot {
+  margin: var(--s-3) 0 0;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-body);
+  color: var(--ink-faint);
+}
+.sp-input-wrap.is-inline {
+  display: inline-flex;
+  width: 8.5ch;
+  vertical-align: baseline;
+}
+.sp-input-wrap.is-inline .sp-input {
+  padding-block: 2px;
+}
