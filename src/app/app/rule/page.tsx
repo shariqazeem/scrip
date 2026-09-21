@@ -63,6 +63,8 @@ export default async function RulePage() {
             delegatedAmount: view.value.usdc.delegatedAmount.toString(),
             floatLamports: view.value.floatLamports.toString(),
             sweepsCovered: view.value.sweepsCovered,
+            ownerLamports: view.value.ownerLamports.toString(),
+            openCostLamports: view.value.openCostLamports.toString(),
           }}
           assets={[...assets, ...(view.value.asset && !assets.some((a) => a.mint === view.value.asset?.mint) ? [view.value.asset] : [])].map(opt)}
         />

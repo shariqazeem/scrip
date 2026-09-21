@@ -35,6 +35,9 @@ type View = {
   delegatedAmount: string;
   floatLamports: string;
   sweepsCovered: number;
+  /** The owner's own SOL, and what a Book plus a Handle costs on this cluster. */
+  ownerLamports: string;
+  openCostLamports: string;
 };
 
 /**
@@ -45,7 +48,7 @@ type View = {
  * be told their rate is out of range.
  */
 /** What the page shows before a wallet is connected: the question, answerable, with nothing to sign yet. */
-const SIGNED_OUT: View = { hasBook: false, slug: null, assetMint: null, state: "off", rule: null, usdcBalance: "0", usdcExists: true, delegatedAmount: "0", floatLamports: "0", sweepsCovered: 0 };
+const SIGNED_OUT: View = { hasBook: false, slug: null, assetMint: null, state: "off", rule: null, usdcBalance: "0", usdcExists: true, delegatedAmount: "0", floatLamports: "0", sweepsCovered: 0, ownerLamports: "0", openCostLamports: "0" };
 
 export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | null; view: View | null; assets: AssetOpt[] }) {
   const router = useRouter();
@@ -110,6 +113,17 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
   const allowanceUsdc = BigInt(Math.round(Number(allowance || 0) * 1e6));
   const floatLamports = BigInt(Math.round(Number(floatSol || 0) * 1e9));
   const termsBody = { rateBps: terms.rateBps, escalateBps: terms.escalateBps, floorUsdc: terms.floorUsdc.toString(), capUsdc: terms.capUsdc.toString(), toleranceBps: terms.toleranceBps };
+
+  // CAN THIS WALLET AFFORD IT? The program moves the float with a system transfer, so a
+  // wallet short by a lamport fails at simulation — and a wallet shows that as "Failed to
+  // simulate the results of this request", which tells the owner nothing at all. Anyone who
+  // meets that message once does not come back. Answer it here, before the wallet opens,
+  // with the real numbers: rent read off this cluster, plus the float they chose, plus a
+  // little for the signature.
+  const FEE_HEADROOM = 100_000n;
+  const ownerLamports = BigInt(view.ownerLamports || "0");
+  const needed = (view.hasBook ? 0n : BigInt(view.openCostLamports || "0")) + floatLamports + FEE_HEADROOM;
+  const short = owner !== null && ownerLamports < needed ? needed - ownerLamports : 0n;
 
   async function run(label: string, body: Record<string, unknown>, message: string, then?: () => void) {
     if (!owner) return;
@@ -312,7 +326,7 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
           <button
             type="button"
             className="sp-action is-primary is-big"
-            disabled={busy !== null || !canStart}
+            disabled={busy !== null || !canStart || short > 0n}
             onClick={() => void run("start", { action: "start", slug, assetMint: asset.mint, termsVersion: asset.xstocks ? 1 : 0, terms: termsBody, allowanceUsdc: allowanceUsdc.toString(), floatLamports: floatLamports.toString() }, "The rule is on. Watching your wallet.", goHome)}
           >
             {busy === "start" ? "Waiting for your wallet…" : "Turn on the rule"}
@@ -321,7 +335,7 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
           <button
             type="button"
             className="sp-action is-primary is-big"
-            disabled={busy !== null || !canStart}
+            disabled={busy !== null || !canStart || short > 0n}
             onClick={() => void run("enable", { action: "enable", terms: termsBody, allowanceUsdc: allowanceUsdc.toString(), floatLamports: floatLamports.toString() }, "The rule is on. Watching your wallet.", goHome)}
           >
             {busy === "enable" ? "Waiting for your wallet…" : "Turn on the rule"}
@@ -347,6 +361,15 @@ export function RuleEditor({ owner, view: viewIn, assets }: { owner: string | nu
             </button>
           </div>
         )}
+        {short > 0n ? (
+          <p className="sp-why is-err">
+            <TriangleAlert size={14} strokeWidth={2} aria-hidden /> Not enough SOL. This needs{" "}
+            <span className="mono">{sol(needed)}</span> — {view.hasBook ? "" : `${sol(BigInt(view.openCostLamports))} of rent for your register and handle, `}
+            {sol(floatLamports)} of float, and a little for the signature. This wallet has{" "}
+            <span className="mono">{sol(ownerLamports)}</span>, so it is short{" "}
+            <span className="mono">{sol(short)}</span>. Add SOL, or lower the float under “what the rule may do” — the rent comes back if you ever close the register.
+          </p>
+        ) : null}
         {why ? (
           <p className="sp-why is-err">
             <TriangleAlert size={14} strokeWidth={2} aria-hidden /> {why}

@@ -59,6 +59,10 @@ export type BookView = {
   };
   readonly floatLamports: bigint;
   readonly rentLamports: bigint;
+  /** The owner's own SOL. What they can actually spend on opening a book and its float. */
+  readonly ownerLamports: bigint;
+  /** Rent for a Book plus a Handle, read from this cluster: what `start` costs before float. */
+  readonly openCostLamports: bigint;
   readonly state: RuleState;
   /** The rate in force now, after escalation. */
   readonly rateNowBps: number;
@@ -111,7 +115,9 @@ async function readBookView(ownerAddress: string, now: number): Promise<Outcome<
 
   // ── one round trip for the USDC account and every holding ────────────────────────────
   const assets = cluster() === "mainnet-beta" || !asset ? ruleAssets() : [asset];
-  const wanted = [usdcAta(owner, usdcMint), ...assets.map((a) => assetAta(owner, a))];
+  // The owner's own account rides along at the end: its lamports decide whether `start` can
+  // afford the float at all, and a round trip already leaving is the cheapest place to learn it.
+  const wanted = [usdcAta(owner, usdcMint), ...assets.map((a) => assetAta(owner, a)), owner];
   let infos;
   try {
     infos = await conn.getMultipleAccountsInfo(wanted, "confirmed");
@@ -177,6 +183,10 @@ async function readBookView(ownerAddress: string, now: number): Promise<Outcome<
   }
 
   // ── the float and the state ──────────────────────────────────────────────────────────
+  const ownerLamports = BigInt(infos[wanted.length - 1]?.lamports ?? 0);
+  // What `start` must pay before a lamport of float: the Book and the Handle it creates.
+  // 356 and 42 bytes, read off mainnet on 2026-09-21; `rentFor` caches by size.
+  const openCostLamports = (await rentFor(conn, 356)) + (await rentFor(conn, 42));
   const rentLamports = bookInfo ? await rentFor(conn, bookInfo.data.length) : 0n;
   const floatLamports = bookInfo ? BigInt(bookInfo.lamports) - rentLamports : 0n;
   const state = ruleState(book, usdc, pda.toBase58(), floatLamports);
@@ -192,6 +202,8 @@ async function readBookView(ownerAddress: string, now: number): Promise<Outcome<
     usdc,
     floatLamports: floatLamports < 0n ? 0n : floatLamports,
     rentLamports,
+    ownerLamports,
+    openCostLamports,
     state,
     rateNowBps,
     sweepsCovered: Number((floatLamports > 0n ? floatLamports : 0n) / SWEEP_COST_LAMPORTS),
