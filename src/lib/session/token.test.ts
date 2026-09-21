@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { SESSION_TTL_SECONDS, issueSessionToken, readSessionToken } from "./token";
 
 beforeAll(() => {
-  process.env.WEBGOLD_SESSION_SECRET = "test-secret-for-this-file-only";
+  process.env.SCRIP_SESSION_SECRET = "test-secret-for-this-file-only";
 });
 
 const OWNER = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU";

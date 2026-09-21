@@ -1,42 +1,50 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Fraunces, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 import { AppShell } from "@/components/shell/app-shell";
+import { Jump } from "@/components/shell/jump";
+import { Toasts } from "@/components/toast/toasts";
 import { siteUrl } from "@/lib/site";
 import "./globals.css";
 import "../styles/tokens.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-const jetbrainsMono = JetBrains_Mono({
+const instrument = Instrument_Sans({
   subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
+  weight: ["400", "500", "600"],
+  variable: "--font-instrument",
+  display: "swap",
+});
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight: "variable",
+  axes: ["opsz", "SOFT"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-plex-mono",
   display: "swap",
 });
 
 const SITE = siteUrl();
 
 /**
- * The description is written to be QUOTED, not merely crawled. An answer engine summarising
- * "how do I get paid in gold on Solana" will lift a sentence, so the sentences say what
- * Webgold does, what lands where, and what a reader can open and check.
+ * The description is written to be QUOTED. An answer engine summarising "how do I invest
+ * stablecoin income on Solana" will lift a sentence, so the sentences say what Scrip does.
  */
-const TITLE = "Webgold — ownership you receive, in grams";
+const TITLE = "Scrip — your income invests itself";
 const DESCRIPTION =
-  "Webgold is a receive book for real assets on Solana. Value arrives as gold and the stock market — in your own wallet, never ours — because you earned it, were gifted it, or were sponsored into it. Every arrival carries an on-chain receipt anyone can open: who paid, who received, how many grams, and why.";
+  "Scrip is a rule on your wallet. Set a rate once on the Solana address you already use; a slice of every USDC that lands becomes S&P 500 in the same wallet, with a permanent receipt anyone can open and a keep-rate measured on chain. Payers keep sending dollars.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: {
-    default: TITLE,
-    // Page titles read "Assets · Webgold" rather than each page inventing its own suffix.
-    template: "%s · Webgold",
-  },
+  title: { default: TITLE, template: "%s · Scrip" },
   description: DESCRIPTION,
-  applicationName: "Webgold",
+  applicationName: "Scrip",
   alternates: { canonical: "/" },
-  // The root sets only the card TYPE and site. An explicit root openGraph/twitter title
-  // overrides every page's own (Next merges per top-level key), which is how a shared
-  // receipt link ends up showing the homepage's SEO string instead of the arrival.
-  openGraph: { type: "website", siteName: "Webgold", url: SITE },
+  // Only the card TYPE and the site here: a root title would override every receipt's own.
+  openGraph: { type: "website", siteName: "Scrip", url: SITE },
   twitter: { card: "summary_large_image" },
   robots: {
     index: true,
@@ -47,13 +55,24 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    // The font variables live on <html> because tokens.css sets font-family from them on
-    // <html>; defining them on <body> leaves the root family unresolved and the page falls
-    // back to the browser's default serif.
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    // The font variables live on <html> because tokens.css sets font-family from them there.
+    // suppressHydrationWarning: the inline script below stamps `data-js` before React
+    // hydrates, and React would otherwise report the attribute it did not render as a
+    // mismatch. It covers this element's own attributes, nothing inside it.
+    <html lang="en" className={`${instrument.variable} ${plexMono.variable} ${fraunces.variable}`} suppressHydrationWarning>
+      <head>
+        {/* The film hides a scene only where a scene can be shown. Without this line the
+            front door renders whole, in place, which is what a crawler and a browser that
+            has not hydrated should see. It runs before first paint, so nothing flashes.
+            An attribute, not a class: className is server-rendered, and changing it before
+            hydration makes React warn that the tree does not match. */}
+        <script dangerouslySetInnerHTML={{ __html: 'document.documentElement.setAttribute("data-js","1")' }} />
+      </head>
       <body>
         {children}
         <AppShell />
+        <Jump />
+        <Toasts />
       </body>
     </html>
   );

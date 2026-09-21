@@ -1,13 +1,14 @@
 /**
- * tokens.css — the SINGLE design-token source of truth for every Webgold surface.
+ * tokens.css — the SINGLE design-token source of truth for every Scrip surface.
  *
- * "Receipt minimalism", re-toned: premium light, ONE burnished-gold accent, green/red
- * reserved strictly for money-outcome semantics. Imported once in the root layout; every
- * per-surface stylesheet ALIASES these (--brass: var(--accent)) and never redeclares a
- * palette value.
+ * THE SUBJECT IS A RECEIPT. Paper, ink, ruled ledger lines, and the perforated edge of a pay
+ * stub. One accent — document blue — on every interactive and brand element. Green and red
+ * are reserved for money outcomes. Gold is a chip colour for the one metal on the registry
+ * and nothing else.
  *
- * Ported from Sage's system, which was consolidated onto a single token file after five
- * competing stylesheets drifted apart. Do not repeat that: one file, aliases everywhere.
+ * Imported once in the root layout; every per-surface stylesheet ALIASES these
+ * (`--line: var(--border)`) and never redeclares a palette value. Never write a raw hex in
+ * a component or a page stylesheet.
  *
  * Fonts (--font-sans / --font-mono) are set on <html> by next/font in layout.tsx.
  */
@@ -17,58 +18,62 @@
   --pill-clear: 4.75rem;
 
   /* ── type families — defined ONCE, here ─────────────────────────── */
-  /* The inner var() fallbacks keep font-family valid when a next/font variable is missing:
-   * a bare undefined var() invalidates the declaration and the browser drops to serif. */
-  --font-sans: var(--font-inter, ui-sans-serif), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono, ui-monospace), SFMono-Regular, "JetBrains Mono", monospace;
+  /* Words: Instrument Sans. Figures: IBM Plex Mono, tabular, at every size. The inner
+   * var() fallbacks keep font-family valid when a next/font variable is missing. */
+  --font-sans: var(--font-instrument, ui-sans-serif), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono, ui-monospace), SFMono-Regular, "IBM Plex Mono", monospace;
+  /* The wordmark and a statement's title line, and nothing else. */
+  --font-serif: var(--font-fraunces, Georgia), "Iowan Old Style", serif;
 
   /* ── surface + text ─────────────────────────────────────────────── */
-  --bg: #faf8f4;           /* paper, faint gold cast */
-  --surface: #ffffff;      /* raised card */
-  --ink: #1a1815;          /* primary text (app surfaces), warm near-black */
-  --ink-warm: #171512;     /* public reading surfaces: landing, docs, long-form */
-  --ink-muted: #5c564c;    /* secondary text */
-  --ink-faint: #8d867a;    /* tertiary / captions */
+  --bg: #f7f5ef;             /* paper */
+  --surface: #ffffff;        /* the sheet */
+  --ink: #14161c;            /* primary text, everywhere */
+  --ink-muted: #5a5d66;      /* secondary text */
+  --ink-faint: #8b8e97;      /* tertiary / captions */
 
-  /* ── brand accent — ALL interactive/brand elements ──────────────── */
-  --accent: #9a6f1e;        /* burnished gold */
-  --accent-soft: #fbf3e3;   /* subtle wash (hover/selected) */
-  --accent-ink: #ffffff;    /* text on an accent fill */
-  --accent-strong: #7a5715; /* hover / active */
+  /* ── brand accent — document blue, ALL interactive/brand elements ── */
+  --accent: #2b4acb;
+  --accent-strong: #1f3aa8;  /* hover / active */
+  --accent-soft: #e8edfb;    /* subtle wash (selected, hover) */
+  --accent-ink: #ffffff;     /* text on an accent fill */
+  --accent-border: #c9d4f4;
 
   /* ── money-outcome semantics ONLY (never generic accents) ───────── */
-  --ok: #15803d;           /* settled / verified / received */
+  --ok: #15803d;             /* settled / still held */
   --ok-soft: #eef6f0;
-  --err: #dc2626;          /* failed / refused */
-  --err-soft: #fdeeee;
-  --warn: #b45309;         /* caution (held, stale price, low balance) — used sparingly */
-  --warn-soft: #fbf1e6;
-  /* tinted callout rings — a shade darker than each matching *-soft fill */
-  --accent-border: #ecdcb8;
   --ok-border: #c3e3cd;
+  --err: #dc2626;            /* failed / refused */
+  --err-soft: #fdeeee;
   --err-border: #f2cccc;
+  --warn: #b45309;           /* held, waiting, paused */
+  --warn-soft: #fbf1e6;
   --warn-border: #ecdcb4;
 
-  /* ── lines + elevation ──────────────────────────────────────────── */
-  --border: #e8e2d6;
-  --border-strong: #d6cdbc;
-  --shadow-sm: 0 1px 2px rgba(26, 24, 21, 0.05);
-  --shadow-md: 0 6px 24px rgba(26, 24, 21, 0.08);
-  --shadow-card: 0 12px 30px -18px rgba(26, 24, 21, 0.28);
-  --shadow-card-hover: 0 16px 34px -18px rgba(26, 24, 21, 0.24);
-  --shadow-float: 0 20px 48px -26px rgba(26, 24, 21, 0.3);
-  --shadow-hero: 0 20px 50px -20px rgba(26, 24, 21, 0.5);
-  --shadow-cta: 0 8px 22px -10px rgba(20, 19, 16, 0.6);
-  --shadow-cta-hover: 0 12px 28px -10px rgba(20, 19, 16, 0.66);
-  --shadow-ok-glow: 0 12px 26px -16px rgba(21, 128, 61, 0.45);
-  --shadow-on-dark: 0 12px 30px -14px rgba(0, 0, 0, 0.5);
-  --scrim-header: rgba(250, 248, 244, 0.82);
+  /* ── the one metal on the registry: its chip, and nothing else ──── */
+  --gold: #9a6f1e;
+  --gold-soft: #fbf3e3;
+  --gold-border: #ecdcb8;
 
-  /* ── inverse: the one dark surface (landing close, balance hero) ─── */
+  /* ── lines + elevation ──────────────────────────────────────────── */
+  --border: #e4dfd3;         /* a ruled line */
+  --border-strong: #cdc5b4;  /* a heavier rule */
+  --shadow-sm: 0 1px 2px rgba(20, 22, 28, 0.05);
+  --shadow-sheet: 0 1px 0 rgba(20, 22, 28, 0.04), 0 12px 28px -18px rgba(20, 22, 28, 0.22);
+  --shadow-float: 0 20px 48px -26px rgba(20, 22, 28, 0.3);
+  --scrim: rgba(247, 245, 239, 0.86);
+
+  /* ── inverse: the dark surfaces — the printer, the floor, the close ─ */
   --ink-inverse: #f4f2ee;
-  --ink-inverse-muted: #b5b0a6;
-  --border-inverse: #322d26;
-  --surface-inverse-raised: #2a2620;
+  --ink-inverse-muted: #b3b6bf;
+  --ink-inverse-faint: #7c808c;
+  --border-inverse: #2c2f38;
+  --surface-inverse: #14161c;
+  --surface-inverse-raised: #1f222b;
+  --accent-inverse: #9db0f7;      /* document blue, lifted for dark ground */
+  --ok-inverse: #5fcf85;          /* settled, on dark */
+  --err-inverse: #f27b7b;         /* failed / down, on dark */
+  --glow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 24px 60px -24px rgba(0, 0, 0, 0.7);
 
   /* ── radii (6/10/16, + pill for status chips ONLY) ──────────────── */
   --r-sm: 6px;
@@ -90,46 +95,56 @@
   --s-11: 128px;
   --s-12: 160px;
 
-  /* ── display type scale — the single source ─────────────────────── */
-  /* Sizes are fluid (clamp); tracking TIGHTENS as size grows. Each role = size + lh + tracking. */
-  --fs-display: clamp(2.6rem, 1.3rem + 5.4vw, 4.4rem);
-  --lh-display: 1.015;
-  --tracking-display: -0.035em;
+  /* ── measure ────────────────────────────────────────────────────── */
+  --measure: 720px;          /* the reading column */
+  --measure-wide: 1040px;    /* a two-column surface */
 
-  --fs-h1: clamp(2rem, 1.35rem + 2.7vw, 3.1rem);
-  --lh-h1: 1.06;
-  --tracking-h1: -0.025em;
+  /* ── type scale — the single source ─────────────────────────────── */
+  --fs-display: clamp(2.4rem, 1.3rem + 4.4vw, 3.9rem);
+  --lh-display: 1.04;
+  --tracking-display: -0.028em;
 
-  --fs-h2: clamp(1.45rem, 1.15rem + 1.5vw, 2.1rem);
-  --lh-h2: 1.15;
-  --tracking-h2: -0.016em;
+  --fs-h1: clamp(1.9rem, 1.3rem + 2.4vw, 2.8rem);
+  --lh-h1: 1.08;
+  --tracking-h1: -0.022em;
 
-  --fs-lead: clamp(1.12rem, 1rem + 0.6vw, 1.35rem);
+  --fs-h2: clamp(1.4rem, 1.15rem + 1.2vw, 1.9rem);
+  --lh-h2: 1.18;
+  --tracking-h2: -0.014em;
+
+  --fs-lead: clamp(1.08rem, 1rem + 0.45vw, 1.25rem);
   --lh-lead: 1.5;
-  --tracking-lead: -0.011em;
+  --tracking-lead: -0.006em;
 
   --fs-body: 1rem;
   --lh-body: 1.6;
-  --tracking-body: 0em;
 
-  --fs-mono: 0.8125rem;    /* data, labels, addresses, amounts */
-  --tracking-mono: 0.02em;
+  --fs-small: 0.875rem;
+  --fs-caption: 0.8125rem;
+
+  --fs-mono: 0.8125rem;      /* data, addresses, hashes */
+  --tracking-mono: 0.01em;
+
+  /* the units: the largest thing on any page they appear on */
+  --fs-units: clamp(2.6rem, 1.4rem + 5vw, 4.6rem);
+  --fs-units-sm: clamp(1.6rem, 1.2rem + 1.6vw, 2.2rem);
 
   /* ── motion — 3 durations, 2 easings ────────────────────────────── */
   --dur-1: 160ms;  /* micro: hover, tap */
-  --dur-2: 320ms;  /* standard: reveal, fade, slide */
-  --dur-3: 640ms;  /* expressive: hero stagger, count-up */
+  --dur-2: 320ms;  /* the one moment: the stub prints */
+  --dur-3: 640ms;
+  --dur-4: 1200ms; /* a scene: a number rolling to its value, a diagram playing */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
 }
 
-/* prefers-reduced-motion COLLAPSES everything: all motion is built on these duration
- * tokens, so zeroing them makes transitions instant with no per-component fork. */
+/* prefers-reduced-motion COLLAPSES everything: all motion rides these tokens. */
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur-1: 0.01ms;
     --dur-2: 0.01ms;
     --dur-3: 0.01ms;
+    --dur-4: 0.01ms;
   }
 }
 
@@ -150,10 +165,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   /* tabular numerals everywhere: amounts and hashes must align in a column */
   font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+  font-variant-numeric: tabular-nums;
 }
 
-/* The Tailwind reset leaves border-color at currentColor; our hairline is the token.
- * Every `border: 1px solid` that names no colour depends on this. */
+/* The Tailwind reset leaves border-color at currentColor; our hairline is the token. */
 * {
   border-color: var(--border);
 }
@@ -161,4 +176,11 @@ body {
 ::selection {
   background: var(--ink);
   color: var(--bg);
+}
+
+/* Visible focus, everywhere, in the accent. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
 }

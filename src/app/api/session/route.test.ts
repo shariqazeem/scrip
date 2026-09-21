@@ -8,7 +8,7 @@ import { NONCE_COOKIE, SESSION_COOKIE, readSessionToken } from "@/lib/session/to
 import { DELETE, POST } from "./route";
 
 beforeAll(() => {
-  process.env.WEBGOLD_SESSION_SECRET = "test-secret-for-this-file-only";
+  process.env.SCRIP_SESSION_SECRET = "test-secret-for-this-file-only";
 });
 
 const NONCE = "0123456789abcdef0123456789abcdef";

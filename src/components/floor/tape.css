@@ -1,0 +1,124 @@
+/**
+ * tape.css — the network's receipts as lines: the stub at its smallest size. On the floor
+ * (dark) by default; the same object on paper inside the app.
+ */
+.sp-tape-feed {
+  --line: var(--border);
+  --line-strong: var(--border-strong);
+  --ink-1: var(--ink);
+  --ink-2: var(--ink-muted);
+  --ink-3: var(--ink-faint);
+  --live: var(--ok);
+  --link: var(--accent);
+  display: grid;
+  gap: var(--s-3);
+}
+.sp-tape-feed.is-dark {
+  --line: var(--border-inverse);
+  --line-strong: var(--border-inverse);
+  --ink-1: var(--ink-inverse);
+  --ink-2: var(--ink-inverse-muted);
+  --ink-3: var(--ink-inverse-faint);
+  --live: var(--ok-inverse);
+  --link: var(--accent-inverse);
+}
+.sp-tape-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: var(--tracking-mono);
+  color: var(--ink-3);
+}
+.sp-tape-head .live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+}
+.sp-tape-head .live .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--ink-3);
+}
+.sp-tape-head .live.on .dot {
+  background: var(--live);
+  box-shadow: 0 0 0 4px rgba(95, 207, 133, 0.15);
+}
+.sp-tape-empty {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+.sp-tape-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line-strong);
+}
+.sp-tape-row {
+  border-bottom: 1px solid var(--line);
+}
+.sp-tape-row.is-printing {
+  animation: stub-print var(--dur-2) var(--ease-spring) both;
+}
+.sp-tape-link {
+  display: grid;
+  grid-template-columns: 64px minmax(110px, 0.6fr) minmax(0, 2.4fr) auto;
+  gap: var(--s-2) var(--s-4);
+  align-items: baseline;
+  padding: var(--s-3) 0;
+  color: var(--ink-1);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  font-variant-numeric: tabular-nums;
+}
+.sp-tape-link:hover .who {
+  color: var(--link);
+}
+.sp-tape-link .kind {
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+  text-transform: none;
+}
+/* --ok is a money outcome: a sweep or a vest is stock that arrived under a rule or a schedule */
+.sp-tape-link .kind.is-sweep,
+.sp-tape-link .kind.is-vest {
+  color: var(--live);
+}
+.sp-tape-link .who {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sp-tape-link .what {
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.sp-tape-link .what strong {
+  color: var(--ink-1);
+  font-weight: 600;
+}
+.sp-tape-link .what .why {
+  color: var(--ink-3);
+}
+.sp-tape-link .when {
+  color: var(--ink-3);
+  white-space: nowrap;
+  text-align: right;
+}
+@media (max-width: 640px) {
+  .sp-tape-link {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .sp-tape-link .what {
+    grid-column: 2;
+  }
+  .sp-tape-link .when {
+    grid-column: 2;
+    text-align: left;
+  }
+}

@@ -23,7 +23,7 @@ export function signInMessage(pubkey: string, nonce: string, issuedAt: string): 
     `${domain} wants you to sign in with your Solana account:`,
     pubkey,
     "",
-    "Open your Webgold book. This signature proves the wallet is yours. It costs nothing,",
+    "Open your Scrip book. This signature proves the wallet is yours. It costs nothing,",
     "moves nothing, and authorises no transaction.",
     "",
     `URI: ${url}`,

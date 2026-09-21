@@ -1,0 +1,134 @@
+/**
+ * floor.css — the floor: the clock, the facts, the tape, corporate actions, the market.
+ * Ink-dark by default (where the crowd is); the same layout on paper inside the app.
+ */
+.sp-floor {
+  --line: var(--border);
+  --line-strong: var(--border-strong);
+  --ink-1: var(--ink);
+  --ink-2: var(--ink-muted);
+  --ink-3: var(--ink-faint);
+  --link: var(--accent);
+  --open: var(--ok);
+  display: grid;
+  gap: var(--s-8);
+  color: var(--ink-1);
+}
+.sp-floor.is-dark {
+  --line: var(--border-inverse);
+  --line-strong: var(--border-inverse);
+  --ink-1: var(--ink-inverse);
+  --ink-2: var(--ink-inverse-muted);
+  --ink-3: var(--ink-inverse-faint);
+  --link: var(--accent-inverse);
+  --open: var(--ok-inverse);
+}
+.sp-floor a {
+  color: var(--link);
+}
+
+/* ── the clock ──────────────────────────────────────────────────────────── */
+.sp-floor-clock {
+  display: grid;
+  gap: var(--s-6);
+}
+.sp-floor-clockline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-4);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-mono);
+}
+.sp-floor-clockline .k {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+.sp-floor-clockline .v {
+  font-size: clamp(1.4rem, 1.1rem + 1.4vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-right: var(--s-5);
+}
+.sp-floor-clockline .v.is-open {
+  color: var(--open);
+}
+.sp-floor-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--s-5) var(--s-6);
+  border-top: 1px solid var(--line-strong);
+  padding-top: var(--s-5);
+}
+.sp-floor-fact .k {
+  margin: 0 0 var(--s-1);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+.sp-floor-fact .v {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(1.8rem, 1.3rem + 1.8vw, 2.6rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sp-floor-fact .n {
+  margin: var(--s-2) 0 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* ── corporate actions ──────────────────────────────────────────────────── */
+.sp-floor-label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin: 0 0 var(--s-3);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+.sp-floor-actionrows {
+  border-top: 1px solid var(--line-strong);
+}
+.sp-floor-actionrow {
+  display: grid;
+  grid-template-columns: 90px 160px minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: baseline;
+  margin: 0;
+  padding: var(--s-3) 0;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+}
+.sp-floor-actionrow .sym {
+  font-weight: 600;
+}
+.sp-floor-actionrow .mult {
+  font-variant-numeric: tabular-nums;
+}
+.sp-floor-actionrow .note {
+  font-family: var(--font-sans);
+  font-size: var(--fs-caption);
+  color: var(--ink-2);
+}
+@media (max-width: 640px) {
+  .sp-floor-actionrow {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .sp-floor-actionrow .note {
+    grid-column: 1 / -1;
+  }
+}
+.sp-floor-foot {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--ink-3);
+  max-width: 72ch;
+}

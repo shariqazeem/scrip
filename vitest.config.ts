@@ -35,6 +35,6 @@ export default defineConfig({
     hookTimeout: 20_000,
     // DB-backed tests run against an isolated in-memory SQLite: real schema, real
     // constraints, never the dev database.
-    env: { WEBGOLD_DB_PATH: ":memory:" },
+    env: { SCRIP_DB_PATH: ":memory:" },
   },
 });

@@ -1,194 +1,153 @@
 /**
- * content.css — the reading surface. Warm ink, capped measure, print-like.
- * Scoped under `.wg-doc`; aliases only, no declared values.
+ * content.css — the reading surface. Measure capped at 68ch, ruled headings, no chrome.
+ * Every value is a token or an alias.
  */
-
-.wg-doc {
-  --brass: var(--accent);
+.sp-doc {
   --line: var(--border);
-  --measure: 68ch;
-
-  max-width: 940px;
+  max-width: var(--measure);
   margin: 0 auto;
-  padding: var(--s-8) var(--s-6) var(--s-10);
-  color: var(--ink-warm);
+  padding: var(--s-6) var(--s-5) var(--s-10);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
 }
-.wg-doc a {
-  color: var(--brass);
+.sp-doc a {
+  color: var(--accent);
   text-decoration: none;
 }
-.wg-doc a:hover {
+.sp-doc a:hover {
   text-decoration: underline;
 }
-.wg-doc :focus-visible {
-  outline: 2px solid var(--brass);
-  outline-offset: 3px;
-  border-radius: var(--r-sm);
+.sp-doc .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
 }
-.wg-doc-brand {
+.sp-doc a.sp-doc-brand {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--ink-warm);
-  margin-bottom: var(--s-7);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--s-6);
 }
-.wg-doc-brand:hover {
-  text-decoration: none;
+.sp-doc-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  padding-bottom: var(--s-4);
+  margin-bottom: var(--s-6);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-small);
 }
-.wg-doc-eyebrow {
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.sp-doc-nav a {
+  color: var(--ink-muted);
+}
+.sp-doc-nav a.on {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sp-doc-eyebrow {
+  font-size: var(--fs-caption);
   color: var(--ink-faint);
-  margin: 0 0 var(--s-3);
+  margin: 0 0 var(--s-2);
 }
-.wg-doc h1 {
+.sp-doc h1 {
   font-size: var(--fs-h1);
   line-height: var(--lh-h1);
   letter-spacing: var(--tracking-h1);
   font-weight: 600;
-  margin: 0 0 var(--s-5);
-  max-width: 22ch;
+  margin: 0 0 var(--s-4);
+  max-width: 24ch;
 }
-.wg-doc h2 {
+.sp-doc .lede {
+  font-size: var(--fs-lead);
+  line-height: var(--lh-lead);
+  color: var(--ink-muted);
+  margin: 0 0 var(--s-7);
+  max-width: 60ch;
+}
+.sp-doc h2 {
   font-size: var(--fs-h2);
   line-height: var(--lh-h2);
   letter-spacing: var(--tracking-h2);
   font-weight: 600;
-  margin: var(--s-8) 0 var(--s-4);
-  max-width: var(--measure);
+  margin: var(--s-7) 0 var(--s-3);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--line);
+  max-width: 30ch;
 }
-.wg-doc p,
-.wg-doc li {
+.sp-doc h3 {
   font-size: var(--fs-body);
-  line-height: var(--lh-body);
-  color: var(--ink-muted);
-  max-width: var(--measure);
+  font-weight: 600;
+  margin: var(--s-5) 0 var(--s-2);
 }
-.wg-doc p {
+.sp-doc p {
   margin: 0 0 var(--s-4);
-}
-.wg-doc .lede {
-  font-size: var(--fs-lead);
-  line-height: var(--lh-lead);
-  letter-spacing: var(--tracking-lead);
   color: var(--ink-muted);
+  max-width: 68ch;
 }
-.wg-doc ul {
-  margin: 0 0 var(--s-4);
-  padding-left: var(--s-5);
-  list-style: disc;
-}
-.wg-doc li {
-  margin-bottom: var(--s-2);
-}
-.wg-doc strong {
-  color: var(--ink-warm);
+.sp-doc p strong {
+  color: var(--ink);
   font-weight: 600;
 }
-.wg-doc-note {
+.sp-doc ul,
+.sp-doc ol {
+  margin: 0 0 var(--s-4);
+  padding-left: var(--s-5);
+  color: var(--ink-muted);
+  max-width: 68ch;
+}
+.sp-doc li {
+  margin-bottom: var(--s-2);
+}
+.sp-doc pre {
+  margin: 0 0 var(--s-5);
+  padding: var(--s-4) var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  line-height: 1.6;
+  overflow-x: auto;
+  color: var(--ink);
+}
+.sp-doc table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 var(--s-5);
+  font-size: var(--fs-small);
+}
+.sp-doc th,
+.sp-doc td {
+  text-align: left;
+  padding: var(--s-2) var(--s-3) var(--s-2) 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  color: var(--ink-muted);
+}
+.sp-doc th {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sp-doc-note {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--s-3);
   padding: var(--s-4) var(--s-5);
-  border: 1px solid var(--warn-border);
-  background: var(--warn-soft);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-soft);
   border-radius: var(--r-md);
   margin: 0 0 var(--s-4);
-  max-width: var(--measure);
-}
-.wg-doc-note svg {
-  color: var(--warn);
-  margin-top: 3px;
-}
-.wg-doc-note p {
-  margin: 0;
-  color: var(--ink-warm);
-  font-size: 0.9375rem;
+  font-size: var(--fs-small);
   line-height: 1.55;
 }
-
-/* ── docs nav: four pages, one line ──────────────────────────────────────── */
-.wg-doc-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  margin-bottom: var(--s-7);
-  padding-bottom: var(--s-4);
-  border-bottom: 1px solid var(--line);
+.sp-doc-note svg {
+  color: var(--accent);
+  margin-top: 3px;
 }
-.wg-doc-nav a {
-  display: inline-flex;
-  align-items: center;
-  height: 30px;
-  padding: 0 var(--s-3);
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--ink-muted);
-}
-.wg-doc-nav a:hover {
-  text-decoration: none;
-  border-color: var(--brass);
-  color: var(--ink-warm);
-}
-.wg-doc-nav a.on {
-  border-color: var(--accent-border);
-  background: var(--accent-soft);
-  color: var(--brass);
-}
-
-/* A worked example: the arithmetic, shown rather than described. */
-.wg-doc-worked {
-  max-width: var(--measure);
-  margin: 0 0 var(--s-5);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background: var(--surface);
-}
-.wg-doc-worked-head {
-  padding: var(--s-3) var(--s-4);
-  border-bottom: 1px solid var(--line);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--ink-warm);
-}
-.wg-doc-worked-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: var(--s-4);
-  padding: var(--s-3) var(--s-4);
-  border-bottom: 1px solid var(--line);
-  font-size: 0.875rem;
-  align-items: baseline;
-}
-.wg-doc-worked-row:last-child {
-  border-bottom: 0;
-}
-.wg-doc-worked-row .mono {
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono);
-  letter-spacing: var(--tracking-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  color: var(--ink-warm);
-}
-.wg-doc-worked-row.is-verdict {
-  background: var(--accent-soft);
-  color: var(--ink-warm);
-  font-weight: 600;
-}
-.wg-doc code {
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  letter-spacing: var(--tracking-mono);
-  background: var(--accent-soft);
-  border-radius: 4px;
-  padding: 1px 5px;
-  color: var(--ink-warm);
+.sp-doc-note p {
+  margin: 0;
+  color: var(--ink);
 }

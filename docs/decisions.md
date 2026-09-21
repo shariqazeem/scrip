@@ -201,3 +201,462 @@ over from Sage is craft, never coupling.
 
 **No versions.** The target is the complete product by 12 October. `docs/build-order.md` is
 dependency order, not a version ladder, and nothing on it is optional.
+
+## 2026-09-15 — Webgold became Scrip: the rule is the product
+
+**Decided by the founder, in `docs/scrip.md` (written as "Paidin", renamed Scrip on the
+same day).** Webgold asked the payer to already hold GOLD and SPYx, put 70% metal in a
+stocks hackathon, and read as a protocol. Its true insight — ownership can arrive in a wallet
+the recipient already has — survives with the intake asset changed to what payers hold
+(USDC), the default changed to what the hackathon is about (SPYx), and the arrival changed
+from "a payer used our escrow" to "money landed, as it always does".
+
+The settled decisions are the table in `docs/scrip.md` §13. What follows are the facts
+found while building it, recorded so they are not re-litigated.
+
+### The name
+
+Scrip: a certificate entitling the holder to something; a scrip dividend is a dividend paid
+in shares instead of cash. The product is income paid in stock. The word is old, short, and
+already means the thing.
+
+### Hermes requires an API key, and the on-chain SPYX account is not kept fresh
+
+Measured 2026-09-15: `hermes.pyth.network/v2/updates/price/latest` answers 401 without a
+key (Pyth's docs: required since 2026-08-26, `Authorization: Bearer`). The sponsored
+on-chain `Crypto.SPYX/USD` account, `jf8Mar…`, was 234,350 seconds old — sixty-five hours.
+Consequence: the keeper posts its own fully verified update from Hermes when the on-chain
+one is older than the program's bound, and `PYTH_API_KEY` is a requirement of running a
+keeper on mainnet, not an option. A stale feed pauses sweeps; nothing is lost by waiting.
+
+### Two feeds per asset, and the Book carries both
+
+Pyth's `Crypto.SPYX/USD` prices one raw token as it trades, multiplier included, around the
+clock. `Equity.US.SPY/USD` prices one share, in market hours. The Book stores both feed
+ids; `finish_sweep` accepts either, decides which it was given from the feed id on the
+account, and divides the minimum by the mint's live multiplier only for the share feed.
+This is the multiplier finding from Webgold, now enforced on chain rather than only
+displayed.
+
+### Activation hours vary; the timestamp on the mint decides
+
+Webgold recorded one activation at 04:00 UTC and called the issuer's documented 00:30
+wrong. Read across fourteen xStocks mints on 2026-09-15: SPYx activated at 04:00, NVDAx,
+AAPLx, GOOGLx and MSFTx at 00:30, QQQx and METAx at 23:55 the day before. Both earlier
+statements were one sample each. Nothing in Scrip assumes an hour.
+
+### Full verification, not the atomic post
+
+Pyth's atomic post is one instruction but partially verified. The program requires
+`VerificationLevel::Full`, so the keeper writes and verifies the encoded VAA over several
+transactions and then sweeps; the sweep transaction only needs a fresh, fully verified
+account to exist. Recorded as drift from `docs/scrip.md` §5.3, which drew the post inside
+the sweep.
+
+### A 4 KiB stack frame, found on devnet
+
+The first devnet deploy passed every small instruction and failed every large one: a
+`require_keys_eq!` printed a "claimer" of `111118Bbj…`, thirty-two bytes that decode to
+stack garbage, and `release_payout` died with an access violation at an address outside
+every VM region. Anchor materialises every deserialized account on the frame; contexts with
+a dozen accounts overflowed it. Every heavy account is now `Box`ed. The battery went from
+five passing to eleven.
+
+### `sync_watermark` exists because a sweep that finds nothing reverts
+
+The spec lowered the watermark inside `begin_sweep` when the balance fell. But a sweep with
+nothing to sweep fails on `InboundBelowMinimum` and reverts, so the lowered watermark never
+persisted, and an owner who spent $700 would see nothing convert until the balance climbed
+back past the old mark. `sync_watermark` is permissionless because it can only ever set the
+watermark to the true balance, and only downward.
+
+### The registry: eleven single names, by depth
+
+Jupiter on 2026-09-15, liquidity and 24-hour volume: CRCLx $2.29M / $11.2M, NVDAx $1.72M /
+$7.2M, MSFTx $0.55M / $5.3M, GOOGLx $0.44M / $3.1M, TSLAx $1.20M / $2.5M, METAx $0.25M /
+$2.4M, AAPLx $0.72M / $2.4M, AMZNx $0.24M / $1.8M, MSTRx $0.79M / $1.8M, COINx $0.58M /
+$1.7M, HOODx $0.50M / $1.4M. SPYx $3.69M / $27.4M; QQQx $1.68M / $3.4M; GOLD $0.38M /
+$0.28M. Every mint read off chain the same day; every one carries the same extension set.
+Single names are a choice, never a default.
+
+### The devnet build accepts any asset
+
+There is no USDC, no SPYx and no Jupiter on devnet. The `devnet` cargo feature makes
+`open_book` accept any mint and price it by SOL/USD and USDC/USD, which are pushed on devnet
+at the same addresses as mainnet; any six-decimal classic mint may stand in for USDC. The
+mainnet build compiles the registry in and refuses anything else. A Rust test asserts the
+mainnet table has no test entry. This is the same category of decision as Webgold's refusal
+to register a fake Oro GOLD on devnet, resolved the other way: the mechanics needed proving,
+and a feature flag proves them without a lie on the mainnet table.
+
+### The old devnet program was closed
+
+Webgold's `3siGe…` and the first Scrip deploy `7DMP…` (the one with the stack overflow)
+were closed to reclaim their rent; the public devnet faucet was rate-limited and the
+deployer held 0.7 SOL. Scrip runs at the id in `Anchor.toml`. A closed program id cannot be
+reused, which is fine: nothing had been published against either.
+
+### Not committed to the multisig yet
+
+The program is upgradeable by the deployer key. `docs/scrip.md` §15 puts multisig-then-
+freeze after Stocklana.
+
+### One wedge: the moment (2026-09-15)
+
+The founder's review of the first complete build: "every single page feels generic … just
+forms to set rules … Pick one wedge and make it excellent." The wedge is the moment money
+lands and becomes stock with a receipt. So: the home screen IS that moment (live, a ghost
+while money waits, a stub that prints when it settles); turning on is one question and one
+signature; the front door shows one object; the ledger is a wall of the same object; send,
+request and claim stay off the primary path. Cost was declared not to matter — "i really
+dont care about mainnet rent fees … i just need to win this" — and the mainnet deploy stays
+the founder's to fund.
+
+### The public page is opt-in
+
+`/book/<handle>` shows a live register to anyone, but only after the owner turns it on. The
+chain is public anyway; what a savings product must not do is become the place where a name
+resolves to somebody's income. The flag is off chain (`books.published`), reversible from
+the home screen, and a handle on the public ledger is named only where it is on.
+
+### Stand-ins are labelled, never dressed up
+
+A devnet book against a mint the registry does not know is read from the chain and shown as
+"stand-in" with its real decimals. It is never called SPYx, because it is priced by SOL/USD.
+On mainnet the same mint would stay held: the registry is the only source of a name there.
+
+### The front door is the product running (2026-09-15, evening)
+
+The founder's second review: "we made it from generic to well built generic … a million
+dollar feel … users are already using … what is possible with tokenized stocks on Solana
+which was never possible before". Everything shown had to be real — "dont do that ever" to
+any mock — so the front door became a real published book printing real receipts under a
+printer, a market band whose every figure is read live from Jupiter and the mint, and three
+doors to the three things a share could never do before (arrive as a payment, obey a rule on
+an address, remember what it was for). The dedicated front wallet is the founder's to fund.
+
+### Prices for display come from Jupiter, keyless
+
+Hermes needs a key and the pinned SPYX/USD account was stale; Jupiter's price and token APIs
+are keyless, live, and carry the underlying's price beside the tracker's. They are used only
+for display (the band, "worth today"); settlement stays on Pyth on chain, and the band says so.
+
+### Two ways to pay, and the second is the point
+
+The pay page gained "in USDC": a Solana Pay transfer request to the recipient's normal
+address, with no Scrip transaction at all. It is the sentence "payers never open Scrip" as a
+button. The intake ("in stock") remains for a payment that should carry a reason.
+
+### The front door is a film; the app is a document (2026-09-15, night)
+
+The founder's third review: cinematic, motion on every scroll, and a doubt about the
+palette — "generic good fonts and better texts". The answer keeps the identity (paper, ink,
+the stub, document blue) and gives it a night: the front door opens dark, the printer glows,
+the tape moves, the last sweep replays, the market band rolls to its figures, and then the
+paper tears off into the document. Motion is spent only on real objects and real figures;
+text never fades up on its own; app surfaces keep the single moment. Tokens gained the dark
+ground's accent and money colours. Nothing became a mock: the founder's rule.
+
+### Ask the question before the wallet
+
+The rule page shows the question to a signed-out visitor and asks for the wallet only when
+there is something to sign. The chosen rate, handle and asset survive the wallet popup.
+Onboarding is "see the value, then sign", never "sign to see".
+
+### Scrip is a company that pays in ownership (2026-09-16)
+
+`docs/SCRIP-COMPANY-PLAN.md` arrived from the founder with three verdicts on the built
+product — a serious wedge, "well-built generic" surfaces, and no reason to return — and one
+instruction: widen the idea to "get paid in ownership", keep the name, build the company,
+mainnet at the end when everything is built. The plan supersedes the design section, the
+presentation section and the roadmap of `docs/scrip.md`. Everything else in that document
+stands: the rule, the intake, keep-rate, the honesty rows, the definition of done.
+
+### Five receipt kinds, two handle kinds
+
+The `Receipt` gained `run_id` and its kind became `Sweep | Pay | Gift | Grant | Vest`; the
+`Handle` gained `Person | Org`. Existing devnet accounts do not decode under the new layout,
+which is why the devnet redeploy is a step and not a detail. The names on chain are the
+names a person reads: "pay" and "gift" on a stub, never "settle" and "sponsor". The IDL's
+Payout kinds keep their old names because the Payout is closed before anyone reads it.
+
+### A grant is bought once, vests by keepers, and repays its own vests
+
+`open_grant` + the route + `seal_grant` in one transaction: the whole grant is bought at
+once, into an escrow the payer cannot spend, and sealed with a float. `vest` is
+permissionless, so a keeper — or the recipient, or a stranger — releases what the schedule
+allows and is repaid the tip and the receipt's rent from that float. The alternative, a
+payer-signed release, would make every vest depend on the payer showing up; the plan's word
+was "keepers vesting". Revoke caps releases at what has vested and returns the rest; nothing
+in the program sends escrowed stock anywhere but to the recipient or back to the payer.
+`/security` says so in one row.
+
+### Vests are daily, not hourly
+
+The plan's §5 said hourly. A $50 grant vesting hourly over a year would spend more in keeper
+tips than it holds. The keeper vests each active grant once every `KEEPER_VEST_HOURS`
+(default 24), and immediately at the first release and the final one. A person sees a vest
+on their register each morning; a grant page shows the next one.
+
+### An organisation is a handle, not a role
+
+`open_book(slug, terms_version, kind)` with `kind = Org` is the whole difference. Any wallet
+can pay in stock without one; an organisation handle gives it a public page — people paid,
+runs, grants vesting — the sentence "pays in stock since", and a name on every receipt it
+writes. No membership table, no permissions: the wallet that signs is the organisation.
+
+### A run is a file and one signature
+
+Twelve people in a CSV become twelve intakes, each its own receipt with its own reason,
+sharing a `run_id`. The wallet signs them all at once (`signAll`) and the page relays them
+(`/api/send`). No batch instruction was added to the program: each line is exactly the
+intake a single payment is, and the run page is a query over receipts by `run_id`.
+
+### The floor is a record, not a feed
+
+`/floor` shows every receipt as it prints, over SSE, with the share that landed while the
+NYSE was closed and the corporate actions read from the mint. No following, no likes, no
+comments, no handles beyond the ones their owners published. The tape is the front door's
+opening because a stranger must see money land and stock print without being told.
+
+### "There is no opening bell"
+
+Two materials assigned by surface: ink for the floor (the front door's opening and close,
+the tape, the printer, the market band) and paper for every document (the register, the
+receipt, the statement, the pay page). Fraunces in exactly two places: the wordmark and a
+statement's title line. The stub at five sizes is the one object drawn everywhere.
+"Register" is the word for a person's Book on every surface; `Book` stays in the code.
+
+### Telegram first, because the message is the receipt
+
+One message per receipt to a linked chat, with a link to open it. Email would need a
+provider and a template; a Telegram bot needs a token. The message says what the stub says
+and nothing more. It is configured by `TELEGRAM_BOT_TOKEN`; without one the settings page
+says so instead of pretending.
+
+### ⌘K resolves from shape, never from a lookup
+
+The field opens a handle, a receipt signature, a run id, a grant address or a page from the
+shape of the text. A wrong guess reaches a page that says "not found" honestly; the
+alternative — a search index — would be another cache to keep true.
+
+### Stay on a local validator until devnet is redeployed
+
+The grant build is proven on a local validator with Pyth's SOL/USD and USDC/USD accounts
+cloned from devnet (`scripts/localnet.sh`, `npm run test:localnet`, 19 tests). The devnet
+program is the 2026-09-15 build; redeploying needs about 4.5 devnet SOL of buffer rent the
+faucet will not give today. Until it lands, `.env.local` names the local validator and
+`.env.local.devnet` keeps the devnet settings, so nothing on a surface is a mock and nothing
+reads an account it cannot decode.
+
+### Every server read passes a gate (2026-09-16)
+
+The first index against `api.devnet.solana.com` failed with "Connection rate limits
+exceeded": web3.js fires each call the moment it is asked, a page reads twenty accounts,
+and the indexer walks every signature the program ever wrote. Scrip now holds itself to
+what an endpoint allows — four calls a second and two at once on Solana's own endpoints,
+a hundred on a paid one, no limit on a local validator — through one gate per endpoint held
+on `globalThis`, because a dev server evaluates a module more than once and a gate in a
+module variable would be one gate per copy. Nothing is dropped: a call waits its turn. A
+slow page is a cost; a refused read would be a wrong number on a surface, which §2.4
+forbids. Rent lookups, asked once per book and three times per sweep for a handful of
+sizes, are cached by size in the same spirit.
+
+The consequence is written into the runbook: a public endpoint cannot carry a first index,
+and a paid RPC is not an optimisation but the thing that makes the cache reachable.
+
+### The front book on devnet is an organisation, `@scrip`
+
+The redeploy of 2026-09-16 changed the layout of `Handle`, `Payout` and `Receipt`, so the
+`@demo` register of 2026-09-15 stopped decoding. Rather than keep a person's demo register,
+the demo script now opens `@scrip` as an organisation (`DEMO_KIND=org`): the front door
+shows the register that the plan says Scrip itself keeps, the one that pays its own
+bounties. The old state file and the old cache are set aside rather than deleted, and the
+indexer skips accounts it cannot decode instead of guessing at them.
+
+### A milestone is a fact, not a prize
+
+Five moments, each crossed by a receipt this register already holds, each dated by that
+receipt and linked to it: the first receipt, the first whole share, ten receipts, thirty
+days kept (only when the chain measured it and the units were still there), a thousand
+dollars in stock. No badges, no streaks, no confetti, no goal anybody was set. The share
+card is the stub with one line above it, at `/m/@handle/<id>`, and it exists only while the
+register is public — a moment cannot leak a private register.
+
+Beside them, one sentence of arithmetic: "about N more arrivals complete your first whole
+SPYx", computed from this register's own average receipt and labelled as arithmetic, with
+the plain warning that the next arrival may be any size. It is the one forward-looking line
+in the product and it forecasts nothing.
+
+### The VM deploy goes through the config file, never through a flag (2026-09-17)
+
+`pm2 restart scrip-web --update-env` from an SSH shell replaced the process environment with
+that shell's, whose PATH finds Ubuntu's Node 20. `next start` then ran under Node 20 while
+`better-sqlite3` had been built for nvm's Node 22, and every page answered 500 with "Module
+did not self-register" — a message that names neither Node nor the version. The deploy now
+deletes and starts from `ecosystem.config.cjs`, which pins both the interpreter and the
+PATH. The runbook says so, with the symptom, because the next person to meet it will be
+reading a 500 and not a version mismatch.
+
+### A confirmation is a question, not a subscription (2026-09-17)
+
+web3.js confirms a signature over a WebSocket, and a WebSocket is a connection. Solana's
+public endpoints refuse one per transaction long before they mind the number of calls, and
+the refusal arrives as "Unexpected server response: 429" with the transaction already sent —
+so the caller cannot tell a lost transaction from a refused socket. `confirmSignature` polls
+`getSignatureStatuses` through the same gated HTTP path as every other read, and stops when
+the signature confirms, when the chain says it failed, or when its blockhash can no longer
+be accepted, which is the only honest way to say it will never land. The keeper, the crank,
+the scripts and the on-chain battery all confirm this way.
+
+### The socket, kept (2026-09-17)
+
+Node's global `fetch` is undici, and undici ignores the `agent` web3.js hands it, so every
+RPC call opened a fresh TLS connection. Measured here: a `node:https` keep-alive agent
+carries six calls on one socket; undici opened six. `src/lib/solana/http.ts` is `fetch` for
+JSON-RPC only — POST, a string body, the small part of `Response` web3.js reads — over a
+kept-alive socket, and a test asserts that four calls arrive on one connection.
+
+### The endpoint's budget belongs to the machine, not the process
+
+With all of that in place the on-chain battery still failed, until the dev server was
+stopped: the public endpoint counts per IP, so a browser tab polling a register every four
+seconds and a nineteen-test battery are one budget. All 19 pass with nothing else running.
+This is written down because the next person will otherwise read it as flakiness in the
+program. It is the same fact from the other side: a paid RPC is not an optimisation.
+
+### The build must produce the file the runbook deploys (2026-09-17)
+
+`npm run anchor:build` built the mainnet program to `target/deploy/scrip.so` and stopped
+there, while `docs/deploy.md` deployed `scrip-mainnet.so` and `/security` hashed it. That
+file was three days stale: deploying it to mainnet would have put a pre-grant program under
+an app that writes grant accounts, and every page would have failed to decode its own data —
+the exact failure devnet had just shown us. The build now copies, the way the devnet script
+always did, and `npm run preflight` prints the size and hash of the file that would actually
+be signed.
+
+### A preflight that reads the chain, not a checklist someone ticks
+
+`npm run preflight [-- --mainnet]` answers "are we ready" by looking: the build's size and
+hash, whether the program is deployed and whether its allocation still fits, what a deploy
+would cost in rent and in buffer, what each key holds against what it needs, whether every
+registry mint and pinned Pyth account exists on that cluster, whether a Pyth key and a paid
+RPC are configured, and whether the keeper's USDC account exists. It signs nothing. A FAIL
+is something that would break; a WAIT is something only the founder can supply.
+
+### The mainnet proof cannot be the devnet battery
+
+`npm run test:devnet` mints its own stand-in USDC and asset. The mainnet build refuses any
+mint that is not on the registry and any pay-in mint but USDC — which is the whole point of
+that build — so pointing the battery at mainnet proves nothing and fails at the first
+instruction. The runbook now proves mainnet with five ordered steps of real money in small
+amounts, and says plainly that only one of them tests something no test can: the real
+Jupiter route inside the atomic sandwich, with the program's introspection guard around it.
+
+### A scene enters when it is reached, and can never stay hidden (2026-09-17)
+
+The founder found a blank band above the footer. The cause was the mechanism, not that
+section: `<Reveal>` used an IntersectionObserver, and an observer reports a *change* in
+intersection. A scene that goes from below the fold to above it in one step — a flick to the
+end of the page, a restored scroll position, an anchor link — never intersects, so it never
+fires, and its content stays at `opacity: 0` for good. Six scenes were invisible after one
+jump to the bottom.
+
+`Reveal` now asks a simpler question on scroll and on mount: has this element's top crossed
+the bottom of the window? That is also true of everything already scrolled past, so the only
+way to see nothing is for the scene to be genuinely below the fold. Two follow-ons, each a
+way the old design could still have hidden something:
+
+- **No per-scene threshold.** A threshold moved the trigger line up, and on a tall window the
+  line sat above the scene, which then never entered. One line for every scene.
+- **The line is the window's own edge, and a page that cannot scroll shows everything.** An
+  inset line looks slightly better and would leave a section in the last few percent of an
+  unscrollable window invisible with nothing the reader could do.
+
+The lesson generalises: content hidden by default must be revealed by a mechanism that cannot
+fail to run. Anything else is a blank page waiting for an unlucky scroll.
+
+### The film hides only where a film can play
+
+The same blank band had a second cause underneath it: with JavaScript off, or before
+hydration, every scene was already `opacity: 0` and nothing would ever set `is-in`. The page
+now marks itself `data-js` in the document head before first paint, and only then does the
+CSS hide anything — so a crawler, a browser with scripting off, and the moment before
+hydration all get the whole front door, in place. The guard is written `:where(html[data-js])`
+because `:where()` adds no specificity: a plain `html[data-js]` prefix outranked every
+`.is-in` rule and the film stopped playing altogether.
+
+### The program's rent is a deposit, and the allocation is exactly the build (2026-09-17)
+
+At $100 a SOL the deploy reads as $600, which is the wrong way to hold it. About half of that
+is the buffer, returned within the minute the deploy lands. The other half is the rent that
+makes the program's bytes rent-exempt, returned in full by `solana program close`. What is
+actually consumed is about 0.05 SOL of fees. The founder needs the balance available, not
+spent.
+
+`--max-len` is therefore the exact size of the build, not the build plus a fifth: the deposit
+scales with the allocation, and headroom bought now is the same money as
+`solana program extend` bought at the upgrade that needs it — and only then, and only if the
+binary has grown. That is 0.6 SOL of cash flow the founder keeps until it is needed.
+
+Shrinking the binary further was measured, not assumed. The profile already carries
+`opt-level = "z"`, `lto = "fat"`, `codegen-units = 1` and `panic = "abort"`; adding
+`strip = "symbols"` saved 3,824 bytes, about 0.02 SOL. That is not worth an unverified change
+to the program that will hold real money, so it was reverted. `overflow-checks = true` stays
+on for the same reason it always was: money code.
+
+### A page render reads the cache; the poll reads the chain (2026-09-17)
+
+The front door took twelve to twenty-two seconds to its first byte on the VM. The cause was
+in the render: `liveView` refreshed the receipt index from the chain before returning, so
+every visitor waited on a walk of the program's signatures. It bought nothing — the same page
+polls `/api/book/live` four seconds later, and that route, the maintenance route and the
+keeper all refresh. Every server render now passes `{ refresh: false }`. `/@handle` went from
+ten seconds to under one.
+
+### The last good read, with its own timestamp
+
+Solana's public endpoint throttles a datacenter IP hard, and no amount of politeness on our
+side changes that. So a register keeps the last view that did read: when a fresh one cannot
+be had, or when the gate is already cooling from a refusal, that view is served immediately
+and the register says "as it was last read at …" above the figures. A blank page helps
+nobody; a stale figure presented as current would be worse than either. The same sentence
+covers being offline, which is the same fact from the reader's side.
+
+The cool-off after a refusal was capped at six seconds for the same reason: a long pause is
+polite to the endpoint and useless to the reader, once there is something honest to show.
+
+### The keeper reads every register in one request
+
+Each tick fetched one account per watched book, which on a public endpoint is a budget the
+site needs — the keeper and the app share an IP, not a process. One `getMultipleAccountsInfo`
+now covers every watched USDC account, and the idle poll is 45 seconds on Solana's own
+endpoints against 15 elsewhere. A websocket still wakes the keeper the moment a watched
+account changes, so the response to an arrival is unchanged.
+
+### The bring-up is rehearsed, not improvised (2026-09-18)
+
+`npm run rehearse` runs the mainnet sequence against a local validator: deploy, open the
+organisation's register with the rule on, land money, sweep it, index, publish, then every
+money path the battery covers, then the production build. Eighty-eight seconds, every step
+green, and serving that state the front door printed the arrival and the floor counted twelve
+receipts. Deploy day is now a repeat of something already done. What it cannot rehearse is the
+Jupiter route inside the atomic sandwich, because Jupiter exists on neither devnet nor a local
+validator; that is the one thing the first real sweep proves.
+
+### Scrip runs two keepers
+
+A single keeper is an operator with extra steps. Two, with different keys, racing for every
+sweep, is the only demonstration that the program leaves a keeper no discretion: whichever
+lands first writes the receipt, and the other's transaction fails because the program refuses
+to sweep the same arrival twice. `KEEPER_HEALTH_URL` takes a list, `/keepers` names each by
+the receipts it wrote, and the page says how many of them are reporting. A third, run by
+somebody who is not the founder, needs nothing from us.
+
+### The film is a record, not a demonstration
+
+`docs/film.md` is the shot list, with a checklist of what must already be true before the
+camera turns on. Its rule is the plan's: the film never explains, every scene shows a stub
+printing for a real person, and no sentence goes in that could not be checked by opening a
+page in the film. If a route fills below the Pyth minimum and the whole transaction reverts
+during the shoot, that is the best shot in the film, not an outtake.

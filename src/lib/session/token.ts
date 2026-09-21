@@ -21,10 +21,10 @@ const SESSION_TTL_SECONDS = 30 * 24 * 3600;
  */
 let devSecret: Buffer | null = null;
 function secret(): Buffer {
-  const fromEnv = process.env.WEBGOLD_SESSION_SECRET?.trim();
+  const fromEnv = process.env.SCRIP_SESSION_SECRET?.trim();
   if (fromEnv) return Buffer.from(fromEnv, "utf8");
   if (process.env.NODE_ENV === "production") {
-    throw new Error("WEBGOLD_SESSION_SECRET must be set in production");
+    throw new Error("SCRIP_SESSION_SECRET must be set in production");
   }
   devSecret ??= randomBytes(32);
   return devSecret;
@@ -58,6 +58,6 @@ export function readSessionToken(token: string | undefined, now: number): string
   return owner;
 }
 
-export const SESSION_COOKIE = "wg_session";
-export const NONCE_COOKIE = "wg_nonce";
+export const SESSION_COOKIE = "scrip_session";
+export const NONCE_COOKIE = "scrip_nonce";
 export { SESSION_TTL_SECONDS };

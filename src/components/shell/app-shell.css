@@ -6,25 +6,25 @@
  * Every value is a token from src/styles/tokens.css or a dimension. No colour is declared here.
  * All motion rides --dur/--ease, so prefers-reduced-motion collapses it with no media query.
  *
- * Ported from Sage's src/components/shell/app-shell.css and re-toned.
+ * Ported from Sage's shell and re-toned for Scrip.
  */
 
 /* When the shell is active (set on <html> by AppShell), give the page room for the fixed
    top pill and, on narrow screens, the rail.
    ONE CONTAINER CLASS, not a list of them. Sage enumerated four page containers here and a
-   fifth page shipped sitting under the mode pill; every shelled page in Webgold wears
-   `.wg-page` and there is nothing to keep in sync. */
-html[data-app-shell="on"] .wg-page {
+   fifth page shipped sitting under the mode pill; every shelled page in Scrip wears
+   `.sp-page` and there is nothing to keep in sync. */
+html[data-app-shell="on"] .sp-page {
   padding-top: 78px;
 }
 @media (max-width: 1180px) {
-  html[data-app-shell="on"] .wg-page {
+  html[data-app-shell="on"] .sp-page {
     padding-left: 84px;
     padding-right: 24px;
   }
 }
 @media (max-width: 720px) {
-  html[data-app-shell="on"] .wg-page {
+  html[data-app-shell="on"] .sp-page {
     padding-left: 16px;
     padding-right: 16px;
     padding-bottom: 92px; /* room for the mobile bottom rail */
@@ -97,7 +97,7 @@ html[data-app-shell="on"] .wg-page {
   background: var(--accent-soft);
   color: var(--accent);
 }
-/* Keyboard focus is visible and gold, on every focusable thing the shell renders. */
+/* Keyboard focus is visible and in the accent, on every focusable thing the shell renders. */
 .app-rail-brand:focus-visible,
 .app-rail-item:focus-visible,
 .app-rail-pill:focus-visible,
@@ -200,6 +200,24 @@ html[data-app-shell="on"] .wg-page {
 }
 
 /* ── top-centre mode pill ──────────────────────────────────────────────────────────── */
+/* A paper scrim behind the pill, so on a phone mid-scroll the page's text fades under the
+   pill instead of colliding with it. Measured on the predecessor at 375px: addresses ran
+   under the pill with bare page visible above them. */
+.mode-scrim {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  z-index: 59;
+  pointer-events: none;
+  background: linear-gradient(to bottom, var(--bg) 40%, transparent);
+}
+@media (min-width: 721px) {
+  .mode-scrim {
+    display: none;
+  }
+}
 .mode-pill {
   position: fixed;
   top: 16px;
@@ -264,9 +282,9 @@ html[data-app-shell="on"] .wg-page {
   color: var(--ink-muted);
   white-space: nowrap;
 }
-/* The dot is the accent, never green — green means a payment settled, and a network light
-   is not a money outcome. A non-mainnet build wears --warn, which is what "this is real
-   on-chain and worth nothing" looks like. */
+/* The dot is the accent, never green: green means a payment settled, and a network light is
+   not a money outcome. A non-mainnet build wears --warn, which is what "real on-chain and
+   worth nothing" looks like. */
 .ctx-dot {
   width: 6px;
   height: 6px;
@@ -338,7 +356,7 @@ html[data-app-shell="on"] .wg-page {
   .app-rail {
     display: none !important;
   }
-  html[data-app-shell="on"] .wg-page {
+  html[data-app-shell="on"] .sp-page {
     padding-top: 0 !important;
   }
 }

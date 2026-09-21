@@ -1,4 +1,7 @@
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { books } from "@/lib/db/schema";
 import { currentOwner } from "@/lib/session/server";
 
 export const dynamic = "force-dynamic";
@@ -13,5 +16,9 @@ export const dynamic = "force-dynamic";
  * server, where the answer is already present by the time anything renders.
  */
 export async function GET() {
-  return NextResponse.json({ owner: await currentOwner() });
+  const owner = await currentOwner();
+  if (!owner) return NextResponse.json({ owner: null, handle: null, kind: null });
+  // The handle and its kind from the cache: a person's register, or an organisation's.
+  const [row] = await db.select({ slug: books.slug, kind: books.kind }).from(books).where(eq(books.owner, owner)).limit(1);
+  return NextResponse.json({ owner, handle: row?.slug ?? null, kind: row ? (row.kind === "org" ? "org" : "person") : null });
 }

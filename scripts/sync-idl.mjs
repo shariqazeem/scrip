@@ -15,8 +15,8 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const pairs = [
-  ["anchor/target/idl/webgold.json", "src/lib/anchor/webgold.json"],
-  ["anchor/target/types/webgold.ts", "src/lib/anchor/webgold.ts"],
+  ["anchor/target/idl/scrip.json", "src/lib/anchor/scrip.json"],
+  ["anchor/target/types/scrip.ts", "src/lib/anchor/scrip.ts"],
 ];
 
 let copied = 0;

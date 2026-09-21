@@ -6,17 +6,20 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-webgold = "3siGeKgHp7pvVVmjbdtBemeirNRPSFHyMXBJu3CXZ3hX"
+scrip = "Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj"
 
 [programs.devnet]
-webgold = "3siGeKgHp7pvVVmjbdtBemeirNRPSFHyMXBJu3CXZ3hX"
+scrip = "Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj"
+
+[programs.mainnet]
+scrip = "Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+wallet = ".keys/deployer.json"
 
 [scripts]
 test = "echo 'program tests run through the workspace suite'"

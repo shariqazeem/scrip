@@ -24,8 +24,9 @@ import { type Outcome, held, ok } from "@/lib/outcome";
  *
  * TWO FACTUAL CORRECTIONS TO THE SPEC, both from reading the mint rather than the docs:
  *
- *   1. `docs/research.md` says activation happens at 00:30 UTC the day after publication. The
- *      one activation actually observed on chain is 04:00:00 UTC. Nothing here hardcodes an
+ *   1. The issuer's docs say activation happens at 00:30 UTC the day after publication. Read
+ *      across fourteen mints on 2026-09-15: SPYx activated at 04:00 UTC, NVDAx, AAPLx, GOOGLx
+ *      and MSFTx at 00:30, QQQx and METAx at 23:55 the day before. Nothing here hardcodes an
  *      activation hour — the timestamp on the mint is the only authority, and a boundary we
  *      cannot verify would be an invented fact doing real work.
  *   2. Both values are published BEFORE the change activates, so a pending corporate action

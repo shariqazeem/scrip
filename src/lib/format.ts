@@ -1,114 +1,97 @@
 /**
  * Shared display formatters. Pure and framework-agnostic, so a server component and a
- * client leaf render the SAME string from the same number — no per-component definitions
- * that can drift.
+ * client leaf render the SAME string from the same number.
  *
- * Every locale is pinned to "en-US" on purpose. `toLocaleString(undefined, …)` renders
- * "$1,000" on a US server and "$1.000" in a European browser, which is a React hydration
- * mismatch on every SSR-ed amount. Same input, same string, always.
+ * Every locale is pinned to "en-US" on purpose: `toLocaleString(undefined, …)` renders
+ * "$1,000" on a US server and "$1.000" in a European browser, which is a hydration mismatch
+ * on every SSR-ed amount.
  */
 
 const group = (v: number, min: number, max: number): string =>
   v.toLocaleString("en-US", { minimumFractionDigits: min, maximumFractionDigits: max });
 
-/**
- * USD in prose. Whole amounts read clean ($500); fractional amounts always show full
- * cents ($459.40, never a dangling $459.4). Rounds to cents first to shed floating-point
- * dust before deciding whether the value is whole.
- */
+/** USD in prose. Whole amounts read clean ($500); fractional amounts always show cents. */
 export const usd = (n: number): string => {
   const v = Math.round(n * 100) / 100;
-  return `$${group(v, Number.isInteger(v) ? 0 : 2, 2)}`;
+  return `${v < 0 ? "-" : ""}$${group(Math.abs(v), Number.isInteger(v) ? 0 : 2, 2)}`;
 };
 
-/**
- * The same amount with the cents ALWAYS shown, for stacked or aligned columns. "$0" sitting
- * beside "$0.50" in tabular figures reads as a rendering fault rather than a round number.
- */
+/** The same amount with the cents ALWAYS shown, for stacked or aligned columns. */
 export const usdAligned = (n: number): string => `$${group(Math.round(n * 100) / 100, 2, 2)}`;
 
-/**
- * QUANTITY PRECISION IS A MONEY DECISION, not a style one. Each unit is rendered to a
- * precision whose last digit is worth well under a cent at today's prices, so a rounded
- * display can never hide value:
- *
- *   1 fine gram of gold  ≈ $110  → 4dp resolves ~$0.011
- *   1 troy ounce silver  ≈  $40  → 4dp resolves ~$0.004
- *   1 SPY share          ≈ $650  → 6dp resolves ~$0.0007
- *
- * Trailing zeros are kept. These numbers live in columns under tabular figures, and a
- * ragged decimal column is how a reader misreads a balance.
- */
-export const GRAM_DP = 4;
-export const OZ_DP = 4;
-export const SHARE_DP = 6;
-
-/** Fine grams of gold: "12.4081 g". */
-export const grams = (n: number): string => `${group(n, GRAM_DP, GRAM_DP)} g`;
-
-/** Troy ounces of silver: "3.2500 oz". */
-export const troyOz = (n: number): string => `${group(n, OZ_DP, OZ_DP)} oz`;
-
-/** Share-equivalents, unitless — the caller names the ticker beside it. */
-export const shares = (n: number): string => group(n, SHARE_DP, SHARE_DP);
-
-/** Basis points as a percentage: 5000 → "50%", 2550 → "25.5%". */
-export const bps = (n: number): string => {
-  const pct = n / 100;
-  return `${group(pct, 0, 2)}%`;
-};
+/** 6-decimal USDC base units → dollars in prose. */
+export const usdc = (base: bigint | number): string => usd(Number(base) / 1e6);
+export const usdcAligned = (base: bigint | number): string => usdAligned(Number(base) / 1e6);
 
 /**
- * Token base units → a display number. `decimals` is the MINT's decimals, never a guess:
- * USDC is 6, most xStocks are 8, and reading one as the other is a 100x error in a balance.
+ * UNITS OF THE ASSET — the largest thing on any page they appear on.
+ *
+ * Four decimals resolves well under a cent at any price on the registry: 1 SPYx ≈ $770, so
+ * 0.0001 is 8 cents; 1 GOLD ≈ $4,300, so 0.0001 is 43 cents — still under the dollar a
+ * reader would care about, and four places is what a stub can carry. Trailing zeros are
+ * kept: a ragged decimal column is how a reader misreads a balance.
  */
+export const UNIT_DP = 4;
+export const units = (n: number, dp = UNIT_DP): string => group(n, dp, dp);
+
+/** Raw token units → a display number at the MINT's decimals. */
 export const fromBase = (base: bigint | number, decimals: number): number =>
   Number(base) / 10 ** decimals;
 
-/** Shorten a base58 address or a signature for display: "7xKXtg…9Fma". */
-export const short = (a: string): string =>
-  a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
+/** Raw units at the mint's decimals → "0.0262". */
+export const unitsFromRaw = (raw: bigint | number, decimals: number, dp = UNIT_DP): string =>
+  units(fromBase(raw, decimals), dp);
 
-/** Capitalize the first letter. */
-export const cap = (s: string): string => (s ? `${s[0]!.toUpperCase()}${s.slice(1)}` : s);
+/** Basis points as a percentage: 1000 → "10%", 2550 → "25.5%". */
+export const bps = (n: number): string => `${group(n / 100, 0, 2)}%`;
 
-const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-] as const;
+/** Lamports → SOL, four places. */
+export const sol = (lamports: bigint | number): string => `${group(Number(lamports) / 1e9, 2, 4)} SOL`;
 
-/**
- * A deterministic short date ("Jul 1", or "Jul 1, 2026") — fixed month names and UTC, so a
- * US-locale server and a client in any locale render the same string. Use this for any
- * SSR-ed date instead of `toLocaleDateString`.
- */
-export const shortDateUTC = (unixSeconds: number, withYear = false): string => {
+/** Shorten a base58 address or a signature: "7xKXtg…9Fma". */
+export const short = (a: string): string => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
+
+/** A Pyth price (price, expo) → dollars. */
+export const pythToUsd = (price: bigint | number, expo: number): number => Number(price) * 10 ** expo;
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+/** "15 Sep 2026" — fixed month names, UTC. */
+export const dateUTC = (unixSeconds: number): string => {
   const d = new Date(unixSeconds * 1000);
-  const base = `${MONTHS[d.getUTCMonth()]!} ${d.getUTCDate()}`;
-  return withYear ? `${base}, ${d.getUTCFullYear()}` : base;
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]!} ${d.getUTCFullYear()}`;
 };
 
-/** A full UTC stamp for receipts: "12 Sep 2026, 14:03 UTC". Receipts get the whole truth. */
+/** "15 Sep 2026, 09:13 UTC". Receipts get the whole truth. */
 export const stampUTC = (unixSeconds: number): string => {
   const d = new Date(unixSeconds * 1000);
   const hh = String(d.getUTCHours()).padStart(2, "0");
   const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]!} ${d.getUTCFullYear()}, ${hh}:${mm} UTC`;
+  return `${dateUTC(unixSeconds)}, ${hh}:${mm} UTC`;
 };
 
-/**
- * Compact relative time ("just now", "12m ago", "3h ago", "2d ago", else a short date).
- * `now` is injectable so tests are deterministic. The absolute fallback uses
- * {@link shortDateUTC} for the same hydration reason.
- */
+/** "3 min ago", "2 h ago", "4 days ago", else a date. `now` is injectable for tests. */
 export const since = (unixSeconds: number, now: number = Date.now()): string => {
   const secs = Math.max(0, Math.floor(now / 1000) - unixSeconds);
   if (secs < 45) return "just now";
   const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return `${mins} min ago`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours} h ago`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return shortDateUTC(unixSeconds);
+  if (days < 14) return `${days} day${days === 1 ? "" : "s"} ago`;
+  return dateUTC(unixSeconds);
 };
+
+/** "48 s", "3 min", "2 h" — an age, for a caption beside a price. */
+export const age = (seconds: number): string => {
+  if (seconds < 90) return `${Math.max(0, Math.floor(seconds))} s`;
+  const mins = Math.floor(seconds / 60);
+  if (mins < 90) return `${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 48) return `${hours} h`;
+  return `${Math.floor(hours / 24)} days`;
+};
+
+/** Capitalize the first letter. */
+export const cap = (s: string): string => (s ? `${s[0]!.toUpperCase()}${s.slice(1)}` : s);

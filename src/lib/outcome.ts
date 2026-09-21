@@ -51,3 +51,22 @@ export function all<T>(items: readonly Outcome<T>[]): Outcome<T[]> {
   }
   return ok(out);
 }
+
+/**
+ * THE LAST GUARD. A reader that is all `Outcome` can still meet a throw from below — an RPC
+ * that refuses, a decoder that meets a byte it did not expect, an address that will not
+ * parse. This turns that into a hold with the reason on it, so the surface renders an honest
+ * waiting state instead of the request dying with a 500 and the visitor seeing nothing.
+ *
+ * `what` names the thing that could not be read, in the words a user reads: "the register",
+ * "this grant". It is not a substitute for guarding a call whose failure has a better
+ * sentence available; it is the floor beneath every one of them.
+ */
+export async function attempt<T>(what: string, fn: () => Promise<Outcome<T>>): Promise<Outcome<T>> {
+  try {
+    return await fn();
+  } catch (err) {
+    const why = err instanceof Error ? err.message : String(err);
+    return held(/429|rate limit/i.test(why) ? `Solana's endpoint is refusing reads right now, so ${what} could not be read. It is not lost; try again in a moment.` : `Could not read ${what} (${why}).`);
+  }
+}

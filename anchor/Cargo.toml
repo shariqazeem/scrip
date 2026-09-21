@@ -2,10 +2,15 @@
 members = ["programs/*"]
 resolver = "2"
 
+# Size first. Rent scales with the binary, and the program's hot paths are a handful of
+# integer operations; measured 2026-09-15, opt-level "z" and panic = "abort" cut the mainnet
+# build from 609,888 to 498,480 bytes with every test passing.
 [profile.release]
 overflow-checks = true
 lto = "fat"
 codegen-units = 1
+opt-level = "z"
+panic = "abort"
 
 [profile.release.build-override]
 opt-level = 3

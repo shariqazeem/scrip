@@ -1,43 +1,39 @@
 /**
- * app.css — the shelled surfaces: the book, pay, goals, settings, assets, the ledger.
+ * app.css — the shelled surfaces: home, rule, request, send, assets, ledger.
  *
- * `.wg-page` is the ONE container class the shell reserves room for (see app-shell.css).
- * Every shelled page wears it. Aliases only; no value is declared here that is not in
- * src/styles/tokens.css.
+ * `.sp-page` is the ONE container class the shell reserves room for. Aliases only; no value
+ * is declared here that is not in src/styles/tokens.css. Left-aligned, ruled rows, no grid
+ * of identical cards with the same shadow, no gradient washes, hover changes colour and
+ * never position.
  */
 
-.wg-page {
+.sp-page {
   --line: var(--border);
   --line-strong: var(--border-strong);
-  --brass: var(--accent);
-  --wash: var(--accent-soft);
 
-  max-width: 1060px;
+  max-width: var(--measure-wide);
   margin: 0 auto;
   padding: var(--s-7) var(--s-6) var(--s-10);
   color: var(--ink);
 }
-.wg-page a {
-  color: var(--brass);
+.sp-page a {
+  color: var(--accent);
   text-decoration: none;
 }
-.wg-page a:hover {
+.sp-page a:hover {
   color: var(--accent-strong);
   text-decoration: underline;
 }
-.wg-page :focus-visible {
-  outline: 2px solid var(--brass);
-  outline-offset: 3px;
-  border-radius: var(--r-sm);
-}
-.wg-page .mono {
+.mono,
+.sp-page .mono {
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
   letter-spacing: var(--tracking-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── page header ────────────────────────────────────────────────────────── */
-.wg-page-head {
+.sp-page-head {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -47,216 +43,207 @@
   margin-bottom: var(--s-6);
   border-bottom: 1px solid var(--line);
 }
-.wg-page-eyebrow {
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.sp-page-eyebrow {
+  font-size: var(--fs-caption);
   color: var(--ink-faint);
   margin: 0 0 var(--s-2);
 }
-/* h2 scale, not h1. On an app surface the NUMBER is the headline — a 50px page title would
-   compete with the balance hero that lands on the book. Long-form surfaces (landing, docs)
-   keep the h1 scale, where the title is the only thing on the screen. */
-.wg-page-title {
+.sp-page-title:empty {
+  display: none;
+}
+.sp-page-title {
   font-size: var(--fs-h2);
   line-height: var(--lh-h2);
   letter-spacing: var(--tracking-h2);
   font-weight: 600;
   margin: 0;
+  max-width: 28ch;
 }
-.wg-page-sub {
+.sp-page-sub {
   margin: var(--s-3) 0 0;
   color: var(--ink-muted);
-  font-size: 1rem;
+  font-size: var(--fs-body);
   line-height: 1.55;
   max-width: 64ch;
 }
 
-/* ── panel ──────────────────────────────────────────────────────────────── */
-.wg-panel {
+/* ── the sheet: a white panel on paper, ruled inside ─────────────────────── */
+.sp-panel {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--r-md);
   overflow: hidden;
 }
-.wg-panel-head {
+.sp-panel-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--s-3);
   padding: var(--s-4) var(--s-5);
   border-bottom: 1px solid var(--line);
 }
-.wg-panel-title {
-  font-size: 0.8125rem;
+.sp-panel-title {
+  font-size: var(--fs-small);
   font-weight: 600;
-  letter-spacing: -0.01em;
 }
-.wg-panel-body {
-  padding: var(--s-5);
-}
-
-/**
- * THE HONEST EMPTY STATE — designed, never a spinner and never a sample row.
- * Used wherever a surface has nothing real to show yet. It says what is missing and what
- * would make it appear, rather than inventing a number to fill the space.
- */
-.wg-empty {
-  display: grid;
-  gap: var(--s-3);
-  place-items: center;
-  text-align: center;
-  padding: var(--s-8) var(--s-5);
+.sp-panel-meta {
+  font-size: var(--fs-caption);
   color: var(--ink-faint);
 }
-.wg-empty-mark {
+.sp-panel-body {
+  padding: var(--s-5);
+}
+.sp-stack {
+  display: grid;
+  gap: var(--s-5);
+}
+.sp-prose {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink-muted);
+  max-width: 70ch;
+}
+.sp-prose strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── ruled rows: the ledger register ─────────────────────────────────────── */
+.sp-rows {
+  display: grid;
+}
+.sp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-2) var(--s-5);
+  align-items: baseline;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+.sp-row:last-child {
+  border-bottom: 0;
+}
+.sp-row-k {
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+.sp-row-v {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  text-align: right;
+  color: var(--ink);
+}
+.sp-row-sub {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+/* ── the honest empty state — designed, never a spinner, never a sample row ── */
+.sp-empty {
+  display: grid;
+  gap: var(--s-3);
+  justify-items: start;
+  text-align: left;
+  padding: var(--s-7) var(--s-5);
+  color: var(--ink-faint);
+}
+.sp-empty-mark {
   color: var(--line-strong);
 }
-.wg-empty-title {
-  font-size: 1rem;
+.sp-empty-title {
+  font-size: var(--fs-body);
   font-weight: 600;
   color: var(--ink);
   margin: 0;
 }
-.wg-empty-note {
-  font-size: 0.9375rem;
+.sp-empty-note {
+  font-size: var(--fs-small);
   line-height: 1.55;
-  max-width: 44ch;
+  max-width: 52ch;
   color: var(--ink-muted);
   margin: 0;
 }
-.wg-empty-actions {
+.sp-empty-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-3);
   margin-top: var(--s-2);
 }
 
-/* ── buttons on app surfaces ────────────────────────────────────────────── */
-.wg-action {
+/* ── buttons: say what happens ────────────────────────────────────────────── */
+.sp-action {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--s-2);
-  height: 40px;
-  padding: 0 var(--s-4);
+  height: 42px;
+  padding: 0 var(--s-5);
   border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--ink);
-  font-size: 0.9375rem;
+  font-size: var(--fs-small);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   cursor: pointer;
   font-family: inherit;
+  white-space: nowrap;
   transition:
     border-color var(--dur-1) var(--ease-out),
-    background var(--dur-1) var(--ease-out);
+    background var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
 }
-.wg-action:hover {
-  border-color: var(--brass);
-  color: var(--ink);
+.sp-action:hover {
+  border-color: var(--accent);
+  color: var(--accent);
   text-decoration: none;
 }
-.wg-action.is-primary {
-  background: var(--brass);
-  border-color: var(--brass);
+.sp-action.is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
   color: var(--accent-ink);
 }
-.wg-action.is-primary:hover {
+.sp-action.is-primary:hover {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
   color: var(--accent-ink);
 }
-/* A disabled button that looks live is a button people click and then distrust. Measured on
-   the policy editor: at 90% the button correctly refused, and looked exactly as ready as at
-   100%. */
-.wg-action:disabled,
-.wg-action:disabled:hover {
-  opacity: 0.45;
+.sp-action.is-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  padding: 0 var(--s-3);
+}
+.sp-action.is-quiet:hover {
+  color: var(--accent);
+}
+.sp-action:disabled,
+.sp-action:disabled:hover {
   cursor: not-allowed;
-  background: var(--surface);
-  border-color: var(--border);
+  background: var(--bg);
+  border-color: var(--line);
   color: var(--ink-faint);
-  transform: none;
 }
-.wg-action.is-primary:disabled,
-.wg-action.is-primary:disabled:hover {
-  background: var(--border-strong);
-  border-color: var(--border-strong);
+.sp-action.is-primary:disabled,
+.sp-action.is-primary:disabled:hover {
+  background: var(--line-strong);
+  border-color: var(--line-strong);
   color: var(--surface);
-  opacity: 1;
 }
-
-/* ── asset rows: the explore surface ─────────────────────────────────────
-   A dense row list. Every row names the issuer, the wrapper and what the token is a claim
-   on, because a row that hides its wrapper is the row a judge opens first. */
-.wg-rows {
-  display: grid;
-}
-.wg-row {
-  display: grid;
-  /* Identity is a fixed narrow column; the wrapper description needs room to be a sentence
-     rather than one word per line. Chips and the disclosure take the full width beneath. */
-  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
-  gap: var(--s-3) var(--s-5);
-  align-items: start;
-  padding: var(--s-5);
-  border-bottom: 1px solid var(--line);
-}
-.wg-row:last-child {
-  border-bottom: 0;
-}
-.wg-row-id {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.wg-row-sym {
-  font-family: var(--font-mono);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: var(--tracking-mono);
-}
-.wg-row-name {
-  font-size: 0.9375rem;
-  color: var(--ink);
-}
-.wg-row-issuer {
-  font-size: 0.8125rem;
-  color: var(--ink-muted);
-  line-height: 1.5;
-}
-.wg-row-issuer a {
-  color: var(--ink-muted);
-}
-.wg-row-issuer a:hover {
-  color: var(--brass);
-}
-.wg-row-meta {
-  grid-column: 1 / -1;
+.sp-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2);
-}
-.wg-row-disclosure {
-  grid-column: 1 / -1;
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.55;
-  color: var(--ink-muted);
-  max-width: 88ch;
-}
-@media (max-width: 720px) {
-  .wg-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  gap: var(--s-3);
+  align-items: center;
 }
 
-/* ── chips ───────────────────────────────────────────────────────────────
-   Pills are for status only (the radius rule). A chip states a FACT about a mint; it is
-   never decoration, and it never uses the money colours. */
-.wg-chip {
+/* ── chips: a fact about a mint, never decoration ─────────────────────────── */
+.sp-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -271,184 +258,40 @@
   color: var(--ink-muted);
   white-space: nowrap;
 }
-.wg-chip.is-unit {
+.sp-chip.is-accent {
   border-color: var(--accent-border);
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
-/* A caution chip, for a fact a holder should weigh: an issuer that can move or freeze a
-   token, or a share that tracks metal rather than being metal. */
-.wg-chip.is-caution {
+.sp-chip.is-caution {
   border-color: var(--warn-border);
   background: var(--warn-soft);
   color: var(--warn);
 }
-
-/* ── a section note that carries a finding ──────────────────────────────── */
-.wg-finding {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--s-3);
-  padding: var(--s-4) var(--s-5);
-  border: 1px solid var(--accent-border);
-  background: var(--accent-soft);
-  border-radius: var(--r-md);
-  margin-bottom: var(--s-5);
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  color: var(--ink);
+.sp-chip.is-gold {
+  border-color: var(--gold-border);
+  background: var(--gold-soft);
+  color: var(--gold);
 }
-.wg-finding svg {
-  color: var(--brass);
-  margin-top: 3px;
+/* --ok is a MONEY outcome: settled, still held. */
+.sp-chip.is-ok {
+  border-color: var(--ok-border);
+  background: var(--ok-soft);
+  color: var(--ok);
 }
-.wg-finding strong {
-  font-weight: 600;
-}
-.wg-stack {
-  display: grid;
-  gap: var(--s-5);
-}
-
-/* ── the sign-in doors ───────────────────────────────────────────────────
-   Written in Webgold's own system rather than pulled from a wallet-adapter UI package,
-   which would ship a second palette into a product whose whole design rule is that there
-   is exactly one. */
-.wg-doors {
-  display: grid;
-  gap: var(--s-3);
-  justify-items: stretch;
-  max-width: 340px;
-  margin: 0 auto;
-}
-.wg-door {
-  justify-content: center;
-  height: 46px;
-}
-.wg-door-icon {
-  width: 18px;
-  height: 18px;
-  border-radius: var(--r-sm);
-  flex: none;
-}
-.wg-doors-note {
-  margin: 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--ink-faint);
-  text-align: center;
-}
-.wg-doors-error {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
+.sp-chip.is-err {
+  border-color: var(--err-border);
+  background: var(--err-soft);
   color: var(--err);
-  text-align: center;
 }
-
-/* ── the balance hero ────────────────────────────────────────────────────
-   The one dark surface on an app page. Grams are the headline; dollars are a caption,
-   because the product's claim is that you own a thing, not that you hold a number. */
-.wg-hero-book {
-  background: var(--ink-warm);
-  color: var(--ink-inverse);
-  border-radius: var(--r-lg);
-  padding: var(--s-7) var(--s-6);
-  margin-bottom: var(--s-5);
-}
-.wg-hero-label {
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-inverse-muted);
-  margin: 0 0 var(--s-3);
-}
-.wg-hero-grams {
-  font-family: var(--font-mono);
-  font-size: clamp(2.2rem, 1.4rem + 3.4vw, 3.4rem);
-  line-height: 1.02;
-  letter-spacing: -0.03em;
-  font-weight: 600;
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-.wg-hero-grams .wg-unit {
-  font-size: 0.42em;
-  letter-spacing: 0;
-  color: var(--ink-inverse-muted);
-  margin-left: 0.35em;
-  font-weight: 500;
-}
-.wg-hero-sub {
+.sp-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-2) var(--s-5);
-  margin: var(--s-5) 0 0;
-  color: var(--ink-inverse-muted);
-  font-size: 0.875rem;
-}
-.wg-hero-sub .mono {
-  color: var(--ink-inverse);
+  gap: var(--s-2);
 }
 
-/* ── position rows ───────────────────────────────────────────────────────── */
-.wg-pos {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr);
-  gap: var(--s-4);
-  align-items: baseline;
-  padding: var(--s-4) var(--s-5);
-  border-bottom: 1px solid var(--line);
-}
-.wg-pos:last-child {
-  border-bottom: 0;
-}
-.wg-pos-name {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.wg-pos-sym {
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.wg-pos-issuer {
-  font-size: 0.75rem;
-  color: var(--ink-faint);
-}
-.wg-pos-qty,
-.wg-pos-val {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  letter-spacing: var(--tracking-mono);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-.wg-pos-qty {
-  color: var(--ink);
-}
-.wg-pos-val {
-  color: var(--ink-muted);
-}
-.wg-pos-note {
-  grid-column: 1 / -1;
-  margin: var(--s-2) 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  color: var(--warn);
-}
-@media (max-width: 640px) {
-  .wg-pos {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .wg-pos-val {
-    grid-column: 2;
-  }
-}
-
-/* ── a held notice: what we could not see, and why ───────────────────────── */
-.wg-held {
+/* ── a held notice: what could not be seen, and why ──────────────────────── */
+.sp-held {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--s-3);
@@ -457,173 +300,157 @@
   background: var(--warn-soft);
   border-radius: var(--r-md);
   color: var(--ink);
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   line-height: 1.55;
 }
-.wg-held svg {
+.sp-held svg {
   color: var(--warn);
   margin-top: 3px;
 }
-.wg-held ul {
+.sp-held ul {
   margin: var(--s-2) 0 0;
   padding-left: var(--s-5);
   list-style: disc;
 }
-.wg-held li {
-  margin-bottom: var(--s-1);
+.sp-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-soft);
+  border-radius: var(--r-md);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--ink);
+}
+.sp-note svg {
+  color: var(--accent);
+  margin-top: 3px;
 }
 
-/* ── the policy strip ────────────────────────────────────────────────────── */
-.wg-mix {
-  display: flex;
-  height: 8px;
-  border-radius: var(--r-pill);
-  overflow: hidden;
-  background: var(--bg);
-  margin-bottom: var(--s-4);
+/* ── stats: sentence case, a number or a sentence, never a zero for "unknown" ── */
+.sp-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-5);
 }
-.wg-mix-seg {
-  height: 100%;
+.sp-stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: var(--s-4) var(--s-5);
+  min-width: 0;
 }
-.wg-mix-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2) var(--s-5);
-  font-size: 0.8125rem;
+.sp-stat-label {
+  font-size: var(--fs-caption);
   color: var(--ink-muted);
+  margin: 0 0 var(--s-2);
 }
-.wg-mix-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: var(--r-pill);
-  margin-right: 6px;
+.sp-stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
-
-/**
- * MIX SEGMENTS ARE TONES OF ONE ACCENT, NOT A CHART PALETTE.
- *
- * The obvious move is a colour per sleeve, and it is the move that turns a savings document
- * into a dashboard. Green and red are reserved for money outcomes and may never be used as
- * series colours, and there is exactly one accent — so the sleeves separate by TONE, in the
- * order a book reads them: metal in gold, the market in ink, funds muted, cash as a hairline.
- */
-.wg-mix-seg.is-metal,
-.wg-mix-dot.is-metal {
-  background: var(--accent);
-}
-.wg-mix-seg.is-equity,
-.wg-mix-dot.is-equity {
-  background: var(--ink);
-}
-.wg-mix-seg.is-fund,
-.wg-mix-dot.is-fund {
-  background: var(--ink-faint);
-}
-.wg-mix-seg.is-cash,
-.wg-mix-dot.is-cash {
-  background: var(--border-strong);
-}
-
-/* ── the policy editor: the one place a weight is chosen ─────────────────── */
-.wg-editor {
-  display: grid;
-  gap: var(--s-4);
-}
-.wg-editor-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(140px, 2fr) 64px;
-  gap: var(--s-4);
-  align-items: center;
-}
-.wg-editor-name {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  font-size: 0.9375rem;
+.sp-stat-held {
+  font-size: var(--fs-caption);
   font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink-muted);
+  margin: 0;
 }
-.wg-editor-sym {
+.sp-stat-note {
+  margin: var(--s-2) 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--ink-faint);
+}
+@media (max-width: 420px) {
+  .sp-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── the event stream: one line per settled event ─────────────────────────── */
+.sp-events {
+  display: grid;
+}
+.sp-event {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-small);
+}
+.sp-event:last-child {
+  border-bottom: 0;
+}
+.sp-event-when,
+.sp-event-units {
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
   letter-spacing: var(--tracking-mono);
   color: var(--ink-faint);
 }
-.wg-editor-range {
-  width: 100%;
-  accent-color: var(--accent);
-  cursor: pointer;
-}
-.wg-editor-pct {
+.sp-event-units {
+  color: var(--ink);
   text-align: right;
-  font-variant-numeric: tabular-nums;
+}
+.sp-event-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sp-event-reason {
+  color: var(--ink-muted);
+  font-size: var(--fs-caption);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-event-kind {
+  font-size: var(--fs-caption);
   color: var(--ink-muted);
 }
-.wg-editor-total {
-  display: flex;
-  justify-content: space-between;
-  padding-top: var(--s-3);
-  border-top: 1px solid var(--line);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--ink-muted);
-}
-/* --ok is a MONEY outcome, and a mix that adds up is a money rule satisfied: this is the
-   one non-payment use of it in the product, and it earns the exception because the number
-   it marks is the invariant the program enforces on the money itself. */
-.wg-editor-total.is-ok {
-  color: var(--ok);
-}
-.wg-editor-why {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--s-2);
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--warn);
-}
-.wg-editor-why.is-error {
-  color: var(--err);
-}
-.wg-editor-why.is-ok {
-  color: var(--ok);
-}
-.wg-editor-why svg {
-  flex: none;
-  margin-top: 2px;
-}
-@media (max-width: 560px) {
-  .wg-editor-row {
-    grid-template-columns: minmax(0, 1fr) 56px;
+@media (max-width: 760px) {
+  .sp-event {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
-  .wg-editor-range {
+  .sp-event-when,
+  .sp-event-kind {
     grid-column: 1 / -1;
   }
 }
 
-/* ── the pay form: one form, one confirm, one receipt. No step wizard ─────── */
-.wg-form {
+/* ── forms: one form, one confirm ─────────────────────────────────────────── */
+.sp-form {
   display: grid;
   gap: var(--s-5);
 }
-.wg-field {
+.sp-field {
   display: grid;
   gap: var(--s-2);
 }
-.wg-label {
-  font-size: 0.875rem;
+.sp-label {
+  font-size: var(--fs-small);
   font-weight: 600;
-  letter-spacing: -0.01em;
   color: var(--ink);
 }
-.wg-hint {
-  font-size: 0.8125rem;
+.sp-hint {
+  font-size: var(--fs-caption);
   line-height: 1.5;
   color: var(--ink-faint);
   margin: 0;
 }
-.wg-input {
+.sp-input {
   height: 44px;
   padding: 0 var(--s-4);
   border: 1px solid var(--line-strong);
@@ -631,210 +458,247 @@
   background: var(--surface);
   color: var(--ink);
   font-family: inherit;
-  font-size: 1rem;
+  font-size: var(--fs-body);
   width: 100%;
 }
-.wg-input.is-mono {
+.sp-input.is-mono {
   font-family: var(--font-mono);
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
   letter-spacing: var(--tracking-mono);
 }
-.wg-input:focus-visible {
+.sp-input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
   border-color: var(--accent);
 }
-.wg-input::placeholder {
+.sp-input::placeholder {
   color: var(--ink-faint);
 }
-.wg-choices {
+.sp-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.sp-input-wrap .sp-input {
+  padding-left: 30px;
+}
+.sp-input-prefix {
+  position: absolute;
+  left: var(--s-4);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+.sp-choices {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-2);
 }
-.wg-choice {
+.sp-choice {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 var(--s-3);
-  border-radius: var(--r-pill);
+  height: 36px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: var(--surface);
-  font-size: 0.8125rem;
+  font-size: var(--fs-small);
   font-weight: 500;
   color: var(--ink-muted);
   cursor: pointer;
   font-family: inherit;
 }
-.wg-choice.on {
+.sp-choice.on {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
-
-/* ── the quote: what will actually land ──────────────────────────────────── */
-.wg-quote {
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--bg);
-  overflow: hidden;
-}
-.wg-quote-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+/* the rate presets are large: a habit, never a trading setting */
+.sp-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--s-3);
+}
+.sp-preset {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  padding: var(--s-4) var(--s-5);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.sp-preset.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.sp-preset-rate {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.sp-preset.on .sp-preset-rate {
+  color: var(--accent-strong);
+}
+.sp-preset-note {
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+}
+.sp-range {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.sp-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  cursor: pointer;
+}
+.sp-check input {
+  margin-top: 4px;
+  accent-color: var(--accent);
+}
+.sp-why {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--warn);
+}
+.sp-why.is-err {
+  color: var(--err);
+}
+.sp-why.is-ok {
+  color: var(--ok);
+}
+.sp-why svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* ── the rule card ────────────────────────────────────────────────────────── */
+.sp-rule {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-5);
+}
+.sp-rule-line {
+  font-size: var(--fs-lead);
+  line-height: var(--lh-lead);
+  letter-spacing: var(--tracking-lead);
+  font-weight: 500;
+  margin: 0;
+}
+.sp-rule-line .mono {
+  font-size: 0.92em;
+}
+.sp-rule-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-rule-meta .mono {
+  color: var(--ink);
+}
+.sp-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.sp-state .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--ink-faint);
+}
+/* on = the rule can draw and pay for itself. Money is not moving here; the dot is the accent. */
+.sp-state.is-on {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.sp-state.is-on .dot {
+  background: var(--accent);
+}
+.sp-state.is-warn {
+  border-color: var(--warn-border);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.sp-state.is-warn .dot {
+  background: var(--warn);
+}
+
+/* ── holdings: units first, dollars second ────────────────────────────────── */
+.sp-holding {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-2) var(--s-5);
+  align-items: baseline;
   padding: var(--s-4) var(--s-5);
   border-bottom: 1px solid var(--line);
 }
-.wg-quote-grams {
-  font-family: var(--font-mono);
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.wg-quote-leg {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: var(--s-4);
-  padding: var(--s-3) var(--s-5);
-  border-bottom: 1px solid var(--line);
-  font-size: 0.875rem;
-  align-items: baseline;
-}
-.wg-quote-leg:last-child {
+.sp-holding:last-child {
   border-bottom: 0;
 }
-.wg-quote-leg .mono {
-  font-variant-numeric: tabular-nums;
+.sp-holding-units {
+  font-family: var(--font-mono);
+  font-size: var(--fs-units-sm);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.sp-holding-units .unit {
+  font-size: 0.5em;
+  color: var(--ink-muted);
+  margin-left: 0.3em;
+  font-weight: 500;
+}
+.sp-holding-usd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
   text-align: right;
 }
-.wg-quote-foot {
-  padding: var(--s-3) var(--s-5);
-  border-top: 1px solid var(--line);
-  font-size: 0.8125rem;
+.sp-holding-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--fs-caption);
   color: var(--ink-faint);
   line-height: 1.5;
 }
 
-/* ── the public record: aggregates then the stream ───────────────────────── */
-.wg-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--s-4);
-  margin-bottom: var(--s-5);
-}
-.wg-stat {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: var(--s-4) var(--s-5);
-}
-.wg-stat-label {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin: 0 0 var(--s-2);
-}
-.wg-stat-value {
-  font-family: var(--font-mono);
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  font-variant-numeric: tabular-nums;
-  margin: 0;
-  line-height: 1.1;
-}
-.wg-stat-note {
-  margin: var(--s-2) 0 0;
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: var(--ink-faint);
-}
-/* A stat that could not be computed says so in the space where the number would be. It is
-   never blank, and it is never a zero standing in for "we do not know". */
-.wg-stat-held {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  line-height: 1.45;
-  color: var(--ink-muted);
-  margin: 0;
-}
-
-.wg-events {
-  display: grid;
-}
-.wg-event {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1.4fr) minmax(0, 1fr) auto;
-  gap: var(--s-4);
-  align-items: baseline;
-  padding: var(--s-4) var(--s-5);
-  border-bottom: 1px solid var(--line);
-  font-size: 0.875rem;
-}
-.wg-event:last-child {
-  border-bottom: 0;
-}
-.wg-event-when,
-.wg-event-value {
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono);
-  letter-spacing: var(--tracking-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-faint);
-}
-.wg-event-value {
-  color: var(--ink);
-  text-align: right;
-}
-.wg-event-who {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.wg-event-reason {
-  color: var(--ink-muted);
-  font-size: 0.8125rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.wg-event-legs {
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono);
-  letter-spacing: var(--tracking-mono);
-  color: var(--ink-muted);
-}
-@media (max-width: 760px) {
-  .wg-event {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .wg-event-when {
-    grid-column: 1 / -1;
-  }
-  .wg-event-legs {
-    grid-column: 1 / -1;
-  }
-}
-
-/* ── a request: a QR and a link, and nothing that needs reconciling ──────── */
-.wg-request {
+/* ── a request or a link: a QR and a URL ──────────────────────────────────── */
+.sp-link {
   display: grid;
   grid-template-columns: 176px minmax(0, 1fr);
   gap: var(--s-5);
   align-items: start;
   padding: var(--s-5);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--bg);
 }
-.wg-request-qr {
+.sp-qr {
   width: 176px;
   height: 176px;
   border-radius: var(--r-md);
@@ -842,22 +706,19 @@
   background: var(--surface);
   display: block;
 }
-.wg-request-qr-blank {
-  display: grid;
-  place-items: center;
-}
-.wg-request-side {
+.sp-link-side {
   display: grid;
   gap: var(--s-3);
   justify-items: start;
+  min-width: 0;
 }
-.wg-request-url {
+.sp-url {
   display: block;
   width: 100%;
   padding: var(--s-3) var(--s-4);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
-  background: var(--surface);
+  background: var(--bg);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   letter-spacing: var(--tracking-mono);
@@ -866,61 +727,109 @@
   line-height: 1.6;
 }
 @media (max-width: 620px) {
-  .wg-request {
+  .sp-link {
     grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-  }
-  .wg-request-side {
-    justify-items: stretch;
   }
 }
 
-/* ── goals ───────────────────────────────────────────────────────────────── */
-.wg-goals {
+/* ── the sign-in doors ────────────────────────────────────────────────────── */
+.sp-doors {
   display: grid;
-  gap: var(--s-4);
+  gap: var(--s-3);
+  justify-items: stretch;
+  max-width: 340px;
 }
-.wg-goal {
-  display: grid;
-  gap: var(--s-2);
-  justify-items: start;
-  padding: var(--s-5);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--bg);
+.sp-door {
+  justify-content: center;
+  height: 46px;
 }
-.wg-goal-head {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: var(--s-4);
+.sp-door-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-sm);
+  flex: none;
 }
-.wg-goal-name {
-  font-size: 1.0625rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-}
-.wg-goal-head .mono {
-  font-size: var(--fs-mono);
-  letter-spacing: var(--tracking-mono);
-  color: var(--accent-strong);
-}
-.wg-goal-holds {
+.sp-doors-note {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--fs-caption);
   line-height: 1.5;
-  color: var(--ink-muted);
-}
-.wg-goal-meta {
-  margin: 0;
-  font-size: var(--fs-mono);
-  letter-spacing: var(--tracking-mono);
   color: var(--ink-faint);
 }
+.sp-doors-error {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--err);
+}
 
-/* A skim line inside a quote: the same row shape, marked so it does not read as a sleeve. */
-.wg-quote-leg.wg-quote-skim {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+/* ── asset rows on /assets ────────────────────────────────────────────────── */
+.sp-asset {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  gap: var(--s-3) var(--s-5);
+  align-items: start;
+  padding: var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+.sp-asset:last-child {
+  border-bottom: 0;
+}
+.sp-asset-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sp-asset-sym {
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.sp-asset-name {
+  font-size: var(--fs-small);
+}
+.sp-asset-issuer {
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.sp-asset-issuer a {
+  color: var(--ink-muted);
+}
+.sp-asset-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.sp-asset-disclosure {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--ink-muted);
+  max-width: 88ch;
+}
+@media (max-width: 720px) {
+  .sp-asset {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── two columns on wide screens (pay, rule) ──────────────────────────────── */
+.sp-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  gap: var(--s-6);
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .sp-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── copy button feedback ─────────────────────────────────────────────────── */
+.sp-copied {
+  font-size: var(--fs-caption);
+  color: var(--ok);
 }

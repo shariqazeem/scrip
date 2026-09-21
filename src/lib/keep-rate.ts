@@ -1,113 +1,124 @@
 import { type Outcome, held, ok } from "@/lib/outcome";
 
 /**
- * KEEP-RATE AT THIRTY DAYS — the share of released value still held.
+ * KEEP-RATE — the share of what was converted that is still held, measured on chain.
  *
- * It is the whole difference between a payout and a farm, and it is the one number nobody
- * else in this category will have, because having it requires a decision made BEFORE the
- * first payout rather than after: the cohort is stamped by the program at release, in the
- * same instruction that moved the value.
+ * Recorded at settlement, measured at 7 and 30 days by anyone who calls `measure_receipt`,
+ * computed from RAW units so a rebase never looks like a sale. Per recipient, over the
+ * receipts whose window has been measured:
  *
- * WHY IT CANNOT BE FAKED, stated precisely, because the claim is worth nothing if it is
- * hand-waved:
+ *     held      = min( balance_raw_at_measure , Σ amount_raw over those receipts )
+ *     keep-rate = Σ held × price_at_settle  /  Σ amount_raw × price_at_settle
  *
- *   · the DENOMINATOR is stamped on chain, by the program, at the instant value moved. It is
- *     not recomputed, re-priced, or chosen later. Anyone can read it from the receipt account.
- *   · the NUMERATOR is the recipient's balance now, read from their own token accounts, which
- *     are public.
- *   · both ends are therefore reproducible by a stranger with an RPC endpoint and this file.
+ * where `price_at_settle` is `paid_usdc ÷ amount_raw` on the receipt — so a receipt's own
+ * dollars weight it, and the ratio is dimensionless.
  *
- * A cohort reconstructed after the fact would be a balance measured against a number somebody
- * chose afterwards, and would tell you nothing. That is exactly why `release_payout` writes
- * the Cohort account rather than an analytics job writing it on Monday.
+ * WHY IT CANNOT BE FAKED. The denominator is the receipt's own `amount_raw`, written by the
+ * program when the tokens landed. The numerator is a balance the program read from the
+ * recipient's own token account, on a date anyone can check. Neither is ours to choose.
+ *
+ * A window that has not matured is not a zero, and a receipt that matured but was never
+ * measured is EXCLUDED and reported, never counted as spent. "They sold it" and "nobody
+ * looked" are opposite claims.
  */
 
-export const KEEP_RATE_WINDOW_DAYS = 30;
+export const WINDOWS = [7, 30] as const;
+export type Window = (typeof WINDOWS)[number];
 const DAY = 86_400;
 
-export type CohortRow = {
+export type ReceiptRow = {
   readonly recipient: string;
-  readonly releaseId: string;
-  /** What the program stamped at release, 6-decimal base units. Never recomputed. */
-  readonly valueAtReleaseBase: bigint;
-  readonly releasedAt: number;
-  /** What the recipient held when we last measured, or null if never measured. */
-  readonly valueNowBase: bigint | null;
-  readonly measuredAt: number | null;
+  readonly asset: string;
+  readonly settledUnix: number;
+  readonly paidUsdc: bigint;
+  readonly amountRaw: bigint;
+  /** null = not measured; a balance in raw units otherwise. */
+  readonly measured7dRaw: bigint | null;
+  readonly measured30dRaw: bigint | null;
 };
 
 export type KeepRate = {
-  /** Basis points of released value still held. 10,000 is everything. */
+  readonly windowDays: Window;
+  /** Basis points still held. May exceed 10,000 only in theory; capped by min() per recipient. */
   readonly bps: number;
-  /** Cohorts old enough to count. */
-  readonly cohorts: number;
-  readonly releasedBase: bigint;
-  readonly heldBase: bigint;
-  /** The window this covers, so a figure is never quoted without the period it is over. */
-  readonly windowDays: number;
+  readonly receipts: number;
+  readonly recipients: number;
+  readonly paidUsdc: bigint;
+  readonly heldUsdc: bigint;
 };
 
-/** Cohorts that have matured: released at least the window ago. */
-export function matured(rows: readonly CohortRow[], now: number, windowDays = KEEP_RATE_WINDOW_DAYS) {
-  const cutoff = now - windowDays * DAY;
-  return rows.filter((r) => r.releasedAt <= cutoff);
+function measured(r: ReceiptRow, w: Window): bigint | null {
+  return w === 7 ? r.measured7dRaw : r.measured30dRaw;
 }
 
-/**
- * Compute keep-rate over the cohorts that have matured AND been measured.
- *
- * A cohort that matured but was never measured is EXCLUDED and counted in the hold, not
- * treated as a zero. Those are opposite claims — "they spent it all" and "we did not look" —
- * and quietly conflating them is how a growth metric becomes a lie in the safest possible
- * direction for whoever is quoting it.
- */
-export function keepRate(
-  rows: readonly CohortRow[],
-  now: number,
-  windowDays = KEEP_RATE_WINDOW_DAYS,
-): Outcome<KeepRate> {
-  const ready = matured(rows, now, windowDays);
+/** Receipts old enough for the window. */
+export function matured(rows: readonly ReceiptRow[], windowDays: Window, now: number): ReceiptRow[] {
+  return rows.filter((r) => now >= r.settledUnix + windowDays * DAY);
+}
+
+/** Receipts old enough and not yet measured — what the crank should call `measure_receipt` on. */
+export function dueForMeasurement(rows: readonly ReceiptRow[], windowDays: Window, now: number): ReceiptRow[] {
+  return matured(rows, windowDays, now).filter((r) => measured(r, windowDays) === null);
+}
+
+export function keepRate(rows: readonly ReceiptRow[], windowDays: Window, now: number): Outcome<KeepRate> {
+  const ready = matured(rows, windowDays, now);
   if (ready.length === 0) {
-    return held(
-      `No payout is ${windowDays} days old yet, so there is no keep-rate to report. This figure appears once one is.`,
-    );
+    return held(`No receipt is ${windowDays} days old yet. This figure appears once one is.`);
   }
-  const measured = ready.filter((r) => r.valueNowBase !== null);
-  if (measured.length === 0) {
-    return held(
-      `${ready.length} payout${ready.length === 1 ? " has" : "s have"} matured but none has been measured yet.`,
-    );
+  const done = ready.filter((r) => measured(r, windowDays) !== null);
+  if (done.length === 0) {
+    return held(`${ready.length} receipt${ready.length === 1 ? " is" : "s are"} old enough but none has been measured yet.`);
   }
-  if (measured.length < ready.length) {
+  if (done.length < ready.length) {
     return held(
-      `${ready.length - measured.length} of ${ready.length} matured payouts have not been measured, so a keep-rate now would be measured over a cohort we only partly looked at.`,
+      `${ready.length - done.length} of ${ready.length} matured receipts have not been measured, so a keep-rate now would be over a cohort only partly looked at.`,
     );
   }
 
-  const releasedBase = measured.reduce((n, r) => n + r.valueAtReleaseBase, 0n);
-  if (releasedBase <= 0n) return held("These cohorts were released with no value in them.");
-  const heldBase = measured.reduce((n, r) => n + (r.valueNowBase ?? 0n), 0n);
+  // Group by (recipient, asset): a person's balance is one number that has to cover every
+  // receipt they have in that asset, so the cap applies to the group, never per receipt.
+  type Group = { rows: ReceiptRow[]; balance: bigint };
+  const groups = new Map<string, Group>();
+  for (const r of done) {
+    const key = `${r.recipient}:${r.asset}`;
+    const g = groups.get(key) ?? { rows: [], balance: measured(r, windowDays)! };
+    g.rows.push(r);
+    // Measurements of the same balance at different receipts' 7-day marks can differ; the
+    // LATEST measurement is the truest reading of what they hold now.
+    const m = measured(r, windowDays)!;
+    if (m < g.balance) g.balance = m;
+    groups.set(key, g);
+  }
+
+  // Weights: dollars paid, scaled to 1e6 precision so the sums stay integers.
+  let paid = 0n;
+  let heldValue = 0n;
+  for (const g of groups.values()) {
+    const totalRaw = g.rows.reduce((n, r) => n + r.amountRaw, 0n);
+    const totalPaid = g.rows.reduce((n, r) => n + r.paidUsdc, 0n);
+    if (totalRaw === 0n) continue;
+    const heldRaw = g.balance < totalRaw ? g.balance : totalRaw;
+    // held × (paid / totalRaw) = held-in-dollars at the settle price.
+    heldValue += (heldRaw * totalPaid) / totalRaw;
+    paid += totalPaid;
+  }
+  if (paid <= 0n) return held("These receipts carry no value.");
 
   return ok({
-    // Deliberately NOT capped at 10,000. If gold rises, a recipient who spent nothing can hold
-    // more than they were given, and a keep-rate above 100% is the true reading. Clamping it
-    // would hide the asset doing exactly what the product says it does.
-    bps: Number((heldBase * 10_000n) / releasedBase),
-    cohorts: measured.length,
-    releasedBase,
-    heldBase,
     windowDays,
+    bps: Number((heldValue * 10_000n) / paid),
+    receipts: done.length,
+    recipients: new Set(done.map((r) => r.recipient)).size,
+    paidUsdc: paid,
+    heldUsdc: heldValue,
   });
 }
 
-/** Cohorts due a measurement: matured, and either never measured or measured before maturity. */
-export function dueForMeasurement(
-  rows: readonly CohortRow[],
-  now: number,
-  windowDays = KEEP_RATE_WINDOW_DAYS,
-): readonly CohortRow[] {
-  const cutoff = now - windowDays * DAY;
-  return matured(rows, now, windowDays).filter(
-    (r) => r.measuredAt === null || r.measuredAt < cutoff,
-  );
+/** The first date on which a keep-rate for this window can exist, or null if it already can. */
+export function firstMaturity(rows: readonly ReceiptRow[], windowDays: Window, now: number): number | null {
+  const earliest = rows.reduce<number | null>((m, r) => (m === null || r.settledUnix < m ? r.settledUnix : m), null);
+  if (earliest === null) return null;
+  const at = earliest + windowDays * DAY;
+  return at > now ? at : null;
 }

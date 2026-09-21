@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1789475164324,
+      "tag": "0000_lonely_the_fallen",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789549582201,
+      "tag": "0001_romantic_mathemanic",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789553083053,
+      "tag": "0002_sleepy_proudstar",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,129 +1,82 @@
 import { describe, expect, it } from "vitest";
-import {
-  bps,
-  cap,
-  fromBase,
-  grams,
-  shares,
-  short,
-  shortDateUTC,
-  since,
-  stampUTC,
-  troyOz,
-  usd,
-  usdAligned,
-} from "./format";
+import { age, bps, dateUTC, fromBase, pythToUsd, short, since, sol, stampUTC, units, unitsFromRaw, usd, usdAligned, usdc } from "./format";
 
 describe("usd", () => {
   it("reads clean when whole and always shows full cents when not", () => {
     expect(usd(500)).toBe("$500");
     expect(usd(459.4)).toBe("$459.40");
-    expect(usd(1234.567)).toBe("$1,234.57");
+    expect(usd(1234567.891)).toBe("$1,234,567.89");
+    expect(usd(-3.5)).toBe("-$3.50");
   });
-
   it("sheds floating-point dust before deciding whether a value is whole", () => {
-    // 0.1 + 0.2 = 0.30000000000000004; rounding to cents first is what stops "$0.30" from
-    // rendering as "$0.3" — or worse, from being treated as non-whole when it is.
     expect(usd(0.1 + 0.2)).toBe("$0.30");
-    expect(usd(2.0000000001)).toBe("$2");
+    expect(usd(199.99999999)).toBe("$200");
   });
-
-  it("always shows cents in the aligned variant", () => {
-    // "$0" beside "$0.50" in a tabular column reads as a rendering fault, not a round number.
-    expect(usdAligned(0)).toBe("$0.00");
+  it("always shows cents in the aligned variant, and reads USDC base units", () => {
     expect(usdAligned(500)).toBe("$500.00");
+    expect(usdc(200_000_000n)).toBe("$200");
+    expect(usdc(50_000_000)).toBe("$50");
+    expect(usdc(1_234_567n)).toBe("$1.23");
   });
 });
 
-describe("quantities", () => {
-  it("keeps trailing zeros so a column cannot go ragged", () => {
-    expect(grams(12.5)).toBe("12.5000 g");
-    expect(troyOz(3)).toBe("3.0000 oz");
-    expect(shares(1)).toBe("1.000000");
+describe("units", () => {
+  it("keeps four places and trailing zeros so a column cannot go ragged", () => {
+    expect(units(0.0262)).toBe("0.0262");
+    expect(units(1)).toBe("1.0000");
+    expect(units(12.5)).toBe("12.5000");
   });
-
-  it("renders a precision whose last digit is worth well under a cent", () => {
-    // 4dp of a gram of gold is ~$0.011; 6dp of an SPY share is ~$0.0007. A rounded display
-    // must never be able to hide value.
-    expect(grams(0.0001)).toBe("0.0001 g");
-    expect(shares(0.000001)).toBe("0.000001");
+  it("reads raw token units at the mint's decimals, never a default", () => {
+    expect(unitsFromRaw(2_620_000n, 8)).toBe("0.0262");
+    expect(unitsFromRaw(2_620_000n, 6)).toBe("2.6200");
+    expect(fromBase(100_000_000n, 8)).toBe(1);
   });
-
   it("groups thousands", () => {
-    expect(grams(1234.5)).toBe("1,234.5000 g");
+    expect(units(1234.5)).toBe("1,234.5000");
   });
 });
 
-describe("fromBase", () => {
-  it("scales by the MINT's decimals, never a default", () => {
-    // Reading an 8-decimal equity token as 6-decimal USDC is a 100x error in a balance.
-    expect(fromBase(1_500_000, 6)).toBe(1.5);
-    expect(fromBase(1_500_000, 8)).toBe(0.015);
+describe("bps, sol, pyth", () => {
+  it("renders basis points as percentages", () => {
+    expect(bps(1_000)).toBe("10%");
+    expect(bps(2_550)).toBe("25.5%");
+    expect(bps(5)).toBe("0.05%");
   });
-
-  it("accepts bigint base units", () => {
-    expect(fromBase(2_000_000n, 6)).toBe(2);
+  it("renders lamports as SOL", () => {
+    expect(sol(50_000_000n)).toBe("0.05 SOL");
+    expect(sol(3_400_000)).toBe("0.0034 SOL");
   });
-});
-
-describe("bps", () => {
-  it("renders policy weights as percentages", () => {
-    expect(bps(5000)).toBe("50%");
-    expect(bps(2000)).toBe("20%");
-    expect(bps(3000)).toBe("30%");
-    expect(bps(2550)).toBe("25.5%");
+  it("turns a Pyth price into dollars", () => {
+    expect(pythToUsd(76_991_499_999n, -8)).toBeCloseTo(769.915, 3);
   });
 });
 
 describe("short", () => {
-  it("shortens a base58 address", () => {
+  it("shortens a base58 address and leaves a short string alone", () => {
     expect(short("7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU")).toBe("7xKXtg…gAsU");
-  });
-
-  it("leaves a short string alone rather than mangling it", () => {
     expect(short("abc")).toBe("abc");
   });
 });
 
 describe("dates", () => {
-  const T = Date.UTC(2026, 8, 12, 14, 3, 0) / 1000; // 12 Sep 2026, 14:03 UTC
-
   it("formats deterministically in UTC with fixed month names", () => {
-    // toLocaleDateString renders "Sep 12" on a US server and "12 Sep" in a European browser,
-    // which is a React hydration mismatch on every SSR-ed date.
-    expect(shortDateUTC(T)).toBe("Sep 12");
-    expect(shortDateUTC(T, true)).toBe("Sep 12, 2026");
-    expect(stampUTC(T)).toBe("12 Sep 2026, 14:03 UTC");
+    expect(dateUTC(1_789_000_000)).toBe("10 Sep 2026");
+    expect(stampUTC(1_789_000_000)).toBe("10 Sep 2026, 00:26 UTC");
   });
-
-  it("pads the clock", () => {
-    expect(stampUTC(Date.UTC(2026, 0, 5, 4, 7, 0) / 1000)).toBe("5 Jan 2026, 04:07 UTC");
+  it("steps through relative units and falls back to a date", () => {
+    const now = 1_789_000_000 * 1000;
+    expect(since(1_789_000_000 - 10, now)).toBe("just now");
+    expect(since(1_789_000_000 - 180, now)).toBe("3 min ago");
+    expect(since(1_789_000_000 - 7_200, now)).toBe("2 h ago");
+    expect(since(1_789_000_000 - 86_400, now)).toBe("1 day ago");
+    expect(since(1_789_000_000 - 3 * 86_400, now)).toBe("3 days ago");
+    expect(since(1_789_000_000 - 30 * 86_400, now)).toBe("11 Aug 2026");
+    expect(since(1_789_000_000 + 100, now)).toBe("just now");
   });
-});
-
-describe("since", () => {
-  const now = Date.UTC(2026, 8, 12, 12, 0, 0);
-  const ago = (secs: number) => Math.floor(now / 1000) - secs;
-
-  it("steps through the units", () => {
-    expect(since(ago(10), now)).toBe("just now");
-    expect(since(ago(60 * 12), now)).toBe("12m ago");
-    expect(since(ago(3600 * 3), now)).toBe("3h ago");
-    expect(since(ago(86400 * 2), now)).toBe("2d ago");
-  });
-
-  it("falls back to an absolute date past a week", () => {
-    expect(since(ago(86400 * 30), now)).toBe("Aug 13");
-  });
-
-  it("never renders a negative age from a clock skew", () => {
-    expect(since(Math.floor(now / 1000) + 500, now)).toBe("just now");
-  });
-});
-
-describe("cap", () => {
-  it("capitalizes without throwing on empty input", () => {
-    expect(cap("settled")).toBe("Settled");
-    expect(cap("")).toBe("");
+  it("describes an age for a caption", () => {
+    expect(age(48)).toBe("48 s");
+    expect(age(300)).toBe("5 min");
+    expect(age(7_200)).toBe("2 h");
+    expect(age(3 * 86_400)).toBe("3 days");
   });
 });

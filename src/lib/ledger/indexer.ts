@@ -1,272 +1,394 @@
 import "server-only";
 
-import { PublicKey } from "@solana/web3.js";
-import { and, desc, eq, sql } from "drizzle-orm";
-import idlJson from "@/lib/anchor/webgold.json";
-import { connection } from "@/lib/book/read-book";
+import { type Connection, PublicKey } from "@solana/web3.js";
+import { desc, eq, sql } from "drizzle-orm";
+import { readReceiptAccount, receiptFromTransaction } from "@/lib/book/read-receipt";
+import { decodeBook, decodeGrant, decodeHandle } from "@/lib/book/decode";
 import { db } from "@/lib/db";
 import { newId } from "@/lib/db/keys";
-import { cohorts, receipts } from "@/lib/db/schema";
-import { assetByMint } from "@/lib/assets/registry";
+import { books, cursors, grants, receipts } from "@/lib/db/schema";
 import { toSafeNumber } from "@/lib/money";
+import { notifyReceipt } from "@/lib/notify/telegram";
 import { type Outcome, held, ok } from "@/lib/outcome";
-import { WEBGOLD_PROGRAM_ID } from "@/lib/solana/program";
+import { connection } from "@/lib/solana/connection";
+import { SCRIP_PROGRAM_ID, discriminatorFilter } from "@/lib/solana/program";
+import { attributeSweep } from "./attribute";
+import { rentFor } from "@/lib/solana/rent";
+import { transactionsFor } from "@/lib/solana/batch";
 
 /**
- * THE RECEIPT INDEXER — mirrors on-chain receipts into the cache so a page is fast.
+ * THE INDEXER — mirrors on-chain receipts and books into the cache so the ledger is fast.
  *
- * THE DATABASE IS A CACHE. THE CHAIN IS THE MEMORY. Nothing here is a source of truth:
- * delete the file and a re-index rebuilds it from Solana, because every row is a copy of an
- * account that still exists. That is why `/receipt/[sig]` reads the chain directly and never
- * this table — the page a stranger opens must not depend on our having indexed anything.
+ * THE DATABASE IS A CACHE. THE CHAIN IS THE MEMORY. `/receipt/[sig]` never reads this table;
+ * the page a stranger opens must not depend on our having indexed anything.
  *
- * What the cache buys is the LEDGER: counting every receipt in the product by walking the
- * chain on each page load would be slow at ten receipts and impossible at ten thousand.
- *
- * It walks backwards from the newest signature and stops at the first one it has already
- * seen, so a routine run is one RPC page. The public devnet and mainnet endpoints rate-limit
- * hard, so the batch size is small and deliberate rather than tuned for a paid provider.
+ * INCREMENTAL, AND PROVEN SO. The cursor is the newest signature fully processed. A run asks
+ * for everything newer than it, walking pages with `before` until the page is short, then
+ * processes OLDEST FIRST so an interrupted run leaves the cursor where it can safely resume.
+ * The predecessor passed `until` alone and stopped after one page; measured, its second run
+ * added zero rows against a chain with forty-seven new signatures. `indexer.test.ts` holds
+ * that a second run adds rows.
  */
 
-const RECEIPT_DISCRIMINATOR: Uint8Array | null = (() => {
-  const accounts = (idlJson as { accounts?: Array<{ name: string; discriminator: number[] }> })
-    .accounts;
-  const found = accounts?.find((a) => a.name === "Receipt");
-  return found ? Uint8Array.from(found.discriminator) : null;
-})();
+const CURSOR_KEY = `receipts:${SCRIP_PROGRAM_ID.toBase58()}`;
 
 export type IndexReport = {
-  /** Signatures examined on this run. */
   readonly scanned: number;
-  /** Receipts written that we had not seen before. */
   readonly added: number;
-  /** Signatures that carried no Webgold receipt — ordinary, not a failure. */
+  readonly updated: number;
   readonly skipped: number;
-  /** Anything that could not be read, said out loud rather than swallowed. */
   readonly holds: readonly string[];
 };
 
-export async function indexReceipts(limit = 50): Promise<Outcome<IndexReport>> {
-  if (!RECEIPT_DISCRIMINATOR) return held("The committed IDL has no Receipt account in it.");
+export type SignatureSource = (opts: { before?: string; until?: string; limit: number }) => Promise<
+  Array<{ signature: string; slot: number; err: unknown }>
+>;
 
-  const conn = connection();
-  const known = await db
-    .select({ sig: receipts.sig })
-    .from(receipts)
-    .orderBy(desc(receipts.at))
-    .limit(1);
-  const stopAt = known[0]?.sig;
+export async function indexReceipts(
+  conn: Connection = connection(),
+  pageSize = 50,
+  maxPages = 20,
+): Promise<Outcome<IndexReport>> {
+  const source: SignatureSource = (opts) => conn.getSignaturesForAddress(SCRIP_PROGRAM_ID, opts, "confirmed");
+  return indexReceiptsFrom(conn, source, pageSize, maxPages);
+}
 
-  let signatures;
-  try {
-    signatures = await conn.getSignaturesForAddress(
-      WEBGOLD_PROGRAM_ID,
-      { limit, ...(stopAt ? { until: stopAt } : {}) },
-      "confirmed",
-    );
-  } catch (err) {
-    return held(
-      `Could not list the program's transactions (${err instanceof Error ? err.message : String(err)}).`,
-    );
+export async function indexReceiptsFrom(
+  conn: Connection,
+  source: SignatureSource,
+  pageSize: number,
+  maxPages: number,
+): Promise<Outcome<IndexReport>> {
+  const cursor = (await db.select().from(cursors).where(eq(cursors.key, CURSOR_KEY)).limit(1))[0];
+
+  // ── gather every signature newer than the cursor, newest first ──────────────────────
+  const fresh: Array<{ signature: string; slot: number; err: unknown }> = [];
+  let before: string | undefined;
+  for (let page = 0; page < maxPages; page += 1) {
+    let batch;
+    try {
+      batch = await source({ before, until: cursor?.signature, limit: pageSize });
+    } catch (err) {
+      return held(`Could not list the program's transactions (${err instanceof Error ? err.message : String(err)}).`);
+    }
+    fresh.push(...batch);
+    if (batch.length < pageSize) break;
+    before = batch[batch.length - 1]!.signature;
   }
 
   const holds: string[] = [];
   let added = 0;
+  let updated = 0;
   let skipped = 0;
 
-  for (const entry of signatures) {
+  // ── oldest first, so the cursor can advance behind what is done ─────────────────────
+  const ordered = [...fresh].reverse();
+  // One batch per 25 signatures, not one request per signature: see lib/solana/batch.ts.
+  const bySignature = await transactionsFor(
+    conn,
+    ordered.filter((e) => !e.err).map((e) => e.signature),
+  );
+  for (const entry of ordered) {
     if (entry.err) {
-      // A failed transaction moved nothing and wrote no receipt. Not an error to report.
       skipped += 1;
       continue;
     }
-    const existing = await db
-      .select({ id: receipts.id })
-      .from(receipts)
-      .where(eq(receipts.sig, entry.signature))
-      .limit(1);
-    if (existing.length > 0) {
-      skipped += 1;
+    const tx = bySignature.get(entry.signature) ?? null;
+    if (!tx) {
+      holds.push(`${entry.signature.slice(0, 8)}…: the transaction could not be fetched.`);
       continue;
     }
-
-    const found = await receiptFromSignature(conn, entry.signature);
+    const found = await receiptFromTransaction(conn, entry.signature, tx);
     if (!found.ok) {
-      // Most signatures on this program are `open_book` or `set_policy` and carry no receipt.
-      if (!found.why.includes("no Webgold receipt")) holds.push(found.why);
+      // Most signatures are rule changes, book openings and sweeps' measurements: no receipt.
+      if (!/did not write a Scrip receipt/.test(found.why)) holds.push(`${entry.signature.slice(0, 8)}…: ${found.why}`);
       skipped += 1;
       continue;
     }
-
     const r = found.value;
-    const valueBase = toSafeNumber(r.valueBase, "receipt value");
-    if (!valueBase.ok) {
-      holds.push(`${entry.signature}: ${valueBase.why}`);
+    const nums = {
+      basis: toSafeNumber(r.basisUsdc, "basis"),
+      paid: toSafeNumber(r.paidUsdc, "paid"),
+      amount: toSafeNumber(r.amountRaw, "amount"),
+      slot: toSafeNumber(r.settledSlot, "slot"),
+      price: toSafeNumber(r.price?.price ?? 0n, "price"),
+      conf: toSafeNumber(r.price?.conf ?? 0n, "conf"),
+      m7: toSafeNumber(r.measured7d?.balanceRaw ?? 0n, "measured"),
+      m30: toSafeNumber(r.measured30d?.balanceRaw ?? 0n, "measured"),
+    };
+    const bad = Object.values(nums).find((n) => !n.ok);
+    if (bad && !bad.ok) {
+      holds.push(`${entry.signature.slice(0, 8)}…: ${bad.why}`);
       continue;
     }
-
-    await db.insert(receipts).values({
-      id: newId("rcp"),
+    const row = {
       pda: r.address,
-      sig: entry.signature,
-      kind: "payout",
-      payer: r.payer,
+      sig: r.signature,
+      kind: r.kind,
       recipient: r.recipient,
-      legsJson: JSON.stringify(r.legs),
-      valueBase: valueBase.value,
-      gramsAtStamp: (Number(r.gramsE8) / 1e8).toFixed(8),
-      reason: r.reason,
+      payer: r.payer ?? "",
+      submitter: r.submitter,
+      book: r.book,
       releaseId: r.releaseId,
-      at: r.at,
-    });
-
-    /**
-     * THE COHORT ROW, and the one thing about it that matters: `value_at_release_base` is
-     * copied from the receipt, which the PROGRAM stamped when the value moved. It is never
-     * recomputed here and never rewritten. A keep-rate measured against a number this indexer
-     * chose after the fact would be a keep-rate we invented.
-     */
-    await db
-      .insert(cohorts)
-      .values({
-        id: newId("coh"),
-        releaseId: r.releaseId,
-        recipient: r.recipient,
-        valueAtReleaseBase: valueBase.value,
-        releasedAt: r.at,
-      })
-      .onConflictDoNothing();
-
-    added += 1;
-  }
-
-  return ok({ scanned: signatures.length, added, skipped, holds });
-}
-
-type IndexedReceipt = {
-  address: string;
-  payer: string;
-  recipient: string;
-  releaseId: string;
-  valueBase: bigint;
-  gramsE8: bigint;
-  reason: string;
-  at: number;
-  legs: Array<{ mint: string; symbol: string; amount: string }>;
-};
-
-async function receiptFromSignature(
-  conn: ReturnType<typeof connection>,
-  signature: string,
-): Promise<Outcome<IndexedReceipt>> {
-  const tx = await conn.getTransaction(signature, {
-    commitment: "confirmed",
-    maxSupportedTransactionVersion: 0,
-  });
-  if (!tx) return held(`${signature}: the transaction could not be fetched.`);
-
-  const keys = tx.transaction.message.getAccountKeys({
-    accountKeysFromLookups: tx.meta?.loadedAddresses,
-  });
-  const candidates: PublicKey[] = [];
-  for (let i = 0; i < keys.length; i += 1) {
-    const key = keys.get(i);
-    if (key) candidates.push(key);
-  }
-
-  const infos = await conn.getMultipleAccountsInfo(candidates, "confirmed");
-  for (let i = 0; i < infos.length; i += 1) {
-    const info = infos[i];
-    if (!info || !info.owner.equals(WEBGOLD_PROGRAM_ID) || info.data.length < 8) continue;
-    if (!sameBytes(info.data.subarray(0, 8), RECEIPT_DISCRIMINATOR!)) continue;
-    const decoded = decode(info.data);
-    if (!decoded.ok) return decoded;
-    return ok({ ...decoded.value, address: candidates[i]!.toBase58() });
-  }
-  return held(`${signature}: no Webgold receipt.`);
-}
-
-function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
-  return true;
-}
-
-function decode(data: Uint8Array): Outcome<Omit<IndexedReceipt, "address">> {
-  try {
-    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    let o = 8;
-    const payer = new PublicKey(data.slice(o, o + 32)).toBase58();
-    o += 32;
-    const recipient = new PublicKey(data.slice(o, o + 32)).toBase58();
-    o += 32;
-    const releaseId = [...data.slice(o, o + 32)]
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    o += 32;
-    const valueBase = view.getBigUint64(o, true);
-    o += 8;
-    const gramsE8 = view.getBigUint64(o, true);
-    o += 8;
-    const reasonLen = view.getUint32(o, true);
-    o += 4;
-    if (reasonLen > 200) return held("a receipt's reason is longer than the program allows");
-    const reason = new TextDecoder().decode(data.slice(o, o + reasonLen));
-    o += reasonLen;
-    const at = Number(view.getBigInt64(o, true));
-    o += 8;
-    o += 1;
-    const legCount = view.getUint32(o, true);
-    o += 4;
-    if (legCount > 8) return held("a receipt claims more legs than the program allows");
-    const legs: IndexedReceipt["legs"] = [];
-    for (let i = 0; i < legCount; i += 1) {
-      const mint = new PublicKey(data.slice(o, o + 32)).toBase58();
-      o += 32;
-      const amount = view.getBigUint64(o, true);
-      o += 8;
-      legs.push({ mint, symbol: assetByMint(mint)?.symbol ?? mint.slice(0, 4), amount: amount.toString() });
+      runId: r.runId ?? "",
+      reasonHash: Buffer.from(r.reasonHash).toString("hex"),
+      reason: r.reason ?? "",
+      basisUsdc: nums.basis.ok ? nums.basis.value : 0,
+      rateBps: r.rateBps,
+      paidUsdc: nums.paid.ok ? nums.paid.value : 0,
+      asset: r.asset,
+      amountRaw: nums.amount.ok ? nums.amount.value : 0,
+      priceFeed: r.price?.feed ?? "",
+      price: nums.price.ok ? nums.price.value : 0,
+      priceExpo: r.price?.expo ?? 0,
+      priceConf: nums.conf.ok ? nums.conf.value : 0,
+      pricePublishTime: r.price?.publishTime ?? 0,
+      settledSlot: nums.slot.ok ? nums.slot.value : 0,
+      settledUnix: r.settledUnix,
+      measured7dAt: r.measured7d?.at ?? 0,
+      measured7dRaw: nums.m7.ok ? nums.m7.value : 0,
+      measured30dAt: r.measured30d?.at ?? 0,
+      measured30dRaw: nums.m30.ok ? nums.m30.value : 0,
+    };
+    const existing = (await db.select({ id: receipts.id }).from(receipts).where(eq(receipts.pda, r.address)).limit(1))[0];
+    if (existing) {
+      await db.update(receipts).set(row).where(eq(receipts.id, existing.id));
+      updated += 1;
+    } else {
+      let attributedJson = "[]";
+      if (r.kind === "sweep") {
+        const attributed = await attributeSweep(conn, r.recipient, r.settledSlot, r.basisUsdc);
+        if (attributed.ok) attributedJson = JSON.stringify(attributed.value);
+        else holds.push(`${entry.signature.slice(0, 8)}…: attribution — ${attributed.why}`);
+      }
+      const id = newId("rcp");
+      await db.insert(receipts).values({ id, ...row, attributedJson });
+      added += 1;
+      // The arrival, as one message, to whoever linked a chat. Never awaited into the index.
+      void notifyReceipt({ id, ...row, attributedJson, createdAt: Math.floor(Date.now() / 1000) }).catch(() => undefined);
     }
-    return ok({ payer, recipient, releaseId, valueBase, gramsE8, reason, at, legs });
-  } catch {
-    return held("a receipt account could not be decoded");
+    // A grant's reason travels as the memo of the transaction that sealed it.
+    if (r.kind === "grant" && r.reason) {
+      await db.update(grants).set({ reason: r.reason }).where(eq(grants.pda, r.book));
+    }
   }
+
+  const newest = fresh[0];
+  if (newest && holds.length === 0) {
+    await db
+      .insert(cursors)
+      .values({ key: CURSOR_KEY, signature: newest.signature, slot: newest.slot, updatedAt: Math.floor(Date.now() / 1000) })
+      .onConflictDoUpdate({
+        target: cursors.key,
+        set: { signature: newest.signature, slot: newest.slot, updatedAt: Math.floor(Date.now() / 1000) },
+      });
+  }
+
+  return ok({ scanned: fresh.length, added, updated, skipped, holds });
 }
 
-/** Every aggregate the public ledger shows, computed from the cache in one pass. */
+/**
+ * Re-read receipts whose windows may have been measured since we last looked, so the ledger's
+ * keep-rate reflects the chain. Bounded: only receipts old enough to have a window due.
+ */
+export async function refreshMeasurements(conn: Connection = connection(), now = Math.floor(Date.now() / 1000), limit = 50): Promise<Outcome<number>> {
+  const due = await db
+    .select({ id: receipts.id, pda: receipts.pda })
+    .from(receipts)
+    .where(
+      sql`(${receipts.measured7dAt} = 0 AND ${receipts.settledUnix} + 7 * 86400 <= ${now}) OR (${receipts.measured30dAt} = 0 AND ${receipts.settledUnix} + 30 * 86400 <= ${now})`,
+    )
+    .limit(limit);
+  let refreshed = 0;
+  for (const row of due) {
+    const r = await readReceiptAccount(conn, new PublicKey(row.pda));
+    if (!r.ok || !r.value) continue;
+    const m7 = toSafeNumber(r.value.measured7d?.balanceRaw ?? 0n, "measured");
+    const m30 = toSafeNumber(r.value.measured30d?.balanceRaw ?? 0n, "measured");
+    if (!m7.ok || !m30.ok) continue;
+    await db
+      .update(receipts)
+      .set({
+        measured7dAt: r.value.measured7d?.at ?? 0,
+        measured7dRaw: m7.value,
+        measured30dAt: r.value.measured30d?.at ?? 0,
+        measured30dRaw: m30.value,
+      })
+      .where(eq(receipts.id, row.id));
+    refreshed += 1;
+  }
+  return ok(refreshed);
+}
+
+/** Mirror every Book. One `getProgramAccounts` on the discriminator; small at any scale this reaches. */
+export async function indexBooks(conn: Connection = connection(), now = Math.floor(Date.now() / 1000)): Promise<Outcome<number>> {
+  let accounts;
+  let handles;
+  try {
+    [accounts, handles] = await Promise.all([
+      conn.getProgramAccounts(SCRIP_PROGRAM_ID, { commitment: "confirmed", filters: [discriminatorFilter("Book")] }),
+      conn.getProgramAccounts(SCRIP_PROGRAM_ID, { commitment: "confirmed", filters: [discriminatorFilter("Handle")] }),
+    ]);
+  } catch (err) {
+    return held(`Could not list books (${err instanceof Error ? err.message : String(err)}).`);
+  }
+  // Who a handle names lives on the Handle account: a person, or an organisation.
+  const kindOf = new Map<string, "person" | "org">();
+  for (const { account } of handles) {
+    const h = decodeHandle(account.data);
+    if (h.ok) kindOf.set(h.value.owner, h.value.kind);
+  }
+  let n = 0;
+  for (const { pubkey, account } of accounts) {
+    const b = decodeBook(account.data);
+    if (!b.ok) continue;
+    const rent = Number(await rentFor(conn, account.data.length));
+    const nums = [b.value.rule.floorUsdc, b.value.rule.capUsdc, b.value.rule.watermark].map((v) => toSafeNumber(v, "rule"));
+    if (nums.some((x) => !x.ok)) continue;
+    const row = {
+      owner: b.value.owner,
+      pda: pubkey.toBase58(),
+      slug: b.value.slug,
+      asset: b.value.asset,
+      openedUnix: b.value.openedUnix,
+      ruleEnabled: b.value.rule.enabled ? 1 : 0,
+      rateBps: b.value.rule.rateBps,
+      escalateBps: b.value.rule.escalateBps,
+      floorUsdc: Number(b.value.rule.floorUsdc),
+      capUsdc: Number(b.value.rule.capUsdc),
+      toleranceBps: b.value.rule.toleranceBps,
+      watermarkUsdc: Number(b.value.rule.watermark),
+      enabledUnix: b.value.rule.enabledUnix,
+      sweeps: b.value.rule.sweeps,
+      floatLamports: Math.max(0, account.lamports - rent),
+      kind: kindOf.get(b.value.owner) ?? "person",
+      seenAt: now,
+    };
+    await db
+      .insert(books)
+      .values({ id: newId("book"), ...row })
+      .onConflictDoUpdate({ target: books.pda, set: row });
+    n += 1;
+  }
+  return ok(n);
+}
+
+/** Mirror every Grant account: the schedule, what has vested, the float. The reasons come with the receipts. */
+export async function indexGrants(conn: Connection = connection(), now = Math.floor(Date.now() / 1000)): Promise<Outcome<number>> {
+  let accounts;
+  try {
+    accounts = await conn.getProgramAccounts(SCRIP_PROGRAM_ID, { commitment: "confirmed", filters: [discriminatorFilter("Grant")] });
+  } catch (err) {
+    return held(`Could not list grants (${err instanceof Error ? err.message : String(err)}).`);
+  }
+  let n = 0;
+  const rentByLen = new Map<number, number>();
+  for (const { pubkey, account } of accounts) {
+    const g = decodeGrant(account.data);
+    if (!g.ok) continue;
+    let rent = rentByLen.get(account.data.length);
+    if (rent === undefined) {
+      rent = Number(await rentFor(conn, account.data.length));
+      rentByLen.set(account.data.length, rent);
+    }
+    const nums = [g.value.totalRaw, g.value.releasedRaw, g.value.declaredUsdc, g.value.releaseCapRaw ?? 0n].map((v) => toSafeNumber(v, "grant"));
+    if (nums.some((x) => !x.ok)) continue;
+    const row = {
+      pda: pubkey.toBase58(),
+      payer: g.value.payer,
+      recipient: g.value.recipient,
+      asset: g.value.asset,
+      grantId: g.value.grantId,
+      totalRaw: Number(g.value.totalRaw),
+      releasedRaw: Number(g.value.releasedRaw),
+      releaseCapRaw: g.value.releaseCapRaw === null ? null : Number(g.value.releaseCapRaw),
+      startUnix: g.value.startUnix,
+      cliffSecs: g.value.cliffSecs,
+      durationSecs: g.value.durationSecs,
+      revocable: g.value.revocable ? 1 : 0,
+      sealed: g.value.sealed ? 1 : 0,
+      state: g.value.state,
+      declaredUsdc: Number(g.value.declaredUsdc),
+      runId: g.value.runId ?? "",
+      createdUnix: g.value.createdUnix,
+      vests: g.value.vests,
+      floatLamports: Math.max(0, account.lamports - rent),
+      seenAt: now,
+    };
+    await db
+      .insert(grants)
+      .values({ id: newId("grt"), ...row })
+      .onConflictDoUpdate({ target: grants.pda, set: row });
+    n += 1;
+  }
+  return ok(n);
+}
+
+// ── what the ledger reads ────────────────────────────────────────────────────────────────
+
+/** A grant's own receipt records stock in escrow; the vests deliver it. Counting both would count it twice. */
+const DELIVERED = sql`${receipts.kind} <> 'grant'`;
+
 export async function ledgerTotals() {
-  const rows = await db
+  const [r] = await db
     .select({
-      count: sql<number>`count(*)`,
-      value: sql<number>`coalesce(sum(${receipts.valueBase}), 0)`,
-      grams: sql<string>`coalesce(sum(cast(${receipts.gramsAtStamp} as real)), 0)`,
+      receipts: sql<number>`count(*)`,
+      paid: sql<number>`coalesce(sum(case when ${receipts.kind} <> 'grant' then ${receipts.paidUsdc} else 0 end), 0)`,
       recipients: sql<number>`count(distinct ${receipts.recipient})`,
-      payers: sql<number>`count(distinct ${receipts.payer})`,
-      releases: sql<number>`count(distinct ${receipts.releaseId})`,
+      sweeps: sql<number>`sum(case when ${receipts.kind} = 'sweep' then 1 else 0 end)`,
+      vests: sql<number>`sum(case when ${receipts.kind} = 'vest' then 1 else 0 end)`,
+      grants: sql<number>`sum(case when ${receipts.kind} = 'grant' then 1 else 0 end)`,
     })
     .from(receipts);
-  const t = rows[0];
+  const [b] = await db.select({ on: sql<number>`sum(${books.ruleEnabled})`, total: sql<number>`count(*)` }).from(books);
   return {
-    receipts: Number(t?.count ?? 0),
-    valueBase: BigInt(Math.round(Number(t?.value ?? 0))),
-    grams: Number(t?.grams ?? 0),
-    recipients: Number(t?.recipients ?? 0),
-    payers: Number(t?.payers ?? 0),
-    releases: Number(t?.releases ?? 0),
+    receipts: Number(r?.receipts ?? 0),
+    paidUsdc: BigInt(Math.round(Number(r?.paid ?? 0))),
+    recipients: Number(r?.recipients ?? 0),
+    sweeps: Number(r?.sweeps ?? 0),
+    vests: Number(r?.vests ?? 0),
+    grants: Number(r?.grants ?? 0),
+    rulesOn: Number(b?.on ?? 0),
+    books: Number(b?.total ?? 0),
   };
 }
 
-/** The event stream: real receipts, newest first. Never a fabricated row. */
-export async function recentReceipts(limit = 25) {
-  return db.select().from(receipts).orderBy(desc(receipts.at)).limit(limit);
+/** Units delivered, per asset, for the ledger's "units delivered" line. */
+export async function unitsByAsset() {
+  return db
+    .select({ asset: receipts.asset, amountRaw: sql<number>`coalesce(sum(${receipts.amountRaw}), 0)`, count: sql<number>`count(*)` })
+    .from(receipts)
+    .where(DELIVERED)
+    .groupBy(receipts.asset);
 }
 
-/** One recipient's arrivals, for a book page that has opted in. */
-export async function receiptsFor(recipient: string, limit = 25) {
-  return db
-    .select()
+export async function recentReceipts(limit = 25) {
+  return db.select().from(receipts).orderBy(desc(receipts.settledUnix)).limit(limit);
+}
+
+export async function receiptsFor(recipient: string, limit = 50) {
+  return db.select().from(receipts).where(eq(receipts.recipient, recipient)).orderBy(desc(receipts.settledUnix)).limit(limit);
+}
+
+/** Every delivered receipt, for keep-rate: a grant's escrow receipt is not a delivery. */
+export async function allReceiptRows() {
+  return db.select().from(receipts).where(DELIVERED);
+}
+
+/** Every keeper that has ever submitted a sweep, from the receipts' own `submitter` field. */
+export async function keepersFromReceipts() {
+  const rows = await db
+    .select({
+      keeper: receipts.submitter,
+      sweeps: sql<number>`count(*)`,
+      lastAt: sql<number>`max(${receipts.settledUnix})`,
+      firstAt: sql<number>`min(${receipts.settledUnix})`,
+      books: sql<number>`count(distinct ${receipts.book})`,
+      paid: sql<number>`coalesce(sum(${receipts.paidUsdc}), 0)`,
+    })
     .from(receipts)
-    .where(and(eq(receipts.recipient, recipient)))
-    .orderBy(desc(receipts.at))
-    .limit(limit);
+    .where(sql`${receipts.kind} in ('sweep', 'vest')`)
+    .groupBy(receipts.submitter)
+    .orderBy(desc(sql`max(${receipts.settledUnix})`));
+  return rows.map((r) => ({ keeper: r.keeper, sweeps: Number(r.sweeps), lastAt: Number(r.lastAt), firstAt: Number(r.firstAt), books: Number(r.books), paidUsdc: BigInt(Math.round(Number(r.paid))) }));
 }

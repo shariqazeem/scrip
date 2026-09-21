@@ -1,157 +1,87 @@
-import { USD_DECIMALS } from "@/lib/money";
 import { type Outcome, held, ok } from "@/lib/outcome";
 
 /**
- * PYTH PRICES, READ FROM SOLANA — parsing and the rules about when a price may be used.
+ * PYTH PRICES, READ FROM SOLANA — parsing the receiver's `PriceUpdateV2`, and the rules
+ * about when a price may be used.
  *
- * WHAT MAINNET ACTUALLY LOOKS LIKE, measured 2026-09-12 and worth writing down because the
- * spec says something else. `CLAUDE.md` describes "Pyth 24/7 equity and metal feeds". The
- * feeds exist, but on Solana they are PUSHED, and how often depends on who is paying to push
- * them. On a Saturday morning:
+ * The same offsets as `anchor/programs/scrip/src/pyth.rs`, checked against the SPYX/USD
+ * sponsored account on mainnet. Two questions, two answers:
  *
- *     Crypto.USDC/USD      7 seconds old
- *     Crypto.SPYX/USD    195 seconds old
- *     Equity.US.SPY/USD   22,774 seconds old   (6h — the equity market is shut)
- *     Metal.XAU/USD       33,578 seconds old   (9h)
- *
- * So "hold if stale" cannot be one rule, because a single strict bound makes the book
- * unreadable every weekend and a single loose one lets a swap execute against a nine-hour-old
- * gold price. There are two questions and they deserve two answers:
- *
- *   DISPLAY   the reader is owed the last price AND its age. A gold balance beside "priced
- *             9h ago" is honest and useful; a blank where a number should be is neither.
- *   SETTLE    money is about to move. A price older than a minute is not a price, it is a
- *             memory, and the allocation holds.
- *
- * That distinction is the whole content of this module, and it is a judgement the product
- * makes on purpose rather than a bound somebody picked.
+ *   DISPLAY   the reader is owed the last price AND its age.
+ *   SETTLE    the program decides, with FEED_MAX_AGE and MAX_CONF_BPS. This copy only lets
+ *             a keeper or a screen know in advance.
  */
 
 export type Price = {
   readonly feedId: string;
-  /** USD in 6-decimal base units, for ONE whole token or unit — see the asset's `basis`. */
-  readonly base: bigint;
-  /** Pyth's own confidence interval, same units. A wide band is a price under stress. */
-  readonly confBase: bigint;
-  /** Unix seconds at which the publishers agreed this price. */
+  /** Pyth's raw fields: the price is `price × 10^expo` dollars. */
+  readonly price: bigint;
+  readonly conf: bigint;
+  readonly expo: number;
   readonly publishedAt: number;
+  /** Full or partial guardian verification. The program requires full. */
+  readonly verification: "full" | "partial";
 };
 
-export type PriceUse = "display" | "settle";
-
-/**
- * The default settle bound, for a caller that does not name one. Every asset in the registry
- * DOES name one, from what its feed actually does — see `PriceFeed.maxSettleAgeSeconds`, and
- * the measurements behind it. This is the floor for anything that arrives without a bound.
- */
-export const MAX_AGE_SETTLE_SECONDS = 60;
-
-/**
- * A price older than this may not even be shown. Fifty hours covers a weekend plus a margin,
- * so a Saturday book still reads; past that the feed is not merely shut, it is abandoned, and
- * showing a number from it would be showing a number nobody stands behind.
- */
+/** A price older than this may not be shown. Fifty hours covers a weekend plus a margin. */
 export const MAX_AGE_DISPLAY_SECONDS = 50 * 3600;
 
-/**
- * The widest confidence band a price may carry, as a fraction of the price itself, before it
- * is refused for settlement. 2% is far outside normal for any asset here and is what a feed
- * under stress or mid-halt looks like.
- */
-export const MAX_CONF_BPS_SETTLE = 200;
-
-/**
- * The Pyth receiver's `PriceUpdateV2` account layout. Offsets rather than a decoder, because
- * the layout is fixed, this is eight reads, and a dependency in the path of every balance is
- * a dependency that can break every balance.
- *
- *   0   8   anchor discriminator
- *   8   32  write_authority
- *   40  1   verification level: 0 = Partial (one more byte), 1 = Full
- *   41  32  feed_id
- *   73  8   price (i64)
- *   81  8   conf (u64)
- *   89  4   exponent (i32)
- *   93  8   publish_time (i64)
- *
- * Verified against the SOL/USD sponsored feed account on mainnet: byte 40 read 1 (Full) and
- * bytes 41..73 matched the published SOL/USD feed id exactly.
- */
-export const PRICE_ACCOUNT_LEN = 134;
+/** Read off mainnet; equals sha256("account:PriceUpdateV2")[..8]. */
+export const PRICE_UPDATE_V2_DISCRIMINATOR = [34, 241, 35, 99, 157, 126, 244, 205] as const;
 
 export function parsePriceAccount(data: Uint8Array): Outcome<Price> {
-  if (data.length < 101) {
-    return held(`price account is ${data.length} bytes, too short to be a Pyth price update`);
+  if (data.length < 101) return held(`price account is ${data.length} bytes, too short to be a Pyth price update`);
+  for (let i = 0; i < 8; i += 1) {
+    if (data[i] !== PRICE_UPDATE_V2_DISCRIMINATOR[i]) return held("account is not a Pyth PriceUpdateV2");
   }
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const verification = view.getUint8(40);
-  // A Partial update carries one extra byte before the feed id. Both shapes are read rather
-  // than one being assumed, because assuming would silently shift every field by a byte.
-  const base = verification === 1 ? 41 : 42;
+  const level = view.getUint8(40);
+  const base = level === 1 ? 41 : 42;
   if (data.length < base + 60) return held("price account is truncated");
 
   let feedId = "";
-  for (let i = base; i < base + 32; i += 1) {
-    feedId += data[i]!.toString(16).padStart(2, "0");
-  }
+  for (let i = base; i < base + 32; i += 1) feedId += data[i]!.toString(16).padStart(2, "0");
   const price = view.getBigInt64(base + 32, true);
   const conf = view.getBigUint64(base + 40, true);
   const expo = view.getInt32(base + 48, true);
   const publishedAt = Number(view.getBigInt64(base + 52, true));
 
   if (price <= 0n) return held("price feed reports a non-positive price");
-  // Pyth exponents are negative and small. Anything else is a misread, not a price.
   if (expo > 0 || expo < -18) return held(`price feed reports an implausible exponent (${expo})`);
 
-  const shift = USD_DECIMALS + expo;
-  const scale = (n: bigint) =>
-    shift >= 0 ? n * 10n ** BigInt(shift) : n / 10n ** BigInt(-shift);
-
-  return ok({ feedId, base: scale(price), confBase: scale(conf), publishedAt });
+  return ok({ feedId, price, conf, expo, publishedAt, verification: level === 1 ? "full" : "partial" });
 }
 
-/**
- * May this price be used for this purpose, at this instant?
- *
- * `now` is a parameter rather than a clock read, because every staleness bug is a
- * disagreement about what time it is and a function that cannot be asked about an instant
- * cannot be tested for one.
- */
-export function usable(
-  price: Price,
-  use: PriceUse,
-  now: number,
-  maxSettleAgeSeconds: number = MAX_AGE_SETTLE_SECONDS,
-): Outcome<Price> {
+/** Dollars per unit, as a number, for DISPLAY. */
+export function priceToUsd(p: Pick<Price, "price" | "expo">): number {
+  return Number(p.price) * 10 ** p.expo;
+}
+
+/** USD in 6-decimal base units per whole unit, exact, for arithmetic. */
+export function priceToUsdcBase(p: Pick<Price, "price" | "expo">): bigint {
+  const shift = 6 + p.expo;
+  return shift >= 0 ? p.price * 10n ** BigInt(shift) : p.price / 10n ** BigInt(-shift);
+}
+
+/** May this price be SHOWN at this instant? */
+export function displayable(price: Price, now: number): Outcome<Price> {
   const age = now - price.publishedAt;
-  if (age < -60) {
-    // More than a minute in the future is a clock we cannot reason from.
-    return held("price feed is stamped in the future");
-  }
-
-  const maxAge = use === "settle" ? maxSettleAgeSeconds : MAX_AGE_DISPLAY_SECONDS;
-  if (age > maxAge) {
-    return held(
-      use === "settle"
-        ? `price is ${describeAge(age)} old — too old to move money against`
-        : `price is ${describeAge(age)} old — too old to show`,
-    );
-  }
-
-  if (use === "settle") {
-    const confBps = (price.confBase * 10_000n) / price.base;
-    if (confBps > BigInt(MAX_CONF_BPS_SETTLE)) {
-      // A wide band is a feed under stress or an asset mid-halt. Money does not move on it.
-      return held(
-        `price feed's confidence band is ±${Number(confBps) / 100}% — too wide to settle against`,
-      );
-    }
-  }
-
+  if (age < -60) return held("price feed is stamped in the future");
+  if (age > MAX_AGE_DISPLAY_SECONDS) return held(`price is ${describeAge(age)} old — too old to show`);
   return ok(price);
 }
 
-/** "9 hours", "3 minutes", "just now" — for a caption beside a number, not a log line. */
+/** Would the PROGRAM accept this price to settle a sweep right now? The same three checks. */
+export function settleable(price: Price, now: number, feedMaxAge: number, maxConfBps: number): Outcome<Price> {
+  if (price.verification !== "full") return held("the price update is not fully verified");
+  const age = now - price.publishedAt;
+  if (age > feedMaxAge) return held(`the price is ${describeAge(age)} old — the sweep waits`);
+  if (price.conf * 10_000n > price.price * BigInt(maxConfBps)) {
+    return held(`the price's confidence band is wider than ${maxConfBps / 100}%`);
+  }
+  return ok(price);
+}
+
 export function describeAge(seconds: number): string {
   if (seconds < 45) return "seconds";
   const mins = Math.floor(seconds / 60);

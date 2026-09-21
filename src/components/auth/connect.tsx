@@ -116,36 +116,36 @@ export function ConnectWallet({ compact = false }: { compact?: boolean }) {
 
   if (wallets.length === 0) {
     return (
-      <div className="wg-doors">
-        <p className="wg-doors-note">
+      <div className="sp-doors">
+        <p className="sp-doors-note">
           No Solana wallet is installed in this browser. Install one — Phantom, Solflare and
-          Backpack all work — or open Webgold in a wallet&rsquo;s own browser.
+          Backpack all work — or open Scrip in a wallet&rsquo;s own browser.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="wg-doors">
+    <div className="sp-doors">
       {wallets.map((w) => (
         <button
           key={w.name}
           type="button"
-          className={`wg-action${compact ? "" : " is-primary"} wg-door`}
+          className={`sp-action${compact ? "" : " is-primary"} sp-door`}
           onClick={() => void connect(w)}
           disabled={busy !== null}
         >
           {w.icon ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={w.icon} alt="" width={18} height={18} className="wg-door-icon" />
+            <img src={w.icon} alt="" width={18} height={18} className="sp-door-icon" />
           ) : (
             <WalletIcon size={16} strokeWidth={2} aria-hidden />
           )}
           {busy === w.name ? `Waiting for ${w.name}…` : w.name}
         </button>
       ))}
-      {why ? <p className="wg-doors-error">{why}</p> : null}
-      <p className="wg-doors-note">
+      {why ? <p className="sp-doors-error">{why}</p> : null}
+      <p className="sp-doors-note">
         Signing in costs nothing and moves nothing. It is a signature, not a transaction.
       </p>
     </div>
@@ -164,7 +164,7 @@ export function SignOut() {
   return (
     <button
       type="button"
-      className="wg-action"
+      className="sp-action"
       onClick={() => {
         void fetch("/api/session", { method: "DELETE" }).then(() => router.refresh());
       }}

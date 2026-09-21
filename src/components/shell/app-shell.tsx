@@ -3,32 +3,33 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { House, Send } from "lucide-react";
+import { House, Send, SlidersHorizontal } from "lucide-react";
+import { ServiceWorker } from "@/components/app/offline";
 import { AppRail } from "./app-rail";
 import { NetworkChip } from "./network-chip";
 import { isAppRoute } from "./routes";
 import "./app-shell.css";
 
 /**
- * The one global app shell: a hover rail, a top-centre mode pill, and top-right context pills.
- * Mounted once in the root layout and shown only on app routes. Sets
- * `html[data-app-shell="on"]` so page content clears the fixed chrome (see app-shell.css).
+ * The one global app shell: a hover rail, a top-centre mode pill, and a top-right context
+ * pill. Mounted once in the root layout and shown only on app routes. Sets
+ * `html[data-app-shell="on"]` so page content clears the fixed chrome.
  *
- * The landing, every receipt and the docs get nothing — see routes.ts for why each one is out.
- */
-
-/**
- * TWO SEGMENTS, AND THEY ARE THE TWO THINGS A PERSON DOES HERE: look at what they own, or move
- * value. Everything else in the product is a detail of one of those.
+ * TWO SEGMENTS, AND THEY ARE THE TWO THINGS AN OWNER DOES HERE: look at what arrived, or set
+ * the rule. Everything else is a detail of one of those.
  */
 function ModePill({ pathname }: { pathname: string }) {
-  const onPay = pathname.startsWith("/app/pay");
+  const onRule = pathname.startsWith("/app/rule");
+  const onOrg = pathname.startsWith("/app/org");
   return (
     <div className="mode-pill" role="group" aria-label="Mode">
-      <Link href="/app" className={`mode-seg${onPay ? "" : " on"}`}>
-        <House size={14} strokeWidth={2} /> Book
+      <Link href="/app" className={`mode-seg${!onRule && !onOrg ? " on" : ""}`}>
+        <House size={14} strokeWidth={2} /> Home
       </Link>
-      <Link href="/app/pay" className={`mode-seg${onPay ? " on" : ""}`}>
+      <Link href="/app/rule" className={`mode-seg${onRule ? " on" : ""}`}>
+        <SlidersHorizontal size={14} strokeWidth={2} /> Rule
+      </Link>
+      <Link href="/app/org" className={`mode-seg${onOrg ? " on" : ""}`}>
         <Send size={14} strokeWidth={2} /> Pay
       </Link>
     </div>
@@ -51,7 +52,9 @@ export function AppShell() {
   if (!active) return null;
   return (
     <>
+      <ServiceWorker />
       <AppRail />
+      <div className="mode-scrim" aria-hidden />
       <ModePill pathname={pathname} />
       <div className="ctx-pills">
         <NetworkChip />

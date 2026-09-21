@@ -1,12 +1,12 @@
 [package]
-name = "webgold"
+name = "scrip"
 version = "0.1.0"
-description = "Webgold — the rule and the record. Holds policy and receipts, never a book."
+description = "Scrip — a rule on a wallet. Holds the rule and the receipts, never the assets."
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "webgold"
+name = "scrip"
 
 [features]
 default = []
@@ -14,17 +14,19 @@ cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
-idl-build = ["anchor-lang/idl-build"]
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+# THE DEVNET BUILD ACCEPTS ANY ASSET. There is no SPYx, no USDC and no Jupiter on devnet, so
+# the only way to prove the sweep's mechanics — introspection, the delegate transfer, the
+# delta check against a real Pyth price — is with test mints. The mainnet build compiles the
+# registry in and refuses anything not on it. `registry.rs` holds both, and a Rust test asserts
+# the mainnet table carries no test entry.
+devnet = []
 
 [dependencies]
-# init-if-needed, for `set_goal`, which is deliberately one instruction rather than an
-# open/update pair. Anchor's warning is about accounts whose state must not be resettable;
-# a Goal has no such state. Its balance lives in its token accounts, not in a counter on the
-# account, and the owner is both a signer and part of the PDA seed — so the only person who
-# can re-initialize a goal is the person whose goal it is, and doing so is what the
-# instruction is for.
+# init-if-needed: the recipient's token account for the asset is created on first arrival,
+# by whoever is paying the fee, and left alone when it already exists.
 anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
-# token_interface, so one code path handles both the classic SPL Token program and
-# Token-2022. The product's own assets straddle them: Oro GOLD is a plain SPL mint and SPYx
-# is Token-2022, and a program that only speaks one of them can only pay half a mix.
-anchor-spl = { version = "0.31.1", features = ["token"] }
+# token_interface so one code path moves a classic SPL mint (USDC, Oro GOLD) and a Token-2022
+# mint (every xStock). The scaled-UI multiplier is read off the mint by hand in
+# `scaled_ui.rs` because the spl-token-2022 crate this anchor pins (v6) predates the extension.
+anchor-spl = { version = "0.31.1", features = ["token", "associated_token"] }

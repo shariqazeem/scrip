@@ -3,7 +3,7 @@
 /**
  * THE CSS RESET, AND NOTHING ELSE.
  *
- * Webgold writes no Tailwind utility classes anywhere — every class in the product is
+ * Scrip writes no Tailwind utility classes anywhere — every class in the product is
  * defined in one of its own stylesheets. But `@import "tailwindcss"` also ships PREFLIGHT,
  * which is the reset the whole layout sits on: `box-sizing: border-box`, zeroed margins,
  * unstyled headings and lists. Dropping the import would silently reflow the product, so

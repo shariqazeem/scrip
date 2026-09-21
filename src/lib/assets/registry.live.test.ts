@@ -1,65 +1,69 @@
 /**
  * @vitest-environment node
  *
- * NODE, NOT JSDOM, AND THIS IS A REAL BUG NOT A PREFERENCE. Account data comes back from the
- * RPC as a Node Buffer; under jsdom the global `Uint8Array` is a DIFFERENT constructor, so the
- * `instanceof` check inside the Token-2022 layout decoder fails and every Token-2022 mint
- * reports "b must be a Uint8Array". Measured here: GOLD and USDC (classic SPL, no extensions)
- * passed while SPYx, GLDx and SLVon all failed on the decode alone. The production path is
- * server-only and never meets jsdom; any test that decodes chain bytes must say so.
- */
-import { Connection } from "@solana/web3.js";
-import { describe, expect, it } from "vitest";
-import { ASSETS } from "./registry";
-import { readMintMultiplier } from "@/lib/corporate-actions/read-mint";
-import { multiplierInForce } from "@/lib/corporate-actions/multiplier";
-
-/**
- * THE ANTI-DRIFT BATTERY — re-reads every registered mint from mainnet and checks the
- * registry still describes it.
- *
- * The registry is a set of claims about someone else's contracts, and an issuer can change
- * them without telling us: enable the transfer hook they reserved, flip the pause, add a
- * transfer fee, or migrate to a new mint. Any of those makes a row on `/assets` a false
- * statement, and the whole product rests on those rows being checkable.
+ * THE LIVE BATTERY. Reads every registered mint off MAINNET and checks the registry's claims
+ * against the account itself: decimals, token program, freeze authority, and each issuer
+ * power. Gated because it needs the network and the public RPC is slow.
  *
  *     npm run test:registry
- *
- * Gated on a flag so the ordinary suite stays offline and deterministic. A test that needs a
- * public RPC to pass is a test that fails on a train, and a suite that cries wolf is how a
- * real failure gets waved through.
  */
+import { Connection, PublicKey } from "@solana/web3.js";
+import {
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+  getPausableConfig,
+  getPermanentDelegate,
+  getScaledUiAmountConfig,
+  getTransferFeeConfig,
+  getTransferHook,
+  unpackMint,
+} from "@solana/spl-token";
+import { describe, expect, it } from "vitest";
+import { parsePriceAccount } from "@/lib/pyth/price";
+import { ASSETS, PYTH_RECEIVER } from "./registry";
+
 const LIVE = process.env.REGISTRY_LIVE === "1";
-const rpc = process.env.SOLANA_RPC || "https://api.mainnet-beta.solana.com";
+const RPC = process.env.MAINNET_RPC || "https://api.mainnet-beta.solana.com";
 
-describe.runIf(LIVE)("the registry still matches mainnet", () => {
-  const connection = new Connection(rpc, "confirmed");
+describe.skipIf(!LIVE)("every registry row matches its mint on mainnet", () => {
+  const conn = new Connection(RPC, "confirmed");
 
-  for (const asset of ASSETS) {
-    it(`${asset.symbol} — mint, decimals and multiplier`, async () => {
-      const now = Math.floor(Date.now() / 1000);
-      const read = await readMintMultiplier(connection, asset, now);
-      expect(read.ok, read.ok ? "" : read.why).toBe(true);
-      if (!read.ok) return;
-
-      if (asset.hasMultiplier) {
-        expect(read.value.kind, `${asset.symbol} should carry a multiplier`).toBe("scaled");
-        if (read.value.kind !== "scaled") return;
-        // The value must resolve cleanly and sit inside the sanity band. An issuer publishing
-        // something we would refuse is exactly what this battery is for.
-        const live = multiplierInForce(read.value.snapshot, now);
-        expect(live.ok, live.ok ? "" : live.why).toBe(true);
-        if (live.ok) {
-          console.log(
-            `  ${asset.symbol}: in force ${live.value.raw}` +
-              (live.value.pending
-                ? ` · pending ${live.value.pending.raw} at ${new Date(live.value.pending.effectiveAt * 1000).toISOString()}`
-                : ""),
-          );
-        }
-      } else {
-        expect(read.value.kind, `${asset.symbol} should carry no multiplier`).toBe("unscaled");
+  it("decimals, program, freeze authority and every issuer power", async () => {
+    const infos = await conn.getMultipleAccountsInfo(ASSETS.map((a) => new PublicKey(a.mint)), "confirmed");
+    ASSETS.forEach((a, i) => {
+      const info = infos[i];
+      expect(info, `${a.symbol} mint exists`).toBeTruthy();
+      if (!info) return;
+      const is22 = info.owner.equals(TOKEN_2022_PROGRAM_ID);
+      expect(is22 ? "token-2022" : info.owner.equals(TOKEN_PROGRAM_ID) ? "spl-token" : "?", `${a.symbol} program`).toBe(a.program);
+      const mint = unpackMint(new PublicKey(a.mint), info, info.owner);
+      expect(mint.decimals, `${a.symbol} decimals`).toBe(a.decimals);
+      expect(mint.freezeAuthority !== null, `${a.symbol} freeze authority`).toBe(a.powers.freezeAuthority);
+      if (!is22) {
+        expect(a.powers.permanentDelegate).toBe(false);
+        expect(a.powers.hasMultiplier).toBe(false);
+        return;
       }
+      expect(getPermanentDelegate(mint) !== null, `${a.symbol} permanent delegate`).toBe(a.powers.permanentDelegate);
+      expect(getPausableConfig(mint) !== null, `${a.symbol} pausable`).toBe(a.powers.pausable);
+      expect(getScaledUiAmountConfig(mint) !== null, `${a.symbol} multiplier`).toBe(a.powers.hasMultiplier);
+      expect(getTransferFeeConfig(mint) !== null, `${a.symbol} transfer fee`).toBe(a.powers.transferFee);
+      const hook = getTransferHook(mint);
+      const hookState = !hook ? "none" : hook.programId.equals(PublicKey.default) ? "reserved-disabled" : "active";
+      expect(hookState, `${a.symbol} transfer hook`).toBe(a.powers.transferHook);
     });
-  }
+  }, 60_000);
+
+  it("every pinned price account is owned by the receiver and carries its feed", async () => {
+    const pinned = ASSETS.flatMap((a) => [a.feedRaw, a.feedAdjusted]).filter((f): f is NonNullable<typeof f> => !!f && !!f.account);
+    const infos = await conn.getMultipleAccountsInfo(pinned.map((f) => new PublicKey(f.account)), "confirmed");
+    pinned.forEach((f, i) => {
+      const info = infos[i];
+      expect(info, `${f.label} exists`).toBeTruthy();
+      if (!info) return;
+      expect(info.owner.toBase58(), `${f.label} owner`).toBe(PYTH_RECEIVER);
+      const p = parsePriceAccount(info.data);
+      expect(p.ok && p.value.feedId, `${f.label} feed id`).toBe(f.feedId);
+    });
+  }, 60_000);
 });

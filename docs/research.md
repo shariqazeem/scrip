@@ -1,7 +1,36 @@
-# Research backing (as of 2026-09-12)
+# Research backing (2026-09-12, extended 2026-09-15)
 
 Every claim used to justify the product, with its source. Re-verify before quoting any of
 these in a submission or a pitch — this file is a snapshot, not a live feed.
+
+## The behavioural evidence for a rule on income (the wedge)
+
+| Fact | Figure | Source |
+| --- | --- | --- |
+| Automatic enrollment raised 401(k) participation among new hires | from 37% to 86% | Madrian, B. & Shea, D. (2001), "The Power of Suggestion: Inertia in 401(k) Participation and Savings Behavior", *Quarterly Journal of Economics* 116(4) |
+| Save More Tomorrow: binding contribution increases to pay raises | average saving rate 3.5% → 13.6% over forty months | Thaler, R. & Benartzi, S. (2004), "Save More Tomorrow", *Journal of Political Economy* 112(S1) |
+| Participation, automatic vs voluntary enrollment | 94% vs 64% | [Vanguard, How America Saves 2025](https://www.investmentnews.com/retirement-planning/auto-enrollment-retirement-plan-adoption-rates-hit-new-highs-in-2025-says-vanguard/267032) |
+| Acorns and Robinhood's direct-deposit split | tens of millions of users on a product whose UX is "do nothing"; both need a US bank and a US brokerage | Acorns and Robinhood product pages |
+
+## Why now
+
+| Fact | Source |
+| --- | --- |
+| Nasdaq's venture arm invested $100M in Kraken's parent; Nasdaq Equity Tokens planned on the xStocks platform in Q2 2027; SEC approval in hand for certain stocks to trade and settle in tokenized form | Reuters, 2026-09-10 (as cited in `docs/scrip.md` §1; re-verify the URL before quoting) |
+
+## Measured on 2026-09-15, while building Scrip
+
+| Fact | Measurement |
+| --- | --- |
+| Hermes requires an API key | `GET /v2/updates/price/latest` → 401 without one; Pyth docs: required since 2026-08-26, `Authorization: Bearer` |
+| The on-chain sponsored `Crypto.SPYX/USD` account | 234,350 seconds (65 h) stale at 07:25 UTC |
+| The on-chain `Crypto.USDC/USD` and `Crypto.SOL/USD` accounts | 20 s and 50 s old on mainnet; 61 s on devnet, same addresses |
+| xStocks multiplier activations | SPYx 04:00 UTC; NVDAx, AAPLx, GOOGLx, MSFTx 00:30 UTC; QQQx, METAx 23:55 UTC the day before; TSLAx, AMZNx, MSTRx, COINx, CRCLx, HOODx at 1.0 with no activation yet |
+| Every xStocks mint's extensions | MetadataPointer, PermanentDelegate, DefaultAccountState, ScaledUiAmountConfig, PausableConfig, ConfidentialTransferMint, TransferHook (system program = disabled), TokenMetadata; freeze authority set; permanent delegate `5aMNNLQJ…` on every one |
+| Jupiter depth, liquidity / 24 h volume | SPYx $3.69M / $27.4M; CRCLx $2.29M / $11.2M; NVDAx $1.72M / $7.2M; QQQx $1.68M / $3.4M; MSFTx $0.55M / $5.3M; GOLD $0.38M / $0.28M |
+| A Solana program's stack frame | 4 KiB; a context with a dozen deserialized accounts overflowed it and produced garbage pointers on devnet until the accounts were boxed |
+| The public devnet faucet | rate-limited for the deployer at 2 SOL per request after two requests in a day; Ankr and Alchemy devnet endpoints refuse `requestAirdrop` without a key |
+
 
 ## The market exists and it is on Solana
 

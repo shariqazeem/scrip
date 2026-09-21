@@ -1,84 +1,76 @@
-# Design system — port and re-tone
+# Design system — the receipt
 
-The goal you set: **the same quality as Sage's UI or better, one tone, different colours,
-consistent across every page**, so that design effort stops being a cost and the week goes
-into the product.
+**The subject is a receipt.** Paper, ink, ruled ledger lines, and the perforated edge of a
+pay stub. Spend the boldness in one place, the stub, and keep everything else quiet. The
+register is a financial document, not a trading terminal.
 
-## The rule that made Sage's UI work
+## The rule that made the predecessor's UI work, kept
 
 One token file. Every surface aliases it. No Tailwind utility classes anywhere.
 
-Sage reached that only after five stylesheets drifted apart and ~116 raw colour literals
-had to be replaced. We start where Sage ended:
-
 - `src/styles/tokens.css` is the **only** place a colour, radius, shadow, spacing step,
-  type size or duration is defined. It is written and lives in this repo already.
-- A per-surface stylesheet may alias (`--brass: var(--accent);`) but must **never**
-  redeclare a palette value.
-- `globals.css` contains `@import "tailwindcss"` and nothing else. Tailwind is kept for
-  **preflight only** — it is the reset the whole layout sits on. Never write a utility class.
+  type size or duration is defined.
+- A per-surface stylesheet (`landing.css`, `app.css`, `pay.css`, `receipt.css`,
+  `content.css`, `stub.css`, `app-shell.css`) may alias (`--line: var(--border);`) but
+  never redeclares a palette value. Classes are prefixed `sp-`.
+- `globals.css` contains `@import "tailwindcss"` for preflight and nothing else.
 - No emoji in UI. Lucide line icons only.
 
 ## The palette, and why these values
 
 | Token | Value | Note |
 | --- | --- | --- |
-| `--bg` | `#faf8f4` | paper with a faint gold cast, warmer than Sage's `#fbfbf9` |
-| `--ink` | `#1a1815` | warm near-black for app chrome |
-| `--ink-warm` | `#171512` | public reading surfaces: landing, docs |
-| `--accent` | `#9a6f1e` | burnished gold. Deep enough to pass contrast on paper, and deliberately **not** bright yellow, which reads cheap and goldbug |
-| `--accent-strong` | `#7a5715` | hover/active |
-| `--accent-soft` | `#fbf3e3` | wash for hover and selected rows |
-| `--ok` / `--err` | `#15803d` / `#dc2626` | **money outcomes only**, never decoration |
+| `--bg` | `#f7f5ef` | paper |
+| `--surface` | `#ffffff` | the sheet |
+| `--ink` | `#14161c` | one ink, everywhere |
+| `--ink-muted` / `--ink-faint` | `#5a5d66` / `#8b8e97` | secondary and captions |
+| `--border` / `--border-strong` | `#e4dfd3` / `#cdc5b4` | a ruled line; a heavier rule |
+| `--accent` | `#2b4acb` | document blue, on every interactive and brand element |
+| `--accent-strong` / `--accent-soft` | `#1f3aa8` / `#e8edfb` | hover; wash |
+| `--ok` / `--err` / `--warn` | `#15803d` / `#dc2626` / `#b45309` | **money outcomes only**: settled and still held; failed; held or paused |
+| `--gold` | `#9a6f1e` | the GOLD chip, and nothing else |
 
-One accent, used on every interactive and brand element. The discipline is what makes it
-look expensive: a page with one accent colour and a lot of white space reads as a financial
-document, which is exactly the register for a product about savings.
+The accent left gold and the type left Inter because the subject is a receipt, not
+bullion (`docs/decisions.md`, 2026-09-15).
 
-`--warn` sits in the same warm family as the accent. Use it rarely, and only for a held or
-stale state.
+## Type
 
-## Pages to build, and their Sage ancestor
+Words: **Instrument Sans**, 400 / 500 / 600. Figures: **IBM Plex Mono**, tabular, at every
+size. Units are the largest thing on any page they appear on (`--fs-units`). Lines under 80
+characters. Sentence case everywhere: no all-caps eyebrows or stat labels.
 
-| Webgold page | Ported from | Notes |
-| --- | --- | --- |
-| `/` landing | Sage cinematic landing (`landing-v2.css`, scene components) | Hero left, live ledger right. Keep the "no fabricated feed" rule: an empty ledger renders an honest waiting state |
-| `/assets` | `marketplace.css` | The explore surface: what you can hold, issuer named on every row, sponsored first positions surfaced |
-| `/app` | `workspace.css` + `live.css` | The reserve: balance, positions, activity. Shelled |
-| `/app/pay` | campaign/submit forms | One form, one confirm, one receipt |
-| `/receipt/[sig]` | `sage-proof.css` (`/proof/<tx>`) | Public, anchored, openable by anyone |
-| `/ledger` | `/explorer` | Public record of everything settled |
-| `/docs/*` | `content.css` + `/docs` | Reading surface, warm ink |
+## Layout
+
+Left-aligned. A 720px reading column (`--measure`); 1040px for a two-column surface
+(`--measure-wide`). The stub is a white sheet on paper with a perforated top edge. Rules
+encode rows. No decorative borders, no grid of identical cards with the same shadow, no
+gradient washes.
+
+## Motion
+
+One moment: when a conversion lands, the stub prints — a single rise on `--dur-2` and
+`--ease-spring`. Nothing fades up on scroll. Hover changes colour, not position.
+`prefers-reduced-motion` zeroes the duration tokens.
+
+## Copy
+
+Active voice. A button says what happens — *Turn on the rule*, *Pause*, *Pay $200*, *Claim
+into your wallet* — and the confirmation uses the same word. Errors say what happened and
+what to do; empty states say what will fill them. Units before dollars.
+
+**Gone:** the single accent-coloured word in a headline; all-caps eyebrows; meta strings
+joined with middle dots; arrows appended to buttons; fade-and-slide on every section; hover
+lifts on every card.
 
 ## The shell
 
-Ported directly from Sage's `src/components/shell/`:
+A fixed hover-expand left rail (Home, Rule, Request, Send · Assets, Ledger, Docs), a
+top-centre mode pill (Home / Rule) with a paper scrim behind it on phones, a top-right
+network chip. `/pay`, `/receipt`, `/claim` and `/docs` are unshelled: the visitor is not the
+owner. Below 720px the rail becomes a bottom bar; shelled pages take `padding-bottom: 92px`.
 
-- fixed hover-expand **left rail** at `left: 16px`, vertically centred, `z-index: 60`
-- top-centre **mode pill**, two segments
-- top-right **context pills** (network, balance)
-- sets `html[data-app-shell="on"]`; shelled page containers get `padding-top: 78px`, and at
-  `max-width: 1180px` they gain left padding for the rail; below `720px` the rail moves to
-  a bottom bar and pages get `padding-bottom: 92px`
+## Floor
 
-All shell motion uses the `--dur` and `--ease` tokens, so `prefers-reduced-motion`
-collapses it with no per-component media query.
-
-## Port checklist
-
-1. `src/styles/tokens.css` — **done**, in this repo.
-2. `globals.css` with `@import "tailwindcss"` only.
-3. `layout.tsx`: Inter + JetBrains Mono via `next/font`, variables `--font-inter` and
-   `--font-jetbrains-mono` on `<html>`; import `globals.css` then `tokens.css`.
-4. Copy Sage's shell components and rename; swap the mode-pill segments to Webgold's.
-5. Copy the per-surface stylesheets one page at a time, replacing every local palette
-   declaration with an alias to a token. Do not bring a raw hex across.
-6. Build the receipt page early. It is the thing screenshots get taken of.
-
-## Rules that are not negotiable
-
-- Numbers are mono with tabular figures. Amounts, addresses, hashes, dates.
-- Green and red mean money settled or money failed. Nothing else may use them.
-- Radii are 6, 10, 16. Pills are for status chips only.
-- Two shadow tokens for ordinary elevation; prefer a 1px border and space over a shadow stack.
-- Never render a number the chain cannot confirm.
+375px works: the mode pill has a scrim, stats reflow to one column, nothing runs under the
+bottom bar, the body never scrolls horizontally. Visible focus in the accent, AA contrast.
+The receipt page ships no client JavaScript except the copy button.

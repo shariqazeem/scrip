@@ -1,246 +1,240 @@
 /**
- * receipt.css — the named arrival.
+ * receipt.css — the named arrival, as a document.
  *
- * Print-like, unshelled, centred on one column. This is the most-shared thing Webgold
- * produces and it is usually opened by somebody who has never heard of Webgold, sent to them
- * to prove one payment happened. So it wears no owner chrome, offers no "open a book" button
- * above the fold, and reads as a document rather than as an app screen.
- *
- * Structure ported from Sage's proof page; every colour is a Webgold token or an alias.
+ * Print-like, unshelled, one column. Usually opened by somebody who has never heard of
+ * Scrip, sent to them to prove one payment happened. The stub is the hero; the sheets
+ * beneath say what arrived and where it is anchored. Ships no client JavaScript except the
+ * copy button.
  */
 
-.wg-receipt {
+.sp-receipt {
   --line: var(--border);
-  --brass: var(--accent);
-
   min-height: 100vh;
   background: var(--bg);
-  color: var(--ink-warm);
+  color: var(--ink);
   display: flex;
   justify-content: center;
-  padding: var(--s-8) var(--s-5) var(--s-10);
+  padding: var(--s-7) var(--s-5) var(--s-10);
 }
-.wg-receipt-col {
+.sp-receipt-col {
   width: 100%;
-  max-width: 620px;
+  max-width: 640px;
 }
-.wg-receipt a {
-  color: var(--brass);
+.sp-receipt a {
+  color: var(--accent);
   text-decoration: none;
 }
-.wg-receipt a:hover {
+.sp-receipt a:hover {
   text-decoration: underline;
 }
-.wg-receipt :focus-visible {
-  outline: 2px solid var(--brass);
-  outline-offset: 3px;
-  border-radius: var(--r-sm);
-}
-.wg-receipt .mono {
+.sp-receipt .mono {
   font-family: var(--font-mono);
   letter-spacing: var(--tracking-mono);
-  font-variant-numeric: tabular-nums;
 }
 
 /* ── head ────────────────────────────────────────────────────────────────── */
-.wg-receipt-top {
+.sp-receipt-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--s-4);
-  margin-bottom: var(--s-8);
+  margin-bottom: var(--s-7);
 }
-/* `.wg-receipt a` is a descendant selector and outranks a bare class, so the brand was
-   picking up the link gold. The mark is chrome, not a link to follow. */
-.wg-receipt a.wg-receipt-brand {
+.sp-receipt a.sp-receipt-brand {
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--ink-warm);
-}
-.wg-receipt-brand:hover {
-  text-decoration: none;
-}
-.wg-receipt-kicker {
-  font-family: var(--font-mono);
-  font-size: var(--fs-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-/* ── the arrival ─────────────────────────────────────────────────────────── */
-.wg-receipt-hero {
-  text-align: center;
-  padding: var(--s-6) 0 var(--s-7);
-}
-.wg-receipt-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 28px;
-  padding: 0 var(--s-3);
-  border-radius: var(--r-pill);
-  /* --ok means SETTLED. This is the one place in the product where a payment actually did. */
-  background: var(--ok-soft);
-  border: 1px solid var(--ok-border);
-  color: var(--ok);
-  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  margin-bottom: var(--s-5);
+  color: var(--ink);
 }
-.wg-receipt-status .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-pill);
-  background: var(--ok);
-}
-.wg-receipt-amount {
-  font-family: var(--font-mono);
-  font-size: clamp(2.4rem, 1.5rem + 4vw, 3.6rem);
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  line-height: 1;
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-.wg-receipt-amount .unit {
-  font-size: 0.4em;
-  letter-spacing: 0;
+.sp-receipt-kicker {
+  font-size: var(--fs-caption);
   color: var(--ink-faint);
-  margin-left: 0.3em;
-  font-weight: 500;
-}
-.wg-receipt-reason {
-  margin: var(--s-5) auto 0;
-  font-size: var(--fs-lead);
-  line-height: var(--lh-lead);
-  color: var(--ink-warm);
-  max-width: 40ch;
-}
-.wg-receipt-sub {
-  margin: var(--s-3) 0 0;
-  font-size: 0.9375rem;
-  color: var(--ink-muted);
 }
 
-/* ── cards ───────────────────────────────────────────────────────────────── */
-.wg-receipt-card {
+/* the stub sits centred, full width of the column */
+.sp-receipt-stub {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--s-6);
+}
+.sp-receipt-stub .stub {
+  max-width: 480px;
+}
+
+/* ── sheets ──────────────────────────────────────────────────────────────── */
+.sp-receipt-sheet {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
   margin-top: var(--s-5);
 }
-.wg-receipt-card-head {
+.sp-receipt-sheet-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--s-3);
   padding: var(--s-4) var(--s-5);
   border-bottom: 1px solid var(--line);
-  font-size: 0.8125rem;
+  font-size: var(--fs-small);
   font-weight: 600;
 }
-.wg-receipt-card-head span:last-child {
-  font-weight: 500;
+.sp-receipt-sheet-head span:last-child {
+  font-weight: 400;
   color: var(--ink-faint);
+  font-size: var(--fs-caption);
 }
-.wg-receipt-row {
+.sp-receipt-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--s-4);
   padding: var(--s-3) var(--s-5);
   border-top: 1px solid var(--line);
-  font-size: 0.875rem;
+  font-size: var(--fs-small);
 }
-.wg-receipt-row:first-of-type {
+.sp-receipt-row:first-of-type {
   border-top: 0;
 }
-.wg-receipt-row .k {
+.sp-receipt-row .k {
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.sp-receipt-row .v {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.sp-receipt-asset {
+  padding: var(--s-4) var(--s-5);
+  display: grid;
+  gap: var(--s-3);
+}
+.sp-receipt-asset-name {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.sp-receipt-asset-issuer {
+  font-size: var(--fs-caption);
   color: var(--ink-muted);
 }
-.wg-receipt-row .v {
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  letter-spacing: var(--tracking-mono);
-  font-weight: 500;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.sp-receipt-asset-disclosure {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--ink-muted);
 }
-.wg-receipt-leg {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: var(--s-4);
-  align-items: baseline;
-  padding: var(--s-4) var(--s-5);
-  border-top: 1px solid var(--line);
-}
-.wg-receipt-leg:first-of-type {
-  border-top: 0;
-}
-.wg-receipt-leg-name {
+.sp-receipt-actions {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 0.9375rem;
-  font-weight: 500;
-}
-.wg-receipt-leg-issuer {
-  font-size: 0.75rem;
-  color: var(--ink-faint);
-  font-weight: 400;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  margin-top: var(--s-5);
 }
 
 /* ── foot ────────────────────────────────────────────────────────────────── */
-.wg-receipt-foot {
+.sp-receipt-foot {
   margin-top: var(--s-6);
-  font-size: 0.8125rem;
+  font-size: var(--fs-caption);
   line-height: 1.6;
   color: var(--ink-faint);
-  text-align: center;
 }
-.wg-receipt-foot strong {
+.sp-receipt-foot strong {
   color: var(--ink-muted);
   font-weight: 600;
 }
 
 /* ── held ────────────────────────────────────────────────────────────────── */
-.wg-receipt-held {
+.sp-receipt-held {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  padding: var(--s-8) var(--s-5);
-  text-align: center;
+  padding: var(--s-7) var(--s-5);
   display: grid;
   gap: var(--s-3);
-  place-items: center;
+  justify-items: start;
 }
-.wg-receipt-held p {
+.sp-receipt-held p {
   margin: 0;
-  max-width: 44ch;
+  max-width: 48ch;
   line-height: 1.6;
 }
-.wg-receipt-held .why {
+.sp-receipt-held .why {
   color: var(--ink-muted);
 }
 
-/* PRINT: it is a document. Give it the page, and nothing that only works on a screen. */
 @media print {
-  .wg-receipt {
+  .sp-receipt {
     padding: 0;
     min-height: auto;
   }
-  .wg-receipt-card {
+  .sp-receipt-sheet {
     box-shadow: none;
     break-inside: avoid;
   }
-  .wg-receipt-noprint {
+  .sp-receipt-actions {
     display: none !important;
   }
+}
+
+/* ── the two quiet actions under the stub ────────────────────────────────── */
+.sp-btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 38px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink) !important;
+  font-family: inherit;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none !important;
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
+}
+.sp-btn-link:hover {
+  border-color: var(--accent);
+  color: var(--accent) !important;
+}
+
+/* ── chips: a fact about a mint, on the receipt's own sheet ──────────────── */
+.sp-receipt .sp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+}
+.sp-receipt .sp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: var(--tracking-mono);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.sp-receipt .sp-chip.is-caution {
+  border-color: var(--warn-border);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.sp-receipt .sp-chip.is-gold {
+  border-color: var(--gold-border);
+  background: var(--gold-soft);
+  color: var(--gold);
 }

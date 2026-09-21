@@ -1,196 +1,116 @@
 import "server-only";
 
-import { PublicKey } from "@solana/web3.js";
-import idlJson from "@/lib/anchor/webgold.json";
-import { assetByMint } from "@/lib/assets/registry";
+import { type Connection, PublicKey, type VersionedTransactionResponse } from "@solana/web3.js";
+import { type Asset } from "@/lib/assets/registry";
+import { resolveAsset } from "@/lib/assets/stand-in";
+import { MEMO_PROGRAM_ID, reasonMatches } from "@/lib/intake/memo";
 import { type Outcome, held, ok } from "@/lib/outcome";
-import { WEBGOLD_PROGRAM_ID } from "@/lib/solana/program";
-import { connection } from "./read-book";
+import { connection } from "@/lib/solana/connection";
+import { SCRIP_PROGRAM_ID, accountDiscriminator } from "@/lib/solana/program";
+import { type Receipt, decodeReceipt } from "./decode";
 
 /**
- * READ AN ARRIVAL FROM ITS TRANSACTION.
+ * A RECEIPT FROM ONE SIGNATURE, AND NOTHING ELSE.
  *
- * A receipt page is opened by somebody who has a link and nothing else — no account, no
- * session, often no idea what Webgold is. So the whole page is built from one signature: the
- * transaction is fetched, the receipt account it created is found, and the account is read.
- *
- * Nothing here touches the database. That is the point of putting the receipt on chain: this
- * page renders identically from a cold RPC with our servers switched off, and it will render
- * in ten years if somebody keeps the link.
+ * The public page is built from a signature alone: no session, no database. The transaction
+ * names every account it touched; the one owned by the program that carries the Receipt
+ * discriminator is the receipt. The memo instruction in the same transaction is the reason,
+ * checked against the hash the program stored, so a reason cannot be substituted later.
  */
 
-export type ReceiptLeg = {
-  readonly mint: string;
-  readonly symbol: string;
-  readonly name: string;
-  readonly issuer: string;
-  readonly decimals: number;
-  readonly amount: bigint;
-};
-
-export type ReceiptView = {
-  readonly signature: string;
+export type ReceiptView = Receipt & {
   readonly address: string;
-  readonly payer: string;
-  readonly recipient: string;
-  readonly releaseId: string;
-  /** USD value at the stamp, 6-decimal base units. */
-  readonly valueBase: bigint;
-  /** Fine grams of gold, 1e8 fixed point, stamped when it settled. */
-  readonly gramsE8: bigint;
-  readonly reason: string;
-  readonly at: number;
-  readonly legs: readonly ReceiptLeg[];
-  /** The slot the transaction landed in — the chain's own ordering, not ours. */
+  readonly signature: string;
   readonly slot: number | null;
+  readonly blockTime: number | null;
+  readonly asset_: Asset | null;
+  /** The memo from the transaction, only if it hashes to the receipt's reason_hash. */
+  readonly reason: string | null;
+  /** True when a memo was present but did not match — shown, never hidden. */
+  readonly reasonMismatch: boolean;
 };
-
-/**
- * The Anchor discriminator for the `Receipt` account, read from the committed IDL rather than
- * typed out. Eight bytes copied by hand is eight bytes that can be copied wrong, and a wrong
- * discriminator does not error — it simply never matches, and every receipt page reads
- * "that transaction wrote no receipt".
- */
-const RECEIPT_DISCRIMINATOR: Uint8Array | null = (() => {
-  const accounts = (idlJson as { accounts?: Array<{ name: string; discriminator: number[] }> })
-    .accounts;
-  const found = accounts?.find((a) => a.name === "Receipt");
-  return found ? Uint8Array.from(found.discriminator) : null;
-})();
 
 export async function readReceiptBySignature(signature: string): Promise<Outcome<ReceiptView>> {
-  if (!/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(signature)) {
-    return held("That does not look like a Solana transaction signature.");
-  }
-
+  if (!/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(signature)) return held("That is not a transaction signature.");
   const conn = connection();
-  let tx;
+  let tx: VersionedTransactionResponse | null;
   try {
-    tx = await conn.getTransaction(signature, {
-      commitment: "confirmed",
-      maxSupportedTransactionVersion: 0,
-    });
+    tx = await conn.getTransaction(signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 });
   } catch (err) {
-    return held(
-      `Could not reach the chain (${err instanceof Error ? err.message : String(err)}).`,
-    );
+    return held(`Could not reach Solana (${err instanceof Error ? err.message : String(err)}).`);
   }
-  if (!tx) {
-    // A signature that is not on THIS cluster is the commonest reason, and saying so is more
-    // use than "not found".
-    return held("No transaction with that signature has settled on this cluster.");
-  }
-  if (tx.meta?.err) {
-    return held("That transaction failed, so nothing was received and no receipt exists.");
-  }
+  if (!tx) return held("No transaction with that signature has settled on this cluster.");
+  if (tx.meta?.err) return held("That transaction failed, so nothing moved and no receipt was written.");
+  return receiptFromTransaction(conn, signature, tx);
+}
 
-  const keys = tx.transaction.message.getAccountKeys({
-    accountKeysFromLookups: tx.meta?.loadedAddresses,
-  });
+export async function receiptFromTransaction(
+  conn: Connection,
+  signature: string,
+  tx: VersionedTransactionResponse,
+): Promise<Outcome<ReceiptView>> {
+  const keys = tx.transaction.message.getAccountKeys({ accountKeysFromLookups: tx.meta?.loadedAddresses ?? undefined });
   const candidates: PublicKey[] = [];
   for (let i = 0; i < keys.length; i += 1) {
-    const key = keys.get(i);
-    if (key) candidates.push(key);
+    const k = keys.get(i);
+    if (k) candidates.push(k);
   }
-
-  // The receipt is whichever account this transaction created that is owned by the program
-  // and carries the Receipt discriminator. Fetching them in one batch keeps the page to two
-  // round trips no matter how many accounts the transaction touched.
   let infos;
   try {
     infos = await conn.getMultipleAccountsInfo(candidates, "confirmed");
   } catch (err) {
-    return held(
-      `Could not reach the chain (${err instanceof Error ? err.message : String(err)}).`,
-    );
+    return held(`Could not reach Solana (${err instanceof Error ? err.message : String(err)}).`);
   }
-
+  const disc = accountDiscriminator("Receipt");
   for (let i = 0; i < infos.length; i += 1) {
     const info = infos[i];
-    if (!info || !info.owner.equals(WEBGOLD_PROGRAM_ID)) continue;
-    if (!RECEIPT_DISCRIMINATOR || info.data.length < 8) continue;
-    if (!sameBytes(info.data.subarray(0, 8), RECEIPT_DISCRIMINATOR)) continue;
-
+    if (!info || !info.owner.equals(SCRIP_PROGRAM_ID) || info.data.length < 8) continue;
+    if (!disc.every((b, j) => info.data[j] === b)) continue;
     const decoded = decodeReceipt(info.data);
     if (!decoded.ok) return decoded;
+    const r = decoded.value;
+    const memo = memoOf(tx);
+    const matches = memo !== null && reasonMatches(memo, r.reasonHash);
     return ok({
-      ...decoded.value,
-      signature,
+      ...r,
       address: candidates[i]!.toBase58(),
+      signature,
       slot: tx.slot ?? null,
+      blockTime: tx.blockTime ?? null,
+      asset_: await resolveAsset(r.asset, conn),
+      reason: matches ? memo : null,
+      reasonMismatch: memo !== null && !matches && !r.reasonHash.every((b) => b === 0),
     });
   }
-
-  return held("That transaction settled, but it did not write a Webgold receipt.");
+  return held("This transaction did not write a Scrip receipt.");
 }
 
-function sameBytes(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
-  return true;
-}
-
-/**
- * Decode the `Receipt` account, in the program's own field order.
- *
- * Hand-decoded rather than routed through an Anchor client, for the same reason the book is:
- * opening a receipt should not require a Provider, a Wallet and a signer on a page that is
- * only looking. `program.test.ts` guards the program id, and the discriminator above is read
- * from the committed IDL rather than typed out.
- */
-function decodeReceipt(
-  data: Uint8Array,
-): Outcome<Omit<ReceiptView, "signature" | "address" | "slot">> {
-  try {
-    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    let o = 8;
-    const payer = new PublicKey(data.slice(o, o + 32)).toBase58();
-    o += 32;
-    const recipient = new PublicKey(data.slice(o, o + 32)).toBase58();
-    o += 32;
-    const releaseId = [...data.slice(o, o + 32)]
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    o += 32;
-    const valueBase = view.getBigUint64(o, true);
-    o += 8;
-    const gramsE8 = view.getBigUint64(o, true);
-    o += 8;
-    const reasonLen = view.getUint32(o, true);
-    o += 4;
-    if (reasonLen > 200) return held("This receipt's reason is longer than the program allows.");
-    const reason = new TextDecoder().decode(data.slice(o, o + reasonLen));
-    o += reasonLen;
-    const at = Number(view.getBigInt64(o, true));
-    o += 8;
-    o += 1; // bump
-    const legCount = view.getUint32(o, true);
-    o += 4;
-    if (legCount > 8) return held("This receipt claims more legs than the program allows.");
-
-    const legs: ReceiptLeg[] = [];
-    for (let i = 0; i < legCount; i += 1) {
-      const mint = new PublicKey(data.slice(o, o + 32)).toBase58();
-      o += 32;
-      const amount = view.getBigUint64(o, true);
-      o += 8;
-      const asset = assetByMint(mint);
-      legs.push({
-        mint,
-        // An arrival of something the registry has never heard of still renders — it just
-        // renders as the mint it is, with no name invented for it.
-        symbol: asset?.symbol ?? `${mint.slice(0, 4)}…`,
-        name: asset?.name ?? "Unrecognised mint",
-        issuer: asset?.issuer.name ?? "Unknown issuer",
-        // 0 is the signal for "we do not know this mint's decimals", and the surface labels
-        // the figure as base units rather than implying a whole-token quantity.
-        decimals: asset?.decimals ?? 0,
-        amount,
-      });
+/** The first SPL Memo in a transaction, decoded as UTF-8. */
+export function memoOf(tx: VersionedTransactionResponse): string | null {
+  const keys = tx.transaction.message.getAccountKeys({ accountKeysFromLookups: tx.meta?.loadedAddresses ?? undefined });
+  const memoProgram = new PublicKey(MEMO_PROGRAM_ID);
+  for (const ix of tx.transaction.message.compiledInstructions) {
+    const program = keys.get(ix.programIdIndex);
+    if (program && program.equals(memoProgram)) {
+      try {
+        return new TextDecoder("utf-8", { fatal: true }).decode(ix.data);
+      } catch {
+        return null;
+      }
     }
-
-    return ok({ payer, recipient, releaseId, valueBase, gramsE8, reason, at, legs });
-  } catch {
-    return held("This receipt account could not be decoded.");
   }
+  return null;
+}
+
+/** Read a receipt account directly, by address. For the indexer's refresh pass. */
+export async function readReceiptAccount(conn: Connection, address: PublicKey): Promise<Outcome<Receipt | null>> {
+  let info;
+  try {
+    info = await conn.getAccountInfo(address, "confirmed");
+  } catch (err) {
+    return held(`Could not reach Solana (${err instanceof Error ? err.message : String(err)}).`);
+  }
+  if (!info || !info.owner.equals(SCRIP_PROGRAM_ID)) return ok(null);
+  const r = decodeReceipt(info.data);
+  return r.ok ? ok(r.value) : r;
 }

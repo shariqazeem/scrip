@@ -1,121 +1,67 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Info } from "lucide-react";
 import { DocFrame } from "@/components/docs/doc-frame";
 
-export const metadata: Metadata = {
-  title: "Receipts",
-  description:
-    "Every money moment in Webgold writes an account on Solana carrying who paid, who received, the amounts mint by mint, the gram-equivalent and the reason. Here is what is in one and how to read it without trusting us.",
-};
+export const metadata: Metadata = { title: "Receipts" };
 
-export default function ReceiptsPage() {
+export default function Page() {
   return (
     <DocFrame
       here="/docs/receipts"
       eyebrow="Docs"
-      title="An arrival you can open, forever."
-      lede={
-        <>
-          A receipt is a program account, not a row in our database. That is the difference
-          between a memory we could lose — or be accused of inventing — and one anybody can
-          open for as long as Solana exists.
-        </>
-      }
+      title="Receipts."
+      lede="A permanent on-chain account, about 350 bytes, written in the same transaction as the conversion. Anyone can open it, forever."
     >
-      <h2>What is in one</h2>
-      <div className="wg-doc-worked">
-        <div className="wg-doc-worked-head">The Receipt account</div>
-        <div className="wg-doc-worked-row">
-          <span>Who paid</span>
-          <span className="mono">payer</span>
-          <span className="mono">32 bytes</span>
-        </div>
-        <div className="wg-doc-worked-row">
-          <span>Who received</span>
-          <span className="mono">recipient</span>
-          <span className="mono">32 bytes</span>
-        </div>
-        <div className="wg-doc-worked-row">
-          <span>What arrived, mint by mint</span>
-          <span className="mono">legs</span>
-          <span className="mono">up to 8</span>
-        </div>
-        <div className="wg-doc-worked-row">
-          <span>What it was worth at the price stamp</span>
-          <span className="mono">value_base</span>
-          <span className="mono">6dp USD</span>
-        </div>
-        <div className="wg-doc-worked-row">
-          <span>Fine grams of gold in it</span>
-          <span className="mono">grams_e8</span>
-          <span className="mono">1e8 fixed</span>
-        </div>
-        <div className="wg-doc-worked-row">
-          <span>Why, in the payer&rsquo;s own words</span>
-          <span className="mono">reason</span>
-          <span className="mono">≤200 chars</span>
-        </div>
-        <div className="wg-doc-worked-row">
-          <span>Which release it belonged to</span>
-          <span className="mono">release_id</span>
-          <span className="mono">32 bytes</span>
-        </div>
-      </div>
+      <h2>What one carries</h2>
+      <table>
+        <tbody>
+          <tr>
+            <th>kind</th>
+            <td>Sweep, Settle or Sponsor</td>
+          </tr>
+          <tr>
+            <th>recipient · payer</th>
+            <td>The recipient&rsquo;s address; the payer for an intake. A sweep has no payer: senders are attributed off chain from the account&rsquo;s transfer history, and labelled as such.</td>
+          </tr>
+          <tr>
+            <th>basis · rate · paid</th>
+            <td>The net inflow that triggered a sweep, the rate applied, the slice converted. For an intake: what was paid, 100%, what was paid.</td>
+          </tr>
+          <tr>
+            <th>asset · amount_raw</th>
+            <td>The mint and the raw units received. Raw, so a rebase never reads as a sale.</td>
+          </tr>
+          <tr>
+            <th>price</th>
+            <td>The Pyth feed, price, exponent, confidence and publish time the sweep was verified against. Optional for an intake.</td>
+          </tr>
+          <tr>
+            <th>reason_hash</th>
+            <td>sha256 of the reason, which travels as an SPL Memo in the same transaction. The page shows the memo only if it hashes to this.</td>
+          </tr>
+          <tr>
+            <th>measured_7d · measured_30d</th>
+            <td>The recipient&rsquo;s total raw balance of the asset at 7 and 30 days, written by <span className="mono">measure_receipt</span>, which anyone may call.</td>
+          </tr>
+        </tbody>
+      </table>
 
-      <h2>Where it lives, and why that address</h2>
+      <h2>Where it lives</h2>
       <p>
-        A receipt sits at a program address derived from{" "}
-        <code>[&quot;receipt&quot;, release_id, recipient]</code>. That is not an
-        implementation detail — it means anybody who knows a release and a recipient can
-        compute the address and read the account without asking us anything, and it means one
-        person can receive at most one receipt per release. A second attempt asks the runtime
-        to create an account that already exists, and the runtime refuses. Nothing has to
-        remember who was paid; the address is the record.
+        <span className="mono">[&quot;receipt&quot;, book, release_id]</span> for a sweep; <span className="mono">[&quot;receipt&quot;, payout, release_id]</span> for an
+        intake. Derivable by anyone who knows both, which is the point: a receipt nobody but us can find is not a public record.
       </p>
 
-      <h2>The receipt is written in the same instruction as the transfer</h2>
+      <h2>The page</h2>
       <p>
-        There is no state in which value moved and no record of it exists, and no state in
-        which a receipt exists for value that did not move. Both happen or neither does,
-        because a Solana instruction cannot half-succeed.
+        <span className="mono">/receipt/&lt;signature&gt;</span> is built from one signature and nothing else: the transaction names the accounts it
+        touched, the one owned by the program with the Receipt discriminator is the receipt, and the memo in the same transaction is the
+        reason. No session, no database. It renders identically from a cold RPC with our servers off.
       </p>
 
-      <h2>What it says, and what it deliberately does not</h2>
-      <div className="wg-doc-note">
-        <Info size={16} strokeWidth={2} aria-hidden />
-        <p>
-          <strong>The reason is asserted by the payer, not verified by us.</strong> Whether the
-          work described actually happened, whether a human approved it, whether a model
-          checked it — all of that lives outside this system, or nowhere. Webgold settles; it
-          does not judge. A receipt records what moved and what was claimed about it.
-        </p>
-      </div>
+      <h2>Who pays for it</h2>
       <p>
-        The value is stamped at the price used at settlement, and it does not move afterwards.
-        A receipt is a record of an arrival, not a live valuation — what that value is worth
-        today is a question about a balance, and the answer is on the book.
-      </p>
-
-      <h2>Reading one without trusting us</h2>
-      <p>
-        Open <code>/receipt/&lt;signature&gt;</code>. That page is built from the signature and
-        nothing else: no session, no database, no account. It renders identically from a cold
-        RPC with our servers switched off. Every figure on it is read from an account you can
-        also read, and the page links to both the account and the transaction on an explorer so
-        you never have to take the rendering on trust.
-      </p>
-
-      <h2>A payout that is partly diverted</h2>
-      <p>
-        When a recipient has a goal taking a share of arrivals, the receipt still records the{" "}
-        <strong>whole</strong> arrival. The skim is where the value went, not a reduction in
-        what was received — and the vault it went to can only ever pay that same person.
-      </p>
-
-      <p>
-        <Link href="/docs/keep-rate">The number this makes possible</Link> ·{" "}
-        <Link href="/ledger">Every receipt published so far</Link>
+        Rent is about 0.003 SOL, permanent. On a sweep the keeper advances it and is repaid from the owner&rsquo;s float; on an intake the payer
+        pays it, shown on the pay page as &ldquo;network and permanent receipt&rdquo;. Owners pay for their own permanent records, transparently.
       </p>
     </DocFrame>
   );

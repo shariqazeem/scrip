@@ -1,109 +1,77 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_POLICY_BPS, assetBySymbol } from "./registry";
+import { ASSETS, DEVNET_FEEDS, PYTH_RECEIVER, USDC_MINT, ruleAssets } from "./registry";
 
 /**
- * THE SPEC AND THE CODE ARE TWO LISTS, AND THEY DRIFT.
- *
- * `CLAUDE.md` is the canonical product law and `registry.ts` is what actually runs. When the
- * default mix changed — silver failed the metal test on live data and the founder moved its
- * weight to gold — there were suddenly five places carrying a number: the spec, the product
- * doc, the registry, and the prose on two pages. Four of them are prose, which is exactly the
- * kind of thing nobody greps for.
- *
- * So this test reads the spec file itself and compares it to the constant. It cannot be
- * satisfied by updating a copy, and it fails loudly the next time one of them moves alone.
+ * TWO LISTS THAT DRIFT: the program compiles the registry in (`registry.rs`); the app reads
+ * this one. A mint on one and not the other is a rule the app offers and the program
+ * refuses, or an asset the program would buy and the app cannot name. This reads the Rust.
  */
-const root = join(__dirname, "..", "..", "..");
+const rs = readFileSync(join(__dirname, "..", "..", "..", "anchor", "programs", "scrip", "src", "registry.rs"), "utf8");
+const pythRs = readFileSync(join(__dirname, "..", "..", "..", "anchor", "programs", "scrip", "src", "pyth.rs"), "utf8");
 
-describe("CLAUDE.md and the registry agree on the default mix", () => {
-  it("states every weight the registry holds, and no others", () => {
-    const spec = readFileSync(join(root, "CLAUDE.md"), "utf8");
-    // The law line: "defaulting to **70% gold, 30% SPY**".
-    const m = /defaulting to \*\*([^*]+)\*\*/.exec(spec);
-    expect(m, "CLAUDE.md no longer states the default mix in the expected form").toBeTruthy();
-    const stated = m![1]!;
-
-    for (const leg of DEFAULT_POLICY_BPS) {
-      const pct = `${leg.bps / 100}%`;
-      expect(stated, `CLAUDE.md does not state ${pct} for ${leg.symbol}`).toContain(pct);
-    }
-    // And nothing the registry dropped is still being claimed.
-    expect(stated.toLowerCase()).not.toContain("silver");
-  });
-});
-
-/**
- * NO USER-FACING SURFACE MAY HARDCODE A POLICY WEIGHT.
- *
- * Prose is the worst place for a number that can change, because it is the copy a person
- * actually reads and the last thing anyone updates. Every weight on a page is derived from
- * `DEFAULT_POLICY_BPS`; this is the guard that keeps it that way.
- */
-function* tsxFiles(dir: string): Generator<string> {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) yield* tsxFiles(full);
-    else if (entry.endsWith(".tsx")) yield full;
-  }
+function rustConstPubkey(name: string): string {
+  const m = new RegExp(`pub const ${name}: Pubkey = Pubkey::from_str_const\\("([1-9A-HJ-NP-Za-km-z]+)"\\);`).exec(rs);
+  if (!m) throw new Error(`${name} not in registry.rs`);
+  return m[1]!;
 }
 
-describe("no page writes a policy weight into its copy", () => {
-  it("has no hardcoded percentage beside a sleeve name", () => {
-    /**
-     * PROXIMITY AND WORD BOUNDARIES, not substring matching.
-     *
-     * The first version looked for a sleeve name anywhere on a line with a percentage on it,
-     * and immediately fired on a docs sentence containing "a 300% return" and the word
-     * "Webgold" — because "webgold" contains "gold". A guard that cries wolf gets deleted, and
-     * then the thing it guarded drifts freely.
-     *
-     * So: the brand is removed first, the sleeve names are matched as whole words, and the
-     * percentage has to sit close enough to be describing that sleeve rather than merely
-     * sharing a sentence with it.
-     */
-    const SLEEVE = /\b(gold|silver|spy|spyx|market)\b/gi;
-    const NEAR = 24;
-    const offenders: string[] = [];
-    for (const file of tsxFiles(join(root, "src", "app"))) {
-      const text = readFileSync(file, "utf8");
-      for (const raw of text.split("\n")) {
-        const line = raw.replace(/webgold/gi, "");
-        if (!/\d{1,3}%/.test(line)) continue;
-        for (const m of line.matchAll(SLEEVE)) {
-          const window = line.slice(
-            Math.max(0, m.index - NEAR),
-            m.index + m[0].length + NEAR,
-          );
-          if (/\d{1,3}%/.test(window)) {
-            offenders.push(`${file.slice(root.length + 1)}: ${raw.trim()}`);
-            break;
-          }
-        }
-      }
-    }
-    expect(offenders, `derive these from DEFAULT_POLICY_BPS instead:\n${offenders.join("\n")}`)
-      .toHaveLength(0);
+function rustFeed(name: string): string {
+  const m = new RegExp(`pub const ${name}: \\[u8; 32\\] = hex32\\("([0-9a-f]{64})"\\);`).exec(rs);
+  if (!m) throw new Error(`${name} not in registry.rs`);
+  return m[1]!;
+}
+
+/** The rows of the mainnet REGISTRY table, as (mint const, raw feed const, adjusted feed const, xstocks). */
+function rustRows(): Array<{ mint: string; raw: string; adjusted: string; xstocks: boolean }> {
+  const table = /pub const REGISTRY: &\[Entry\] = &\[([\s\S]*?)\n\];/.exec(rs)?.[1];
+  if (!table) throw new Error("REGISTRY table not found");
+  return [...table.matchAll(/Entry \{ mint: (\w+), feed_raw: (\w+), feed_adjusted: (\w+), xstocks: (true|false) \}/g)].map((m) => ({
+    mint: m[1]!,
+    raw: m[2]!,
+    adjusted: m[3]!,
+    xstocks: m[4] === "true",
+  }));
+}
+
+describe("the TypeScript registry and the program's agree", () => {
+  const rows = rustRows();
+
+  it("USDC is the same mint", () => {
+    expect(rustConstPubkey("USDC_MINT")).toBe(USDC_MINT);
   });
 
-  it("still catches a weight written into copy", () => {
-    // The guard has to keep working after being narrowed. This is the shape it exists for.
-    const SLEEVE = /\b(gold|silver|spy|spyx|market)\b/gi;
-    const bad = "The default is 50% gold, 20% silver, 30% SPY.";
-    const hit = [...bad.matchAll(SLEEVE)].some((m) =>
-      /\d{1,3}%/.test(bad.slice(Math.max(0, m.index - 24), m.index + m[0].length + 24)),
-    );
-    expect(hit).toBe(true);
-  });
-});
-
-describe("every registry symbol the default names is real", () => {
-  it("resolves each weighted symbol to a registered asset with a metal or equity unit", () => {
-    for (const leg of DEFAULT_POLICY_BPS) {
-      const a = assetBySymbol(leg.symbol);
-      expect(a, `${leg.symbol} is weighted but unregistered`).toBeDefined();
-      expect(["gram", "troy-ounce", "share"]).toContain(a!.unit);
+  it("every rule asset in TypeScript is in the program's table, with the same feeds", () => {
+    for (const a of ruleAssets()) {
+      const row = rows.find((r) => rustConstPubkey(r.mint) === a.mint);
+      expect(row, `${a.symbol} (${a.mint}) is not in registry.rs`).toBeTruthy();
+      if (!row) continue;
+      expect(rustFeed(row.raw), `${a.symbol} raw feed`).toBe(a.feedRaw?.feedId);
+      if (row.adjusted === "ZERO_FEED") expect(a.feedAdjusted, `${a.symbol} adjusted feed`).toBeNull();
+      else expect(rustFeed(row.adjusted), `${a.symbol} adjusted feed`).toBe(a.feedAdjusted?.feedId);
+      expect(row.xstocks, `${a.symbol} xstocks flag`).toBe(a.issuer.name.includes("xStocks"));
     }
+  });
+
+  it("every row in the program's table is a rule asset in TypeScript", () => {
+    const mints = new Set(ruleAssets().map((a) => a.mint));
+    for (const r of rows) {
+      expect(mints.has(rustConstPubkey(r.mint)), `${r.mint} is in registry.rs but not in registry.ts`).toBe(true);
+    }
+    expect(rows.length).toBe(ruleAssets().length);
+  });
+
+  it("the devnet stand-in feeds are the ones the devnet build compiles in", () => {
+    expect(rustFeed("FEED_SOL_USD")).toBe(DEVNET_FEEDS.raw.feedId);
+    expect(rustFeed("FEED_USDC_USD")).toBe(DEVNET_FEEDS.adjusted.feedId);
+  });
+
+  it("the Pyth receiver is the same program", () => {
+    expect(pythRs).toContain(`Pubkey::from_str_const("${PYTH_RECEIVER}")`);
+  });
+
+  it("the pay-in asset is not a rule asset", () => {
+    expect(ASSETS.find((a) => a.mint === USDC_MINT)?.ruleEligible).toBe(false);
   });
 });

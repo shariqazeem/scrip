@@ -1,0 +1,11 @@
+{
+  "org": "scrip",
+  "note": "Real micro-tasks, paid in SPYx through Scrip's own organisation page. Every payment is on /@scrip, labelled as Scrip's. Edit this file to add or close a bounty.",
+  "bounties": [
+    { "id": "keeper-week", "title": "Run a keeper for a week", "reward": 50, "asset": "SPYx", "status": "open", "how": "Run `npm run keeper` on a host of your own with a funded key for seven days. Your address appears on /keepers once it submits a sweep. Send the address and the dates." },
+    { "id": "break-claim", "title": "Break the claim flow", "reward": 50, "asset": "SPYx", "status": "open", "how": "Find a way to claim a first share that is not yours, or to take a sponsored position twice. A write-up with a signature; a failing test is better." },
+    { "id": "docs-translate", "title": "Translate one docs page", "reward": 20, "asset": "SPYx", "status": "open", "how": "Any docs page, into any language you write natively. A pull request; the reason on your receipt is the page." },
+    { "id": "thirty-seconds", "title": "Thirty seconds on why you turned the rule on", "reward": 10, "asset": "SPYx", "status": "open", "how": "A phone video, you in it, your register public. Posted anywhere; send the link." },
+    { "id": "stub-variant", "title": "Design a stub variant", "reward": 25, "asset": "SPYx", "status": "open", "how": "The stub at one of its five sizes, redrawn inside the design system: paper, ink, the perforation, units the largest thing. A file and a paragraph." }
+  ]
+}

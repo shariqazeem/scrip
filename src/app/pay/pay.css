@@ -1,0 +1,244 @@
+/**
+ * pay.css — the intake. Unshelled: a payer needs no account. Two columns on desktop, the
+ * form left and the live quote right; one column on a phone. LCP is the heading and the
+ * amount field; the QR is a data URI rendered on the server.
+ */
+.sp-pay {
+  --line: var(--border);
+  --line-strong: var(--border-strong);
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  padding: var(--s-6) var(--s-5) var(--s-10);
+}
+.sp-pay-col {
+  max-width: var(--measure-wide);
+  margin: 0 auto;
+}
+.sp-pay a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.sp-pay a:hover {
+  text-decoration: underline;
+}
+.sp-pay .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+}
+.sp-pay-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-7);
+}
+.sp-pay a.sp-pay-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 600;
+  color: var(--ink);
+}
+.sp-pay-h1 {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  letter-spacing: var(--tracking-h1);
+  font-weight: 600;
+  margin: 0 0 var(--s-3);
+  max-width: 20ch;
+}
+.sp-pay-lede {
+  font-size: var(--fs-lead);
+  line-height: var(--lh-lead);
+  color: var(--ink-muted);
+  margin: 0 0 var(--s-6);
+  max-width: 52ch;
+}
+.sp-pay-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+  gap: var(--s-6);
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .sp-pay-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* the quote sheet */
+.sp-quote {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.sp-quote-head {
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+.sp-quote-units {
+  padding: var(--s-5) var(--s-5) var(--s-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-units-sm);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+.sp-quote-units .sym {
+  font-size: 0.5em;
+  color: var(--ink-muted);
+  margin-left: 0.3em;
+  font-weight: 500;
+}
+.sp-quote-units.is-waiting {
+  color: var(--ink-faint);
+  font-size: var(--fs-body);
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
+.sp-quote-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-small);
+}
+.sp-quote-row .k {
+  color: var(--ink-muted);
+}
+.sp-quote-row .v {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  text-align: right;
+}
+.sp-quote-foot {
+  padding: var(--s-3) var(--s-5) var(--s-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+  line-height: 1.5;
+}
+
+/* the QR */
+.sp-pay-qr {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-4) var(--s-5);
+  border-top: 1px solid var(--line);
+}
+.sp-pay-qr img {
+  width: 168px;
+  height: 168px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  display: block;
+}
+.sp-pay-qr p {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+@media (max-width: 460px) {
+  .sp-pay-qr {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+}
+
+/* states */
+.sp-pay-state {
+  padding: var(--s-4) var(--s-5);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+.sp-pay-state.is-err {
+  color: var(--err);
+}
+.sp-pay-state.is-ok {
+  color: var(--ok);
+}
+.sp-pay-state.is-warn {
+  color: var(--warn);
+}
+
+/* the printed stub after settlement */
+.sp-pay-done {
+  display: grid;
+  gap: var(--s-4);
+  justify-items: start;
+}
+
+/* the eligible-asset note under a sponsor form */
+.sp-pay-note {
+  margin: var(--s-3) 0 0;
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+  line-height: 1.5;
+}
+
+/* ── two ways to pay: a pair of ruled tabs ─────────────────────────────── */
+.sp-pay-modes {
+  display: grid;
+  gap: var(--s-5);
+}
+.sp-pay-mode-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+.sp-pay-mode {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink);
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+.sp-pay-mode:hover {
+  border-color: var(--accent);
+}
+.sp-pay-mode.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.sp-pay-mode .t {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.sp-pay-mode.on .t {
+  color: var(--accent-strong);
+}
+.sp-pay-mode .p {
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+@media (max-width: 520px) {
+  .sp-pay-mode-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A moment's stub sits alone on the page, at the width of a document. */
+.sp-moment-stub {
+  margin: var(--s-6) 0;
+  max-width: 460px;
+}

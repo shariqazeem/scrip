@@ -1,0 +1,194 @@
+/**
+ * market.css — the market on Solana, live, as a ruled band on the front door.
+ * Figures mono and tabular; the price the largest thing in its row; no cards.
+ */
+.sp-market {
+  --line: var(--border);
+  --line-strong: var(--border-strong);
+  display: grid;
+  gap: var(--s-5);
+}
+.sp-market-head {
+  display: grid;
+  gap: var(--s-3);
+}
+.sp-market-h2 {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  letter-spacing: var(--tracking-h1);
+  font-weight: 600;
+  margin: 0;
+  max-width: 24ch;
+}
+.sp-market-clock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+.sp-market-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
+
+.sp-market-rows {
+  border-top: 1px solid var(--line-strong);
+}
+.sp-market-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.6fr) minmax(170px, 0.8fr) minmax(0, 3fr);
+  gap: var(--s-4) var(--s-6);
+  align-items: start;
+  padding: var(--s-5) 0;
+  border-bottom: 1px solid var(--line);
+}
+.sp-market-name {
+  display: grid;
+  gap: 2px;
+}
+.sp-market-name .sym {
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.sp-market-name .name {
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+}
+.sp-market-price {
+  display: grid;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.sp-market-price .big {
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.sp-market-price .chg {
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+}
+/* --ok / --err are money outcomes; a day's move in a price the reader may hold IS one. */
+.sp-market-price .chg.up {
+  color: var(--ok);
+}
+.sp-market-price .chg.down {
+  color: var(--err);
+}
+.sp-market-price .held {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-market-facts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s-3) var(--s-4);
+  margin: 0;
+}
+@media (max-width: 1100px) {
+  .sp-market-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .sp-market-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.sp-market-facts div {
+  display: grid;
+  gap: 2px;
+}
+.sp-market-facts dt {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-market-facts dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  font-variant-numeric: tabular-nums;
+}
+.sp-market-facts .muted {
+  color: var(--ink-faint);
+}
+.sp-market-foot {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--ink-faint);
+  max-width: 72ch;
+}
+.sp-market-foot a {
+  color: var(--accent);
+}
+@media (max-width: 760px) {
+  .sp-market-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .sp-market-facts {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── on dark ground ────────────────────────────────────────────────────── */
+.sp-market.is-dark {
+  --line: var(--border-inverse);
+  --line-strong: var(--border-inverse);
+  color: var(--ink-inverse);
+}
+.sp-market.is-dark .sp-market-clock,
+.sp-market.is-dark .sp-market-name .name,
+.sp-market.is-dark .sp-market-price .chg {
+  color: var(--ink-inverse-muted);
+}
+.sp-market.is-dark .sp-market-dot {
+  background: var(--ok-inverse);
+}
+.sp-market.is-dark .sp-market-facts dt,
+.sp-market.is-dark .sp-market-facts .muted,
+.sp-market.is-dark .sp-market-foot,
+.sp-market.is-dark .sp-market-price .held {
+  color: var(--ink-inverse-faint);
+}
+.sp-market.is-dark .sp-market-price .chg.up {
+  color: var(--ok-inverse);
+}
+.sp-market.is-dark .sp-market-price .chg.down {
+  color: var(--err-inverse);
+}
+.sp-market.is-dark .sp-market-foot a {
+  color: var(--accent-inverse);
+}
+/* rows enter one after another when the scene is reached */
+.sp-market .sp-market-row {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--dur-3) var(--ease-out),
+    transform var(--dur-3) var(--ease-out);
+}
+.is-in .sp-market .sp-market-row,
+.sp-market.is-in .sp-market-row {
+  opacity: 1;
+  transform: none;
+}
+.is-in .sp-market .sp-market-row:nth-child(2) {
+  transition-delay: 120ms;
+}
+.is-in .sp-market .sp-market-row:nth-child(3) {
+  transition-delay: 240ms;
+}

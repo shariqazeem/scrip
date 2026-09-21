@@ -1,13 +1,12 @@
 /**
- * THE DOCS NAV, in a module of its own with no stylesheet behind it.
- *
- * It lived on the frame component, which imports the reading surface's CSS — and a test that
- * only wants the list then drags a PostCSS config into a test runner that has no business
- * with one. A list of routes is data; keep it importable by anything.
+ * THE DOCS NAV, in a module of its own with no stylesheet behind it, so a test can import
+ * the list and compare it with the pages on disk.
  */
 export const DOC_PAGES = [
-  { href: "/docs", label: "What Webgold does" },
-  { href: "/docs/corporate-actions", label: "Corporate actions" },
+  { href: "/docs", label: "What Scrip does" },
+  { href: "/docs/how-the-rule-sees-money", label: "How the rule sees money" },
+  { href: "/docs/keepers", label: "What a keeper can and cannot do" },
   { href: "/docs/receipts", label: "Receipts" },
   { href: "/docs/keep-rate", label: "Keep-rate" },
+  { href: "/docs/corporate-actions", label: "Corporate actions" },
 ] as const;

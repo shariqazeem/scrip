@@ -1,0 +1,219 @@
+/**
+ * rule.css — one question, three numbers, one signature. Ruled sections on paper; the
+ * presets are the only large objects. Everything with a default is folded.
+ */
+.sp-rulepage {
+  --line: var(--border);
+  --line-strong: var(--border-strong);
+  display: grid;
+  gap: var(--s-7);
+  max-width: var(--measure);
+}
+
+.sp-q {
+  display: grid;
+  gap: var(--s-4);
+}
+.sp-q-label {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--tracking-h2);
+  font-weight: 600;
+  margin: 0;
+  max-width: 26ch;
+}
+.sp-q-presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+.sp-q-preset {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  padding: var(--s-4) var(--s-4) var(--s-3);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition:
+    border-color var(--dur-1) var(--ease-out),
+    background var(--dur-1) var(--ease-out);
+}
+.sp-q-preset:hover {
+  border-color: var(--accent);
+}
+.sp-q-preset.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.sp-q-preset .rate {
+  font-family: var(--font-mono);
+  font-size: clamp(1.9rem, 1.2rem + 2.4vw, 2.8rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+}
+.sp-q-preset.on .rate {
+  color: var(--accent-strong);
+}
+.sp-q-preset .note {
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+}
+.sp-q-preset.is-other .rate {
+  color: var(--ink-faint);
+}
+.sp-q-preset.is-other.on .rate {
+  color: var(--accent-strong);
+}
+@media (max-width: 560px) {
+  .sp-q-presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.sp-q-slider {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  gap: var(--s-4);
+  align-items: center;
+}
+.sp-q-slider .mono {
+  text-align: right;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.sp-q-example {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  color: var(--ink-muted);
+  max-width: 60ch;
+}
+.sp-q-example .mono {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ── the two details, and the folded rest: ruled rows ────────────────────── */
+.sp-q-details,
+.sp-q-advanced-body {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line-strong);
+}
+.sp-q-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--s-2) var(--s-4);
+  align-items: center;
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+.sp-q-row .k {
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+.sp-q-row .v {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+.sp-q-row .v .sp-input,
+.sp-q-row .v .sp-input-wrap {
+  max-width: 260px;
+}
+.sp-q-row .v .sp-range {
+  max-width: 260px;
+}
+.sp-q-row .note {
+  grid-column: 2;
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--ink-faint);
+  max-width: 62ch;
+}
+.sp-q-at {
+  font-family: var(--font-mono);
+  color: var(--ink-faint);
+}
+@media (max-width: 560px) {
+  .sp-q-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sp-q-row .note {
+    grid-column: 1;
+  }
+}
+.sp-q-more summary {
+  list-style: none;
+  cursor: pointer;
+}
+.sp-q-more summary::-webkit-details-marker {
+  display: none;
+}
+.sp-q-details .sp-check {
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sp-q-advanced > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  padding: var(--s-3) 0;
+  color: var(--ink);
+}
+.sp-q-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+.sp-q-advanced > summary .mono {
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+.sp-q-advanced > summary::before {
+  content: "+ ";
+  color: var(--accent);
+}
+.sp-q-advanced[open] > summary::before {
+  content: "− ";
+}
+.sp-q-advanced-body .sp-check {
+  padding: var(--s-4) 0;
+}
+
+/* ── the signature ───────────────────────────────────────────────────────── */
+.sp-q-sign {
+  display: grid;
+  gap: var(--s-4);
+  border-top: 1px solid var(--line-strong);
+  padding-top: var(--s-5);
+}
+.sp-action.is-big {
+  height: 52px;
+  padding: 0 var(--s-7);
+  font-size: var(--fs-body);
+}
+.sp-q-fine {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.55;
+  color: var(--ink-faint);
+  max-width: 68ch;
+}
+
+/* the wallet, asked for only at the moment of signing */
+.sp-q-connect {
+  display: grid;
+  gap: var(--s-3);
+}
+.sp-q-connect-h {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}

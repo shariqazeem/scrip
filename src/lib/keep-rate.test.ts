@@ -1,122 +1,93 @@
 import { describe, expect, it } from "vitest";
-import { type CohortRow, dueForMeasurement, keepRate, matured } from "./keep-rate";
+import { type ReceiptRow, dueForMeasurement, firstMaturity, keepRate } from "./keep-rate";
 
 const DAY = 86_400;
-const NOW = 1_800_000_000;
-const usd = (n: number) => BigInt(Math.round(n * 1e6));
+const T0 = 1_789_000_000;
 
-const cohort = (over: Partial<CohortRow> = {}): CohortRow => ({
-  recipient: "rec1",
-  releaseId: "rel1",
-  valueAtReleaseBase: usd(100),
-  releasedAt: NOW - 40 * DAY,
-  valueNowBase: usd(100),
-  measuredAt: NOW - DAY,
-  ...over,
-});
-
-describe("maturity", () => {
-  it("counts only payouts at least thirty days old", () => {
-    const rows = [
-      cohort({ recipient: "old", releasedAt: NOW - 31 * DAY }),
-      cohort({ recipient: "young", releasedAt: NOW - 29 * DAY }),
-    ];
-    expect(matured(rows, NOW).map((r) => r.recipient)).toEqual(["old"]);
-  });
-});
+function row(over: Partial<ReceiptRow> = {}): ReceiptRow {
+  return {
+    recipient: "alice",
+    asset: "SPYx",
+    settledUnix: T0,
+    paidUsdc: 50_000_000n, // $50
+    amountRaw: 6_500_000n, // 0.065 SPYx
+    measured7dRaw: null,
+    measured30dRaw: null,
+    ...over,
+  };
+}
 
 describe("keepRate", () => {
-  it("reports the share of released value still held", () => {
-    const r = keepRate(
-      [
-        cohort({ recipient: "a", valueAtReleaseBase: usd(100), valueNowBase: usd(100) }),
-        cohort({ recipient: "b", valueAtReleaseBase: usd(100), valueNowBase: usd(60) }),
-      ],
-      NOW,
-    );
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.value.bps).toBe(8000); // 80%
-    expect(r.value.cohorts).toBe(2);
-    expect(r.value.windowDays).toBe(30);
-  });
-
-  it("does NOT cap at 100%, because gold rising is the product working", () => {
-    // Clamping would hide the asset doing exactly what the product says it does: a recipient
-    // who spent nothing can hold more than they were given.
-    const r = keepRate([cohort({ valueAtReleaseBase: usd(100), valueNowBase: usd(118) })], NOW);
-    expect(r.ok && r.value.bps).toBe(11_800);
-  });
-
-  it("holds before any payout has matured, and says when the figure appears", () => {
-    // A keep-rate quoted at day three is not a keep-rate.
-    const r = keepRate([cohort({ releasedAt: NOW - 3 * DAY })], NOW);
+  it("holds before any receipt is old enough, and says when one will be", () => {
+    const r = keepRate([row()], 7, T0 + 3 * DAY);
     expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.why).toMatch(/No payout is 30 days old yet/);
+    expect(firstMaturity([row()], 7, T0 + 3 * DAY)).toBe(T0 + 7 * DAY);
   });
 
-  it("holds when a matured cohort was never measured, rather than counting it as zero", () => {
-    /**
-     * "They spent it all" and "we did not look" are opposite claims, and conflating them
-     * moves the number in the safest possible direction for whoever is quoting it. This is
-     * the single easiest way a growth metric becomes a lie, so it is refused outright.
-     */
-    const r = keepRate(
-      [
-        cohort({ recipient: "measured", valueNowBase: usd(90) }),
-        cohort({ recipient: "not-measured", valueNowBase: null, measuredAt: null }),
-      ],
-      NOW,
-    );
+  it("holds when a matured receipt was never measured, rather than counting it as spent", () => {
+    const r = keepRate([row()], 7, T0 + 8 * DAY);
     expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.why).toMatch(/1 of 2 matured payouts have not been measured/);
+    expect(!r.ok && r.why).toMatch(/measured/);
   });
 
-  it("holds when nothing matured has been measured at all", () => {
-    const r = keepRate([cohort({ valueNowBase: null, measuredAt: null })], NOW);
+  it("holds when only part of the cohort was measured", () => {
+    const rows = [row({ measured7dRaw: 6_500_000n }), row({ recipient: "bob" })];
+    const r = keepRate(rows, 7, T0 + 8 * DAY);
     expect(r.ok).toBe(false);
-    if (r.ok) return;
-    expect(r.why).toMatch(/none has been measured/);
+    expect(!r.ok && r.why).toMatch(/1 of 2/);
   });
 
-  it("holds on cohorts released with no value", () => {
-    expect(keepRate([cohort({ valueAtReleaseBase: 0n })], NOW).ok).toBe(false);
+  it("reads 100% when everything is still held", () => {
+    const r = keepRate([row({ measured7dRaw: 6_500_000n })], 7, T0 + 8 * DAY);
+    expect(r.ok && r.value.bps).toBe(10_000);
   });
 
-  it("ignores cohorts that have not matured when computing the rate", () => {
-    const r = keepRate(
-      [
-        cohort({ recipient: "mature", valueAtReleaseBase: usd(100), valueNowBase: usd(50) }),
-        cohort({
-          recipient: "fresh",
-          releasedAt: NOW - DAY,
-          valueAtReleaseBase: usd(900),
-          valueNowBase: usd(900),
-        }),
-      ],
-      NOW,
-    );
-    // A day-old payout at 100% would drag the reported figure to 95%. It is not in the window.
-    expect(r.ok && r.value.bps).toBe(5000);
-    expect(r.ok && r.value.cohorts).toBe(1);
+  it("reads the share still held when some was sold", () => {
+    const r = keepRate([row({ measured7dRaw: 3_250_000n })], 7, T0 + 8 * DAY);
+    expect(r.ok && r.value.bps).toBe(5_000);
+  });
+
+  it("is capped by the balance across ALL of a person's receipts in an asset, never per receipt", () => {
+    // Two receipts of 0.065 each; the person holds 0.065 total. Naively each receipt would
+    // read as fully held (0.065 ≥ 0.065) — the group cap makes it 50%.
+    const rows = [
+      row({ measured7dRaw: 6_500_000n }),
+      row({ settledUnix: T0 + DAY, measured7dRaw: 6_500_000n }),
+    ];
+    const r = keepRate(rows, 7, T0 + 9 * DAY);
+    expect(r.ok && r.value.bps).toBe(5_000);
+  });
+
+  it("never exceeds 100% when a balance is larger than what was delivered", () => {
+    // The person bought more elsewhere. Their receipts are still fully held, no more.
+    const r = keepRate([row({ measured7dRaw: 99_000_000n })], 7, T0 + 8 * DAY);
+    expect(r.ok && r.value.bps).toBe(10_000);
+  });
+
+  it("weights by dollars paid, not by units, across assets with different prices", () => {
+    const rows = [
+      row({ measured7dRaw: 6_500_000n }), // $50 of SPYx, all held
+      row({ recipient: "carol", asset: "GOLD", paidUsdc: 150_000_000n, amountRaw: 35_000n, measured7dRaw: 0n }), // $150 of GOLD, all sold
+    ];
+    const r = keepRate(rows, 7, T0 + 8 * DAY);
+    expect(r.ok && r.value.bps).toBe(2_500); // $50 of $200
+    expect(r.ok && r.value.recipients).toBe(2);
+  });
+
+  it("uses the 30-day column for the 30-day window", () => {
+    const r = keepRate([row({ measured7dRaw: 0n, measured30dRaw: 6_500_000n })], 30, T0 + 31 * DAY);
+    expect(r.ok && r.value.bps).toBe(10_000);
   });
 });
 
 describe("dueForMeasurement", () => {
-  it("names matured cohorts that have never been measured", () => {
+  it("lists matured, unmeasured receipts and nothing else", () => {
     const rows = [
-      cohort({ recipient: "never", valueNowBase: null, measuredAt: null }),
-      cohort({ recipient: "recent", measuredAt: NOW - DAY }),
-      cohort({ recipient: "young", releasedAt: NOW - 2 * DAY }),
+      row(), // matured, unmeasured → due
+      row({ recipient: "bob", measured7dRaw: 1n }), // measured → not due
+      row({ recipient: "carol", settledUnix: T0 + 5 * DAY }), // too young → not due
     ];
-    expect(dueForMeasurement(rows, NOW).map((r) => r.recipient)).toEqual(["never"]);
-  });
-
-  it("re-measures a cohort last measured before it matured", () => {
-    // A balance read on day two says nothing about what is held on day thirty.
-    const stale = cohort({ recipient: "stale", measuredAt: NOW - 35 * DAY });
-    expect(dueForMeasurement([stale], NOW).map((r) => r.recipient)).toEqual(["stale"]);
+    expect(dueForMeasurement(rows, 7, T0 + 8 * DAY).map((r) => r.recipient)).toEqual(["alice"]);
+    expect(dueForMeasurement(rows, 30, T0 + 8 * DAY)).toEqual([]);
   });
 });

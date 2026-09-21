@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Check } from "lucide-react";
-import { WebgoldMark } from "@/components/brand/webgold-mark";
+import { ScripMark } from "@/components/brand/scrip-mark";
+import { CopyLink } from "@/components/receipt/copy-link";
+import { type StubSection, Stub } from "@/components/stub/stub";
+import { readBookOf } from "@/lib/book/read-book";
 import { readReceiptBySignature } from "@/lib/book/read-receipt";
-import { fromBase, grams, short, stampUTC, usd, usdAligned } from "@/lib/format";
+import { db } from "@/lib/db";
+import { receipts as receiptsTable } from "@/lib/db/schema";
+import { age, bps, dateUTC, pythToUsd, short, stampUTC, unitsFromRaw, usd, usdc } from "@/lib/format";
+import { assetByFeedId } from "@/lib/assets/registry";
 import { explorerUrl } from "@/lib/solana/cluster";
+import { connection } from "@/lib/solana/connection";
+import { PublicKey } from "@solana/web3.js";
+import { eq } from "drizzle-orm";
 import "../receipt.css";
 
 export const dynamic = "force-dynamic";
@@ -12,29 +20,24 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ sig: string }> };
 
 /**
- * THE NAMED ARRIVAL — the most-shared thing Webgold produces, and the reason the receipt is
- * an on-chain account rather than a database row.
+ * THE RECEIPT — built from ONE signature and nothing else.
  *
- * This page is built from ONE signature and nothing else: no session, no database, no
- * account. It renders identically from a cold RPC with our servers switched off, and it will
- * render in ten years if somebody keeps the link. That is what "anyone can open it, forever"
- * has to mean if it is going to mean anything.
- *
- * It is deliberately unshelled — see src/components/shell/routes.ts. It is usually opened by
- * somebody who has never heard of Webgold, sent to them to prove one payment happened, and
- * wrapping that in owner chrome offering "Pay" turns an artifact into an advert.
+ * No session, no database for anything that is a claim: the account and the transaction
+ * are read from the chain at request time. The cache contributes only the attribution of a
+ * sweep to senders, and says so on the row. It renders identically from a cold RPC with our
+ * servers off, and it will render in ten years if somebody keeps the link.
  */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { sig } = await params;
-  const receipt = await readReceiptBySignature(sig);
-  if (!receipt.ok) return { title: "Receipt" };
-  const g = Number(receipt.value.gramsE8) / 1e8;
-  const what = g > 0 ? grams(g) : usd(fromBase(receipt.value.valueBase, 6));
+  const r = await readReceiptBySignature(sig);
+  if (!r.ok) return { title: "Receipt" };
+  const v = r.value;
+  const units = v.asset_ ? `${unitsFromRaw(v.amountRaw, v.asset_.decimals)} ${v.asset_.symbol}` : `${v.amountRaw} units`;
+  const title = v.kind === "sweep" ? `${usdc(v.basisUsdc)} landed · ${bps(v.rateBps)} became ${units}` : `${usdc(v.paidUsdc)} paid · became ${units}`;
   return {
-    // The share card says what arrived and why, because that is what somebody is sharing.
-    title: `${what} received`,
-    description: `${what} arrived for ${short(receipt.value.recipient)} — ${receipt.value.reason}`,
-    openGraph: { title: `${what} received`, description: receipt.value.reason },
+    title,
+    description: `${units} in ${short(v.recipient)}'s own wallet, ${stampUTC(v.settledUnix)}. A permanent receipt on Solana, measured at 7 and 30 days.`,
+    openGraph: { title, description: v.reason ? `“${v.reason}”` : "Settled on Solana." },
   };
 }
 
@@ -44,11 +47,11 @@ export default async function ReceiptPage({ params }: Params) {
 
   if (!receipt.ok) {
     return (
-      <main className="wg-receipt">
-        <div className="wg-receipt-col">
+      <main className="sp-receipt">
+        <div className="sp-receipt-col">
           <Header />
-          <div className="wg-receipt-held">
-            <WebgoldMark size={26} />
+          <div className="sp-receipt-held">
+            <ScripMark size={26} />
             <p>
               <strong>There is no receipt at that signature.</strong>
             </p>
@@ -62,106 +65,184 @@ export default async function ReceiptPage({ params }: Params) {
   }
 
   const r = receipt.value;
-  const gramsNow = Number(r.gramsE8) / 1e8;
-  const value = fromBase(r.valueBase, 6);
+  const asset = r.asset_;
+  const decimals = asset?.decimals ?? 0;
+  const symbol = asset?.symbol ?? `${r.asset.slice(0, 4)}…`;
+  const units = decimals ? unitsFromRaw(r.amountRaw, decimals) : `${r.amountRaw}`;
+  const isSweep = r.kind === "sweep";
+
+  // The recipient's handle, from their Book: one read, and only for the "in @x's wallet" line.
+  const book = await readBookOf(connection(), new PublicKey(r.recipient)).catch(() => null);
+  const handle = book && book.ok && book.value ? book.value.slug : null;
+
+  // Attribution comes from the cache and is labelled as such on the row.
+  const cached = isSweep ? (await db.select({ attributedJson: receiptsTable.attributedJson }).from(receiptsTable).where(eq(receiptsTable.pda, r.address)).limit(1))[0] : undefined;
+  const attributed: Array<{ from: string; usdc: string; sig: string }> = cached ? (JSON.parse(cached.attributedJson) as Array<{ from: string; usdc: string; sig: string }>) : [];
+
+  const sections: StubSection[] = [];
+  if (isSweep) {
+    sections.push({
+      title: "From (attributed from the account’s transfer history)",
+      rows:
+        attributed.length > 0
+          ? attributed.map((a) => ({ k: a.from ? short(a.from) : "unknown sender", v: <a href={explorerUrl("tx", a.sig)}>{usdc(BigInt(a.usdc))}</a> }))
+          : [{ k: "not attributed yet", v: "the indexer reads senders after the sweep", tone: "muted" as const }],
+    });
+  } else {
+    sections.push({
+      rows: [
+        { k: "From", v: r.payer ? <a href={explorerUrl("address", r.payer)}>{short(r.payer)}</a> : "—" },
+        { k: "Paid", v: usdc(r.paidUsdc) },
+        ...(r.reason ? [{ k: "For", v: `“${r.reason}”` }] : []),
+        ...(r.reasonMismatch ? [{ k: "Memo", v: "does not match the receipt’s hash", tone: "muted" as const }] : []),
+      ],
+    });
+  }
+  if (r.price) {
+    const feed = assetByFeedId(r.price.feed);
+    sections.push({
+      rows: [
+        { k: "Price", v: `${usd(pythToUsd(r.price.price, r.price.expo))} · ${feed ? feed.asset.symbol === symbol ? (feed.basis === "raw" ? "Pyth, the token" : "Pyth, the underlying") : "Pyth" : "Pyth"} · ${age(r.settledUnix - r.price.publishTime)} old` },
+        { k: "Band", v: `±${usd(pythToUsd(r.price.conf, r.price.expo))}` },
+      ],
+    });
+  }
+  sections.push({
+    title: "Still held",
+    rows: [
+      {
+        k: "7 days",
+        v: r.measured7d ? `${unitsFromRaw(r.measured7d.balanceRaw, decimals)} on ${dateUTC(r.measured7d.at)}` : `measured ${dateUTC(r.settledUnix + 7 * 86_400)}`,
+        tone: r.measured7d ? "ok" : "muted",
+      },
+      {
+        k: "30 days",
+        v: r.measured30d ? `${unitsFromRaw(r.measured30d.balanceRaw, decimals)} on ${dateUTC(r.measured30d.at)}` : `measured ${dateUTC(r.settledUnix + 30 * 86_400)}`,
+        tone: r.measured30d ? "ok" : "muted",
+      },
+    ],
+  });
+  sections.push({
+    rows: [
+      { k: "Receipt", v: <a href={explorerUrl("address", r.address)}>{short(r.address)}</a> },
+      { k: "Tx", v: <a href={explorerUrl("tx", r.signature)}>{short(r.signature)}</a> },
+    ],
+  });
 
   return (
-    <main className="wg-receipt">
-      <div className="wg-receipt-col">
+    <main className="sp-receipt">
+      <div className="sp-receipt-col">
         <Header />
 
-        <section className="wg-receipt-hero">
-          <span className="wg-receipt-status">
-            <span className="dot" aria-hidden />
-            Settled on chain
-          </span>
-          <p className="wg-receipt-amount">
-            {gramsNow > 0 ? (
-              <>
-                {grams(gramsNow).replace(" g", "")}
-                <span className="unit">g of gold</span>
-              </>
-            ) : (
-              usd(value)
-            )}
-          </p>
-          {r.reason ? <p className="wg-receipt-reason">&ldquo;{r.reason}&rdquo;</p> : null}
-          <p className="wg-receipt-sub">
-            {usd(value)} of value, received {stampUTC(r.at)}
-          </p>
-        </section>
+        <div className="sp-receipt-stub">
+          <Stub
+            landed={
+              isSweep ? (
+                <>
+                  <strong>{usdc(r.basisUsdc)}</strong> landed
+                </>
+              ) : (
+                <>
+                  <strong>{usdc(r.paidUsdc)}</strong> paid
+                </>
+              )
+            }
+            became={isSweep ? `${bps(r.rateBps)} became` : r.kind === "gift" ? "A first position, claimed" : r.kind === "grant" ? "Granted, vesting" : r.kind === "vest" ? "Vested" : "It became"}
+            units={units}
+            symbol={symbol}
+            when={stampUTC(r.settledUnix)}
+            where="in"
+            whereName={handle ? `@${handle}’s wallet` : `${short(r.recipient)}’s wallet`}
+            sections={sections}
+          />
+        </div>
 
-        <div className="wg-receipt-card">
-          <div className="wg-receipt-card-head">
+        <div className="sp-receipt-actions">
+          <CopyLink />
+          <Link href={`/pay/${handle ?? r.recipient}`} className="sp-btn-link">
+            Pay {handle ? `@${handle}` : short(r.recipient)} in stock
+          </Link>
+        </div>
+
+        <div className="sp-receipt-sheet">
+          <div className="sp-receipt-sheet-head">
             <span>What arrived</span>
             <span>in the recipient&rsquo;s own wallet</span>
           </div>
-          {r.legs.map((leg) => (
-            <div key={leg.mint} className="wg-receipt-leg">
-              <span className="wg-receipt-leg-name">
-                {leg.name}
-                <span className="wg-receipt-leg-issuer">
-                  {leg.symbol} · {leg.issuer}
-                </span>
-              </span>
-              <span className="mono">{formatQty(leg.amount, leg.decimals)}</span>
-              <span className="mono" />
+          <div className="sp-receipt-asset">
+            <div>
+              <div className="sp-receipt-asset-name">{asset ? `${asset.name} (${asset.symbol})` : "Unrecognised mint"}</div>
+              <div className="sp-receipt-asset-issuer">
+                {asset ? (
+                  <>
+                    {asset.issuer.name} · {asset.issuer.wrapper}
+                  </>
+                ) : (
+                  <span className="mono">{r.asset}</span>
+                )}
+              </div>
             </div>
-          ))}
+            {asset ? (
+              <div className="sp-chips">
+                {asset.powers.permanentDelegate ? <span className="sp-chip is-caution">issuer permanent delegate</span> : null}
+                {asset.powers.pausable ? <span className="sp-chip is-caution">issuer can pause</span> : null}
+                {asset.powers.hasMultiplier ? <span className="sp-chip">dividends reinvested via multiplier</span> : null}
+                {!asset.powers.permanentDelegate && !asset.powers.freezeAuthority ? <span className="sp-chip">no freeze authority, no delegate</span> : null}
+                {asset.kind === "metal" ? <span className="sp-chip is-gold">allocated metal</span> : null}
+              </div>
+            ) : null}
+            {asset ? <p className="sp-receipt-asset-disclosure">{asset.disclosure}</p> : null}
+            <div className="sp-receipt-row">
+              <span className="k">Raw units, at {decimals} decimals</span>
+              <span className="v">{r.amountRaw.toString()}</span>
+            </div>
+          </div>
         </div>
 
-        <div className="wg-receipt-card">
-          <div className="wg-receipt-card-head">
-            <span>Who, and where it is anchored</span>
-            <Check size={14} strokeWidth={2} aria-hidden />
+        <div className="sp-receipt-sheet">
+          <div className="sp-receipt-sheet-head">
+            <span>Where it is anchored</span>
           </div>
-          <div className="wg-receipt-row">
-            <span className="k">From</span>
-            <a className="v" href={explorerUrl("address", r.payer)} target="_blank" rel="noreferrer">
-              {short(r.payer)}
-            </a>
+          <div className="sp-receipt-row">
+            <span className="k">Recipient</span>
+            <span className="v">
+              <a href={explorerUrl("address", r.recipient)}>{r.recipient}</a>
+            </span>
           </div>
-          <div className="wg-receipt-row">
-            <span className="k">To</span>
-            <a
-              className="v"
-              href={explorerUrl("address", r.recipient)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {short(r.recipient)}
-            </a>
-          </div>
-          <div className="wg-receipt-row">
-            <span className="k">Value at the price stamp</span>
-            <span className="v">{usdAligned(value)}</span>
-          </div>
-          <div className="wg-receipt-row">
-            <span className="k">Receipt account</span>
-            <a
-              className="v"
-              href={explorerUrl("address", r.address)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {short(r.address)}
-            </a>
-          </div>
-          <div className="wg-receipt-row">
-            <span className="k">Transaction</span>
-            <a className="v" href={explorerUrl("tx", r.signature)} target="_blank" rel="noreferrer">
-              {short(r.signature)}
-            </a>
-          </div>
-          {r.slot !== null ? (
-            <div className="wg-receipt-row">
-              <span className="k">Slot</span>
-              <span className="v">{r.slot.toLocaleString("en-US")}</span>
+          {r.payer ? (
+            <div className="sp-receipt-row">
+              <span className="k">Payer</span>
+              <span className="v">
+                <a href={explorerUrl("address", r.payer)}>{r.payer}</a>
+              </span>
             </div>
-          ) : null}
-          <div className="wg-receipt-row">
-            <span className="k">Release</span>
-            <span className="v">{r.releaseId.slice(0, 12)}…</span>
+          ) : (
+            <div className="sp-receipt-row">
+              <span className="k">Submitted by keeper</span>
+              <span className="v">
+                <a href={explorerUrl("address", r.submitter)}>{short(r.submitter)}</a>
+              </span>
+            </div>
+          )}
+          <div className="sp-receipt-row">
+            <span className="k">Receipt account</span>
+            <span className="v">
+              <a href={explorerUrl("address", r.address)}>{r.address}</a>
+            </span>
+          </div>
+          <div className="sp-receipt-row">
+            <span className="k">Transaction</span>
+            <span className="v">
+              <a href={explorerUrl("tx", r.signature)}>{short(r.signature)}</a>
+            </span>
+          </div>
+          <div className="sp-receipt-row">
+            <span className="k">Slot</span>
+            <span className="v">{r.settledSlot.toLocaleString("en-US")}</span>
+          </div>
+          <div className="sp-receipt-row">
+            <span className="k">Release id</span>
+            <span className="v">{r.releaseId}</span>
           </div>
         </div>
 
@@ -173,36 +254,22 @@ export default async function ReceiptPage({ params }: Params) {
 
 function Header() {
   return (
-    <div className="wg-receipt-top">
-      <Link href="/" className="wg-receipt-brand" aria-label="Webgold">
-        <WebgoldMark size={20} />
-        webgold
+    <div className="sp-receipt-top">
+      <Link href="/" className="sp-receipt-brand" aria-label="Scrip">
+        <ScripMark size={20} />
+        Scrip
       </Link>
-      <span className="wg-receipt-kicker">Receipt</span>
+      <span className="sp-receipt-kicker">Receipt</span>
     </div>
   );
 }
 
 function Foot() {
   return (
-    <p className="wg-receipt-foot">
-      <strong>This page is built from the chain, not from our database.</strong> Every figure
-      above is read from an account anyone can open, anchored to a transaction that settled.
-      Webgold recorded what moved and why; it did not judge whether the reason was true.
+    <p className="sp-receipt-foot">
+      <strong>This page is built from the chain, not from our database.</strong> Every figure above is read from an account anyone
+      can open, anchored to a transaction that settled. The 7- and 30-day lines are written by the program from the recipient&rsquo;s
+      own token account, by whoever calls for the measurement.
     </p>
   );
-}
-
-/**
- * Token base units → a readable quantity, at the MINT's own decimals.
- *
- * A mint the registry has never heard of has no decimals we can trust, so the raw figure is
- * shown and LABELLED as base units. Printing "160000" unlabelled beside "0.1600" would invite
- * a reader to take it for a hundred and sixty thousand of something — the receipt would be
- * accurate and still mislead, which is the same failure as being wrong.
- */
-function formatQty(amount: bigint, decimals: number): string {
-  if (decimals === 0) return `${amount.toLocaleString("en-US")} base units`;
-  const whole = Number(amount) / 10 ** decimals;
-  return whole.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 6 });
 }

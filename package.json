@@ -1,5 +1,5 @@
 {
-  "name": "webgold",
+  "name": "scrip",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,16 +13,23 @@
     "db:generate": "drizzle-kit generate",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "anchor:build": "cd anchor && anchor build && cd .. && node scripts/sync-idl.mjs",
-    "anchor:test": "cd anchor && anchor test",
+    "anchor:build": "cd anchor && anchor build && cp target/deploy/scrip.so target/deploy/scrip-mainnet.so && cd .. && node scripts/sync-idl.mjs",
+    "anchor:build:devnet": "cd anchor && anchor build -- --features devnet && cp target/deploy/scrip.so target/deploy/scrip-devnet.so && cd .. && node scripts/sync-idl.mjs",
+    "anchor:test": "cd anchor && cargo test -p scrip --lib && cargo test -p scrip --lib --features devnet",
+    "keeper": "tsx src/keeper/index.ts",
     "test:registry": "REGISTRY_LIVE=1 vitest run src/lib/assets/registry.live.test.ts",
-    "test:valuer": "VALUER_LIVE=1 vitest run src/lib/valuer.live.test.ts",
-    "test:live": "npm run test:registry && npm run test:valuer",
-    "test:devnet": "DEVNET_E2E=1 vitest run tests/devnet-payout.e2e.test.ts"
+    "test:devnet": "DEVNET_E2E=1 vitest run tests/devnet.e2e.test.ts",
+    "demo:devnet": "tsx scripts/devnet-demo.ts",
+    "book": "tsx scripts/book.ts",
+    "test:localnet": "scripts/localnet.sh start && scripts/localnet.sh test; scripts/localnet.sh stop",
+    "preflight": "tsx scripts/preflight.ts",
+    "rehearse": "scripts/rehearse.sh"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
     "@noble/curves": "^1.9.7",
+    "@pythnetwork/hermes-client": "^3.1.0",
+    "@pythnetwork/pyth-solana-receiver": "^0.16.0",
     "@solana/spl-token": "^0.4.9",
     "@solana/wallet-standard-features": "^1.5.0",
     "@solana/web3.js": "^1.98.0",
@@ -56,8 +63,10 @@
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^26.1.0",
     "prettier": "^3.8.4",
+    "rpc-websockets": "7.9.0",
     "server-only": "^0.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.6"
