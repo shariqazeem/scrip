@@ -16,6 +16,19 @@ import { siteUrl } from "@/lib/site";
  */
 export const NONCE_TTL_SECONDS = 10 * 60;
 
+/**
+ * THE SHAPE IS NOT OURS TO CHOOSE. Sign In With Solana follows EIP-4361: the domain line,
+ * the address, a blank line, a statement of EXACTLY ONE LINE, a blank line, then the
+ * labelled fields. A wallet that recognises the shape renders it as a sign-in; one that
+ * cannot parse it refuses to show it at all.
+ *
+ * This statement used to be wrapped across two lines, which is not a legal statement. It
+ * went unnoticed while the site ran on an sslip.io host, because the domain line did not
+ * match the origin and Phantom fell back to displaying it as plain text. The moment the
+ * site moved to its own domain and the two matched, Phantom parsed it properly and refused:
+ * "The app's signature request cannot be shown due to invalid formatting." Fixing the
+ * domain is what surfaced the bug, not what caused it.
+ */
 export function signInMessage(pubkey: string, nonce: string, issuedAt: string): string {
   const url = siteUrl();
   const domain = new URL(url).host;
@@ -23,10 +36,12 @@ export function signInMessage(pubkey: string, nonce: string, issuedAt: string): 
     `${domain} wants you to sign in with your Solana account:`,
     pubkey,
     "",
-    "Open your Scrip book. This signature proves the wallet is yours. It costs nothing,",
-    "moves nothing, and authorises no transaction.",
+    // One line. The wording still has to do its job in the most alarming moment in the
+    // product, so it says what this is and what it is not, in the popup itself.
+    "Open your Scrip register. This signature proves the wallet is yours. It costs nothing, moves nothing, and authorises no transaction.",
     "",
     `URI: ${url}`,
+    "Version: 1",
     `Nonce: ${nonce}`,
     `Issued At: ${issuedAt}`,
   ].join("\n");
