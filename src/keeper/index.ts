@@ -22,7 +22,14 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { Wallet } from "@coral-xyz/anchor";
 import { PythSolanaReceiver, TransactionBuilder } from "@pythnetwork/pyth-solana-receiver";
-import { TOKEN_2022_PROGRAM_ID, unpackAccount } from "@solana/spl-token";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountIdempotentInstruction,
+  getAssociatedTokenAddressSync,
+  unpackAccount,
+} from "@solana/spl-token";
 import { type AccountInfo, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import { type Asset, type PriceFeed, USDC_MINT, assetByMint } from "@/lib/assets/registry";
 import { type Book, type Grant, decodeBook, decodeGrant, releasableRaw } from "@/lib/book/decode";
@@ -35,7 +42,7 @@ import { type Outcome, held, ok } from "@/lib/outcome";
 import { type HermesLatest, hermesKey, latest as hermesLatest } from "@/lib/pyth/hermes";
 import { readPriceAccount } from "@/lib/pyth/read";
 import { settleable } from "@/lib/pyth/price";
-import { decimalToE12, minOutRaw, multiplierToE12 } from "@/lib/rule/min-out";
+import { decimalToE12, minOutRaw } from "@/lib/rule/min-out";
 import { assetAta, syncWatermarkIx, tokenProgramFor, usdcAta } from "@/lib/rule/instructions";
 import { FEED_MAX_AGE_SECONDS, MAX_CONF_BPS, MIN_SLICE, computeSlice, effectiveRate } from "@/lib/rule/slice";
 import { SCRIP_PROGRAM_ID, bookPda, discriminatorFilter, newReleaseId } from "@/lib/solana/program";
@@ -520,6 +527,26 @@ async function main(): Promise<void> {
   log(`keeper balance ${(sol / 1e9).toFixed(4)} SOL`);
   if (sol < 20_000_000) log("WARNING: under 0.02 SOL; a sweep advances rent before it is repaid");
 
+  // The keeper's own USDC account must EXIST before the first sweep. `begin_sweep` moves the
+  // slice from the owner's account, through the delegate, into this one, and Anchor refuses
+  // an uninitialised destination with AccountNotInitialized (0xbc4) — which is what both
+  // mainnet keepers hit on the very first real arrival. A sweep does NOT create it: the
+  // sweep is the thing that needs it. So the keeper creates its own, once, idempotently.
+  // About 0.00204 SOL of rent, which comes back if the account is ever closed.
+  {
+    const mint = new PublicKey(USDC_MINT);
+    const ata = getAssociatedTokenAddressSync(mint, keeper.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    const info = await conn.getAccountInfo(ata, "confirmed");
+    if (info) {
+      log(`keeper USDC account ${ata.toBase58()}`);
+    } else {
+      log(`keeper USDC account ${ata.toBase58()} does not exist; creating it`);
+      const ix = createAssociatedTokenAccountIdempotentInstruction(keeper.publicKey, ata, keeper.publicKey, mint, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+      const made = await sendAndConfirm(conn, new Transaction().add(ix), [keeper]);
+      log(`keeper USDC account created: ${made}`);
+    }
+  }
+
   // Warn about the multiplier state of every registered rebasing mint, once, for the log.
   for (const mint of ["XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W"]) {
     const asset = assetByMint(mint);
@@ -527,7 +554,24 @@ async function main(): Promise<void> {
     const read = await readMintMultiplier(conn, asset, Math.floor(Date.now() / 1000));
     if (read.ok && read.value.kind === "scaled") {
       const live = multiplierInForce(read.value.snapshot, Math.floor(Date.now() / 1000));
-      log(`${asset.symbol} multiplier ${live.ok ? live.value.raw : live.why}${read.value.paused ? " — PAUSED by the issuer" : ""}; feed ${asset.feedRaw ? multiplierToE12(1) && asset.feedRaw.label : "none"}`);
+      log(`${asset.symbol} multiplier ${live.ok ? live.value.raw : live.why}${read.value.paused ? " — PAUSED by the issuer" : ""}`);
+      // Which of the two feeds could actually settle a sweep right now. One glance answers
+      // "can mainnet settle?", which the old line could not: it always named the raw feed.
+      const at = Math.floor(Date.now() / 1000);
+      for (const f of [asset.feedRaw, asset.feedAdjusted]) {
+        if (!f) continue;
+        if (!f.account) {
+          log(`  ${f.label}: no pinned account; only Hermes can supply it`);
+          continue;
+        }
+        const read2 = await readPriceAccount(conn, new PublicKey(f.account), f.feedId, f.label);
+        if (!read2.ok) {
+          log(`  ${f.label}: unreadable — ${read2.why}`);
+          continue;
+        }
+        const usable = settleable(read2.value, at + 45, FEED_MAX_AGE_SECONDS, MAX_CONF_BPS);
+        log(`  ${f.label}: ${at - read2.value.publishedAt}s old — ${usable.ok ? "USABLE" : `not settleable, ${usable.why}`}`);
+      }
     }
   }
 
