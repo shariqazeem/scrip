@@ -24,7 +24,7 @@ import { Wallet } from "@coral-xyz/anchor";
 import { PythSolanaReceiver, TransactionBuilder } from "@pythnetwork/pyth-solana-receiver";
 import { TOKEN_2022_PROGRAM_ID, unpackAccount } from "@solana/spl-token";
 import { type AccountInfo, Keypair, PublicKey, Transaction } from "@solana/web3.js";
-import { type Asset, USDC_MINT, assetByMint } from "@/lib/assets/registry";
+import { type Asset, type PriceFeed, USDC_MINT, assetByMint } from "@/lib/assets/registry";
 import { type Book, type Grant, decodeBook, decodeGrant, releasableRaw } from "@/lib/book/decode";
 import { vestIx } from "@/lib/grant/instructions";
 import { multiplierInForce } from "@/lib/corporate-actions/multiplier";
@@ -32,10 +32,10 @@ import { readMintMultiplier } from "@/lib/corporate-actions/read-mint";
 import { lookupTables, quote as jupQuote, swapInstructions } from "@/lib/jupiter/client";
 import type { KeeperBookReport, KeeperHealth } from "@/lib/keeper/health";
 import { type Outcome, held, ok } from "@/lib/outcome";
-import { hermesKey, latest as hermesLatest } from "@/lib/pyth/hermes";
+import { type HermesLatest, hermesKey, latest as hermesLatest } from "@/lib/pyth/hermes";
 import { readPriceAccount } from "@/lib/pyth/read";
 import { settleable } from "@/lib/pyth/price";
-import { minOutRaw, multiplierToE12 } from "@/lib/rule/min-out";
+import { decimalToE12, minOutRaw, multiplierToE12 } from "@/lib/rule/min-out";
 import { assetAta, syncWatermarkIx, tokenProgramFor, usdcAta } from "@/lib/rule/instructions";
 import { FEED_MAX_AGE_SECONDS, MAX_CONF_BPS, MIN_SLICE, computeSlice, effectiveRate } from "@/lib/rule/slice";
 import { SCRIP_PROGRAM_ID, bookPda, discriminatorFilter, newReleaseId } from "@/lib/solana/program";
@@ -104,26 +104,60 @@ async function listBooks(): Promise<Array<{ pda: PublicKey; book: Book; lamports
 
 // ── the price ─────────────────────────────────────────────────────────────────────────────
 
-type PriceSource = { account: PublicKey; posted: boolean; close: () => Promise<void> };
+type PriceSource = { account: PublicKey; posted: boolean; feed: PriceFeed; adjusted: boolean; close: () => Promise<void> };
 
 /**
- * A fresh, fully verified price account for the book's raw feed. The pinned on-chain
- * account when it is fresh; otherwise a Hermes update posted by this keeper, closed after.
+ * A fresh, fully verified price account for EITHER of the book's two feeds.
+ *
+ * The program accepts either — that is why a Book carries two — and the two fail in
+ * different weather. `Crypto.SPYX/USD` prices the token and was meant to be the around-the-
+ * clock one; `Equity.US.SPY/USD` prices a share and is pushed while the market has a price.
+ * On mainnet on 2026-09-21 it is the reverse of the design's assumption: the raw feed's
+ * sponsored account was NINE DAYS stale and Hermes answers 403 for it on any affordable
+ * plan, while the adjusted account was seven seconds old. A keeper that only ever read the
+ * raw feed could therefore never sweep SPYx on mainnet at all.
+ *
+ * Order: each pinned on-chain account first, because it is free and permissionless and
+ * needs no API key; then a Hermes update this keeper posts and closes after.
  */
 async function priceFor(book: Book, asset: Asset): Promise<Outcome<PriceSource>> {
-  const feed = asset.feedRaw;
-  if (!feed || feed.feedId !== book.feedRaw) return held("the book's raw feed is not the registry's");
+  // Only a feed the book itself named. The registry may know more than this book agreed to.
+  const candidates: Array<{ feed: PriceFeed; adjusted: boolean }> = [];
+  if (asset.feedRaw && asset.feedRaw.feedId === book.feedRaw) candidates.push({ feed: asset.feedRaw, adjusted: false });
+  if (asset.feedAdjusted && asset.feedAdjusted.feedId === book.feedAdjusted) candidates.push({ feed: asset.feedAdjusted, adjusted: true });
+  if (candidates.length === 0) return held("neither of the book's feeds is the registry's");
+
   const now = Math.floor(Date.now() / 1000);
-  if (feed.account) {
-    const pinned = await readPriceAccount(conn, new PublicKey(feed.account), feed.feedId, feed.label);
+  for (const c of candidates) {
+    if (!c.feed.account) continue;
+    const pinned = await readPriceAccount(conn, new PublicKey(c.feed.account), c.feed.feedId, c.feed.label);
     if (pinned.ok && settleable(pinned.value, now + 45, FEED_MAX_AGE_SECONDS, MAX_CONF_BPS).ok) {
-      return ok({ account: new PublicKey(feed.account), posted: false, close: async () => {} });
+      return ok({ account: new PublicKey(c.feed.account), posted: false, feed: c.feed, adjusted: c.adjusted, close: async () => {} });
     }
   }
-  const fresh = await hermesLatest([feed.feedId]);
-  if (!fresh.ok) return fresh;
-  const update = fresh.value[0];
-  if (!update) return held("Hermes returned no update for the feed");
+
+  // Nothing on chain is usable. Post one, trying each feed: an API plan that refuses one
+  // asset class may still carry the other, and a 403 for one feed is not a 403 for both.
+  let feed = candidates[0]!.feed;
+  let adjusted = candidates[0]!.adjusted;
+  let update: HermesLatest | undefined;
+  let lastWhy = "no feed was reachable";
+  for (const c of candidates) {
+    const fresh = await hermesLatest([c.feed.feedId]);
+    if (!fresh.ok) {
+      lastWhy = `${c.feed.label}: ${fresh.why}`;
+      continue;
+    }
+    if (!fresh.value[0]) {
+      lastWhy = `${c.feed.label}: Hermes returned no update`;
+      continue;
+    }
+    feed = c.feed;
+    adjusted = c.adjusted;
+    update = fresh.value[0];
+    break;
+  }
+  if (!update) return held(lastWhy);
 
   // Full verification: the encoded VAA is written and verified over several transactions,
   // then posted. Atomic posting would be one transaction but only partially verified, and
@@ -139,6 +173,8 @@ async function priceFor(book: Book, asset: Asset): Promise<Outcome<PriceSource>>
   return ok({
     account,
     posted: true,
+    feed,
+    adjusted,
     close: async () => {
       if (closeIxs.length === 0) return;
       try {
@@ -244,8 +280,26 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     return;
   }
   try {
-    const p = await readPriceAccount(conn, price.value.account, asset.feedRaw!.feedId);
+    const p = await readPriceAccount(conn, price.value.account, price.value.feed.feedId);
     if (!p.ok) throw new Error(p.why);
+
+    // A feed that prices a SHARE needs the mint's live scaled-UI multiplier to become a
+    // token amount, which is exactly what finish_sweep does on its side. Getting this wrong
+    // is not a safety hole — the program checks the delivered amount itself — but a min-out
+    // computed against the wrong denomination either submits a doomed transaction or
+    // refuses a fill the program would have taken.
+    let multiplierE12: bigint | null = null;
+    if (price.value.adjusted) {
+      const read = await readMintMultiplier(conn, asset, Math.floor(Date.now() / 1000));
+      if (!read.ok) throw new Error(`the adjusted feed prices a share and the multiplier could not be read: ${read.why}`);
+      if (read.value.kind === "scaled") {
+        const live = multiplierInForce(read.value.snapshot, Math.floor(Date.now() / 1000));
+        if (!live.ok) throw new Error(`the adjusted feed prices a share and the multiplier is not usable: ${live.why}`);
+        multiplierE12 = decimalToE12(live.value.value);
+        if (multiplierE12 <= 0n) throw new Error("the multiplier did not convert to fixed point");
+      }
+    }
+
     const min = minOutRaw({
       sliceUsdc: slice.value.slice,
       toleranceBps: book.rule.toleranceBps,
@@ -253,7 +307,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
       conf: p.value.conf,
       expo: p.value.expo,
       assetDecimals: asset.decimals,
-      multiplierE12: null,
+      multiplierE12,
     });
     if (!min.ok) throw new Error(min.why);
 

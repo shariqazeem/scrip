@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { minOutRaw, multiplierToE12 } from "./min-out";
+import { decimalToE12, minOutRaw, multiplierToE12 } from "./min-out";
 
 /**
  * THE SAME NUMBERS AS `rule.rs`'s tests, on the same inputs. If the program's copy and this
@@ -76,5 +76,24 @@ describe("multiplierToE12", () => {
     expect(multiplierToE12(1)).toBe(1_000_000_000_000n);
     expect(multiplierToE12(0)).toBe(0n);
     expect(multiplierToE12(Number.NaN)).toBe(0n);
+  });
+});
+
+describe("decimalToE12", () => {
+  it("is exact where a float is not", () => {
+    // 1.005714560286254, the live SPYx multiplier on 2026-09-21.
+    expect(decimalToE12({ units: 1005714560286254n, scale: 15 })).toBe(1005714560286n);
+    expect(decimalToE12({ units: 1n, scale: 0 })).toBe(1_000_000_000_000n);
+    expect(decimalToE12({ units: 15n, scale: 1 })).toBe(1_500_000_000_000n);
+  });
+
+  it("truncates rather than rounding up, so a min-out is never overstated", () => {
+    expect(decimalToE12({ units: 1_9999999999999n, scale: 13 })).toBe(1_999999999999n);
+  });
+
+  it("refuses a multiplier it cannot compute with", () => {
+    expect(decimalToE12({ units: 0n, scale: 0 })).toBe(0n);
+    expect(decimalToE12({ units: -1n, scale: 0 })).toBe(0n);
+    expect(decimalToE12({ units: 1n, scale: -1 })).toBe(0n);
   });
 });

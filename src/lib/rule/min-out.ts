@@ -50,3 +50,21 @@ export function multiplierToE12(multiplier: number): bigint {
   if (!Number.isFinite(multiplier) || multiplier <= 0) return 0n;
   return BigInt(Math.floor(multiplier * 1e12 + 0.5));
 }
+
+/**
+ * A `Decimal` multiplier to the program's 1e12 fixed point, exactly.
+ *
+ * `multiplierToE12` goes through a JS number, which is fine for a literal like 1 but not for
+ * a multiplier read off a mint: 1.005714560286254 is not representable in binary floating
+ * point, and this value scales the least a sweep may accept. Decimal carries `units` and
+ * `scale`, so the conversion is integer arithmetic throughout.
+ */
+export function decimalToE12(d: { readonly units: bigint; readonly scale: number }): bigint {
+  if (!Number.isInteger(d.scale) || d.scale < 0 || d.scale > 36) return 0n;
+  if (d.units <= 0n) return 0n;
+  if (d.scale <= 12) return d.units * 10n ** BigInt(12 - d.scale);
+  // More precision than the fixed point holds: truncate, never round up. A min-out that
+  // rounds up is a sweep that refuses a fill the program would have accepted; rounding down
+  // can only ever accept one the program then checks again itself.
+  return d.units / 10n ** BigInt(d.scale - 12);
+}
