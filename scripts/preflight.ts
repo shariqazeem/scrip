@@ -11,7 +11,8 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { homedir } from "node:os";
+import { basename, join } from "node:path";
 import { getAccount, getMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { ASSETS, USDC_MINT, assetBySymbol } from "@/lib/assets/registry";
@@ -83,10 +84,45 @@ async function main() {
 
   // ── the keys that must exist and be funded ─────────────────────────────────────────
   console.log("\nThe keys");
-  const deployer = keypairAt(join(process.cwd(), "anchor", ".keys", "deployer.json"));
-  // The keeper falls back to the deployer, which is how the devnet deployment runs today.
-  const keeper = keypairAt(process.env.SCRIP_KEEPER_KEYPAIR) ?? deployer;
+  // On mainnet the deployer IS the upgrade authority: the one key that can push a new
+  // program and the only key that can close it and reclaim the ~2.975 SOL of rent. It must
+  // live on the founder's machine and nowhere else — never on the VM, never in an env file,
+  // never in the repository. `authorityPath` prefers an explicit env var, then the offline
+  // key outside the repository, and only then the devnet deployer.
+  const authorityPath = MAINNET
+    ? [process.env.SCRIP_AUTHORITY_KEYPAIR, join(homedir(), "scrip-authority.json"), join(process.cwd(), "anchor", ".keys", "deployer.json")].find(
+        (c) => c && existsSync(c),
+      )
+    : join(process.cwd(), "anchor", ".keys", "deployer.json");
+  const deployer = keypairAt(authorityPath);
+  const keeper = keypairAt(process.env.SCRIP_KEEPER_KEYPAIR) ?? keypairAt(join(process.cwd(), "anchor", ".keys", "keeper1.json"));
   const front = keypairAt(join(process.cwd(), "anchor", ".keys", "front.json"));
+
+  // ── the authority must not be reachable from anything that runs on a server ────────
+  // Every process on the VM sources .env.local. A key named there is a key on the VM, and
+  // a key on the VM is one shell away from being someone else's program.
+  if (MAINNET && deployer) {
+    const authority = deployer.publicKey.toBase58();
+    if (authorityPath) note("authority key", `${authority}, from ${authorityPath.replace(homedir(), "~")}`);
+    const serverKeys = ["SCRIP_KEEPER_KEYPAIR", "SCRIP_CRANK_KEYPAIR", "SCRIP_RELAYER_KEYPAIR"] as const;
+    const shared = serverKeys.filter((v) => {
+      const k = keypairAt(process.env[v]);
+      return k && k.publicKey.toBase58() === authority;
+    });
+    if (shared.length > 0) fail("authority is exposed", `${shared.join(", ")} resolve to the upgrade authority. A server process would hold the key that can close the program and take its rent. Give each service its own key.`);
+    else ok("authority is separate", "no service key resolves to the upgrade authority");
+
+    // The keypair file itself must not be named by any env file the VM sources.
+    const named: string[] = [];
+    for (const envFile of [".env.local", ".env.production", "deploy/ecosystem.vm.cjs"]) {
+      const at = join(process.cwd(), envFile);
+      if (!existsSync(at)) continue;
+      const body = readFileSync(at, "utf8");
+      if (authorityPath && body.includes(basename(authorityPath))) named.push(envFile);
+    }
+    if (named.length > 0) fail("authority is named", `${named.join(", ")} mention ${basename(authorityPath ?? "")}. Anything the VM sources must not point at the authority key.`);
+    else ok("authority is unnamed", "no env or process file points at the authority keypair");
+  }
 
   // What the deployer must hold, exactly. Measured on devnet on 2026-09-19 by funding a
   // throwaway payer with 2.9794 SOL and deploying the real 585,384-byte mainnet build:
