@@ -2,6 +2,19 @@
 
 **Scrip is where income becomes ownership.**
 
+> **Live on Solana mainnet since 21 September 2026 — [scrip.work](https://scrip.work)**
+>
+> | | |
+> | --- | --- |
+> | Program | [`Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj`](https://solscan.io/account/Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj) |
+> | Build | 585,384 bytes, sha256 `92f9cbda1fee08a796e0273478bb660f00ccec31c4c6632b5cbf23efa15b8d7a` |
+> | Verify it yourself | `solana program dump Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj out.so` reproduces that hash from the chain |
+> | Registers | [@scrip](https://scrip.work/@scrip) (an organisation), [@shariq](https://scrip.work/@shariq), [@yusih](https://scrip.work/@yusih) |
+> | Everything settled | [scrip.work/ledger](https://scrip.work/ledger) · [the keepers](https://scrip.work/keepers) |
+>
+> A real receipt, openable by a stranger with no wallet and no account:
+> **[$25.05 landed · 10% became 0.0032 SPYx](https://scrip.work/receipt/3ZEDeZLWUqTLgMe77QmEfy3DfZBVHT5rWE8mDNhbfqo2FqP9EFAgxzjdCRYs2a3JLd4wcoJW2sNfVuPJAC7WqmVn)**
+
 Since the first stock exchange, being paid in ownership was for employees of public
 companies with brokerage accounts. A stock was a certificate a company issued to insiders,
 then a line in a broker's database, and in both cases something you had to go somewhere to
@@ -15,18 +28,20 @@ ruled, given, vested and remembered like money. That is the whole idea.
 Each of these is something a stock could not do before it was a token on Solana, and each is
 a surface in this repository, not a claim.
 
-| | A stock can | Where it happens |
-| --- | --- | --- |
-| 01 | be paid | `/app/org/pay` — an organisation pays a person in stock, one signature |
-| 02 | obey a rule on an address | `/app/rule` — a slice of every arrival becomes stock |
-| 03 | remember why it arrived | `/receipt/<sig>` — the reason is hashed onto the receipt |
-| 04 | vest from anyone to anyone | `/grant/<pda>` — an escrow the payer cannot spend, released by keepers |
-| 05 | arrive at 3am on a Sunday | `/floor` — the share of arrivals while the NYSE was closed |
-| 06 | be given to an empty wallet | `/claim/<payer>/<id>` — a relayer pays the fee |
-| 07 | prove it was kept | `/ledger` — keep-rate measured on chain at 7 and 30 days |
+| | A stock can | Where it happens | On mainnet |
+| --- | --- | --- | --- |
+| 01 | be paid | `/app/org/pay` — an organisation pays a person in stock, one signature | [`NFZucZvh…`](https://solscan.io/tx/NFZucZvh5QJAeid7WNxZECeUxuMsJgRUbFxyn57gCxmBmym5C1cP4X3yvnERN4JShde9PxLodVcohYawq3gVcza) |
+| 02 | obey a rule on an address | `/app/rule` — a slice of every arrival becomes stock | [`3ZEDeZLW…`](https://solscan.io/tx/3ZEDeZLWUqTLgMe77QmEfy3DfZBVHT5rWE8mDNhbfqo2FqP9EFAgxzjdCRYs2a3JLd4wcoJW2sNfVuPJAC7WqmVn) |
+| 03 | remember why it arrived | `/receipt/<sig>` — the reason is hashed onto the receipt | [`NFZucZvh…`](https://scrip.work/receipt/NFZucZvh5QJAeid7WNxZECeUxuMsJgRUbFxyn57gCxmBmym5C1cP4X3yvnERN4JShde9PxLodVcohYawq3gVcza) |
+| 04 | vest from anyone to anyone | `/grant/<pda>` — an escrow the payer cannot spend, released by keepers | devnet only, so far |
+| 05 | arrive at 3am on a Sunday | `/floor` — the share of arrivals while the NYSE was closed | no weekend arrival yet |
+| 06 | be given to an empty wallet | `/claim/<payer>/<id>` — a relayer pays the fee | [`3tbreDda…`](https://solscan.io/tx/3tbreDdapAgVF7XdXGzucBiSAFK75x1xgHsALj2NVLcVRscX19J1x4J9LxZijTsh2337FRoRvWgjtWLmcMBan9vL) |
+| 07 | prove it was kept | `/ledger` — keep-rate measured on chain at 7 and 30 days | first marks 28 Sep 2026 |
 
-Every one is exercised by the on-chain battery (`npm run test:devnet`). The mainnet
-signature for each goes in this table when the program is deployed there.
+Every one is exercised by the on-chain battery (`npm run test:devnet`). The mainnet column is
+filled only where a real transaction exists; two are still honestly empty, and 06 is the one
+worth opening — a wallet holding **zero SOL** opened a register and took a stock position in
+a single transaction, because the fee was sponsored.
 
 A person paid in stablecoins on Solana — a freelancer, a contractor, a grant recipient, a
 bounty earner — can receive USDC from anyone, anywhere, at any hour, and cannot own the
