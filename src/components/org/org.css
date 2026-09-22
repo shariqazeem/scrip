@@ -258,3 +258,66 @@
   background: var(--accent);
   transition: width var(--dur-2) var(--ease-out);
 }
+
+/* ── the claim link, when a payment lands in escrow ───────────────────────────────────
+   The deliverable of a gift is a link somebody has to SEND, so it is an object with a
+   copy button, not a sentence. It used to live inside a flex paragraph, where a 100-
+   character URL squeezed the words into one per line and then overflowed the form. */
+.sp-claim {
+  margin-top: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--ok-border, var(--border));
+  border-radius: var(--r-md, 10px);
+  background: var(--ok-soft, var(--surface));
+}
+.sp-claim-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--ok);
+}
+.sp-claim-p,
+.sp-claim-fine {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-body);
+  color: var(--ink-muted);
+}
+.sp-claim-fine {
+  margin-top: var(--s-3);
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-claim-link {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin: var(--s-3) 0 0;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 6px);
+  background: var(--surface);
+}
+.sp-claim-link code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;      /* a 100-char URL wraps inside the box, never past it */
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink);
+}
+.sp-claim-link .sp-action { flex: 0 0 auto; }
+@media (max-width: 620px) {
+  .sp-claim-link { flex-direction: column; align-items: stretch; }
+}
+
+/* A grid track with minmax(0, …) lets the TRACK shrink, but its contents still need to be
+   told to wrap — otherwise a long hint or an address runs under the quote sheet beside it,
+   which has an opaque background and simply hides the tail of the sentence. */
+.sp-org-two > * { min-width: 0; }
+.sp-org-form p,
+.sp-org-form label,
+.sp-org-form .sp-hint { overflow-wrap: anywhere; }

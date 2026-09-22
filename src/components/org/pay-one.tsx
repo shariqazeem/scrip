@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, TriangleAlert } from "lucide-react";
+import { CopyText } from "@/components/app/copy-text";
 import { bps, units as fmtUnits, usd } from "@/lib/format";
 import { MAX_REASON_LEN } from "@/lib/intake/memo";
 import { findAccount, fromBase64, signAndSend } from "@/lib/wallet/client";
@@ -150,15 +151,36 @@ export function PayOne({ owner, cluster, site }: { owner: string; cluster: strin
             <TriangleAlert size={14} strokeWidth={2} aria-hidden /> {why}
           </p>
         ) : null}
-        {done ? (
+        {done && done.mode === "pay" ? (
           <p className="sp-why is-ok">
-            <Check size={14} strokeWidth={2} aria-hidden />{" "}
-            {done.mode === "pay" ? "Paid. Opening the receipt…" : (
-              <>
-                Paid into escrow. Their claim link: <span className="mono">{`${site}/claim/${owner}/${done.releaseId}`}</span>
-              </>
-            )}
+            <Check size={14} strokeWidth={2} aria-hidden /> Paid. Opening the receipt…
           </p>
+        ) : null}
+        {/*
+          THE CLAIM LINK IS THE DELIVERABLE, not a status message. It used to be a long URL
+          inside a flex paragraph, which squeezed the words into a one-per-line column and
+          overflowed the address — at the exact moment a person has just spent real money and
+          needs to send that link to somebody. It gets its own panel, a copy button, and the
+          one fact that makes the link worth sending: the recipient needs no SOL.
+        */}
+        {done && done.mode !== "pay" ? (
+          <div className="sp-claim">
+            <p className="sp-claim-head">
+              <Check size={15} strokeWidth={2} aria-hidden /> Paid into escrow.
+            </p>
+            <p className="sp-claim-p">
+              That address has no register yet, so the stock is waiting in an escrow you cannot spend. Send them this link
+              and it lands in their own wallet.
+            </p>
+            <div className="sp-claim-link">
+              <code>{`${site}/claim/${owner}/${done.releaseId}`}</code>
+              <CopyText text={`${site}/claim/${owner}/${done.releaseId}`} label="Copy the link" />
+            </div>
+            <p className="sp-claim-fine">
+              They need no SOL and no Scrip account — claiming is fee-sponsored, so an empty wallet can take its first
+              position. Until they claim it, you can cancel and take the stock back.
+            </p>
+          </div>
         ) : null}
       </form>
 
