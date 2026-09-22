@@ -320,3 +320,25 @@ a.stub:hover,
 .stub-stack.is-printed .stub {
   max-width: none;
 }
+
+/* A pending slice is dollars, not units: the figure is exact, the denomination is not the
+   one a settled stub carries. Slightly smaller than settled units so the two never read as
+   the same kind of number, and quietly alive so it reads as working rather than stuck. */
+.stub.is-ghost .stub-units.is-pending {
+  font-size: var(--fs-units-sm);
+  color: var(--ink-muted);
+}
+.stub.is-ghost .stub-units.is-pending .sym {
+  margin-left: 0.4ch;
+  color: var(--ink-faint);
+}
+.stub.is-ghost .stub-head .pending .dot {
+  animation: stub-pending 1.6s var(--ease-out) infinite;
+}
+@keyframes stub-pending {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stub.is-ghost .stub-head .pending .dot { animation: none; }
+}

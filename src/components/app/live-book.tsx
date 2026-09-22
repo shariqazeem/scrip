@@ -87,9 +87,10 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
       {unswept > 0n ? (
         <GhostStub
           landed={usdc(unswept)}
-          line={view.state === "on" ? "a keeper sweeps within seconds of an arrival" : `nothing converts while the rule is ${STATE_LINE[view.state]}`}
+          line={view.state === "on" ? "a keeper is racing for this now; the units print with the receipt" : `nothing converts while the rule is ${STATE_LINE[view.state]}`}
           symbol={asset?.symbol ?? "stock"}
           rateBps={view.rateNowBps}
+          slice={BigInt(view.sliceNext || "0") > 0n ? usdc(BigInt(view.sliceNext)) : undefined}
         />
       ) : null}
       {arrivals.length === 0 && unswept === 0n ? (

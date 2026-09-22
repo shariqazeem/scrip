@@ -107,14 +107,32 @@ export function EmptyStub({ title = "No arrival has settled yet", note }: { titl
 /**
  * MONEY THAT LANDED AND HAS NOT BEEN SWEPT. Drawn dashed, never mistaken for a receipt: the
  * balance rose above the watermark by this much and a keeper has not acted yet.
+ *
+ * This used to draw an ellipsis where the units go, which read as a receipt that had failed
+ * rather than one being written — the most exciting second in the product rendered as a
+ * broken figure. The dollars are knowable to the cent (`slice` is the program's own
+ * computeSlice over this rule's cap, floor and minimum), so they are what the eye lands on;
+ * the units genuinely are not known until a route fills, and the line says exactly that.
  */
-export function GhostStub({ landed, line, symbol, rateBps }: { landed: string; line: string; symbol: string; rateBps: number }) {
+export function GhostStub({
+  landed,
+  line,
+  symbol,
+  rateBps,
+  slice,
+}: {
+  landed: string;
+  line: string;
+  symbol: string;
+  rateBps: number;
+  slice?: string;
+}) {
   return (
     <article className="stub is-ghost is-compact" aria-live="polite">
       <div className="stub-head">
         <span className="pending">
           <span className="dot" aria-hidden />
-          Landed, not yet swept
+          Landed, converting now
         </span>
         <span>Scrip</span>
       </div>
@@ -122,9 +140,16 @@ export function GhostStub({ landed, line, symbol, rateBps }: { landed: string; l
         <strong>{landed}</strong> landed
       </p>
       <p className="stub-became">{rateBps / 100}% becomes</p>
-      <p className="stub-units">
-        …<span className="sym">{symbol}</span>
-      </p>
+      {slice ? (
+        <p className="stub-units is-pending">
+          {slice}
+          <span className="sym">of {symbol}</span>
+        </p>
+      ) : (
+        <p className="stub-units is-pending">
+          <span className="sym">{symbol}</span>
+        </p>
+      )}
       <p className="stub-when">{line}</p>
     </article>
   );

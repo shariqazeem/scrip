@@ -153,10 +153,22 @@ export default async function LandingPage() {
                     <>
                       <QrSvg text={payQr} size={112} label={`Send @${front.handle} $${sendUsd} with a phone wallet`} />
                       <div>
-                        <p className="sp-front-try-h">Send this wallet ${sendUsd} and watch.</p>
+                        <p className="sp-front-try-h">Try it on @{front.handle}, for ${sendUsd}.</p>
                         <p className="sp-front-try-p">
-                          Scan with any Solana wallet. A normal USDC transfer to a normal address; within seconds {bps(front.rateNowBps)} of it is{" "}
-                          {front.asset?.symbol ?? "stock"} here, with a receipt. <Link href={`/@${front.handle}`}>Open the page.</Link>
+                          This is <strong>@{front.handle}&rsquo;s own wallet</strong> on Solana mainnet. Scan with any wallet and send USDC —
+                          nothing to install, nothing to sign up for, no page to come back to — and within seconds{" "}
+                          {bps(front.rateNowBps)} of it is {front.asset?.symbol ?? "stock"} in that wallet, with a receipt anyone can open.
+                        </p>
+                        {/*
+                          "Send this wallet $5 and watch" did not say whose wallet, or where
+                          the money goes. A stranger reads an address and an instruction to
+                          send money to it, which is the shape of every scam they have been
+                          warned about. Say whose it is, say the money stays there, and point
+                          at the way to see it happen in their own.
+                        */}
+                        <p className="sp-front-try-p is-fine">
+                          The ${sendUsd} stays with @{front.handle} — it is our wallet, not yours. To watch it happen in your own,{" "}
+                          <Link href="/app/rule">turn on the rule</Link>. <Link href={`/@${front.handle}`}>Open the page.</Link>
                         </p>
                       </div>
                     </>

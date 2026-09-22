@@ -1112,3 +1112,10 @@
 :where(html[data-js]) .sp-wall .stub.is-printing {
   opacity: 0;
 }
+
+/* The disclaimer under the try-it invitation: quieter than the offer, never hidden. */
+.sp-front-try-p.is-fine {
+  margin-top: var(--s-2);
+  font-size: var(--fs-caption);
+  color: var(--ink-inverse-faint, var(--ink-faint));
+}

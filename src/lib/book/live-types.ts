@@ -38,6 +38,13 @@ export type LiveView = {
   readonly usdc: { readonly balance: string; readonly watermark: string; readonly delegatedAmount: string };
   /** USDC above the watermark that no keeper has swept yet, or "0". */
   readonly unswept: string;
+  /**
+   * What the program would take from that arrival RIGHT NOW — the real slice, through the
+   * same computeSlice the keeper and the program use, with this rule's own cap, floor and
+   * minimum applied. Not the rate times the balance: a cap or a floor makes those differ,
+   * and a figure on a surface has to be the one that will actually happen.
+   */
+  readonly sliceNext: string;
   readonly sweeps: number;
   readonly floatLamports: string;
   readonly sweepsCovered: number;

@@ -7,7 +7,7 @@ import { books, grants } from "@/lib/db/schema";
 import { rowToArrival } from "@/components/stub/from-row";
 import { indexReceipts, receiptsFor } from "@/lib/ledger/indexer";
 import { attempt, type Outcome, ok } from "@/lib/outcome";
-import { DEFAULT_MIN_INBOUND } from "@/lib/rule/slice";
+import { DEFAULT_MIN_INBOUND, computeSlice } from "@/lib/rule/slice";
 import { connection } from "@/lib/solana/connection";
 import { keeperHealth } from "@/lib/keeper/health";
 import { market } from "@/lib/market";
@@ -108,6 +108,20 @@ async function assemble(owner: string, opts: { refresh?: boolean }): Promise<Out
   const mine = keeper.ok ? (keeper.value.books[v.pda] ?? null) : null;
   const above = v.book?.rule.enabled && v.usdc.balance > v.book.rule.watermark ? v.usdc.balance - v.book.rule.watermark : 0n;
   const unswept = above >= DEFAULT_MIN_INBOUND ? above : 0n;
+  // The exact slice waiting to be taken, not an estimate. A pending arrival that shows only
+  // an ellipsis reads as a receipt that failed; the dollars are knowable to the cent and the
+  // only thing that genuinely is not yet known is the units, which need a fill.
+  const sliceNow =
+    unswept > 0n && v.book
+      ? computeSlice({
+          balance: v.usdc.balance,
+          watermark: v.book.rule.watermark,
+          rateBps: v.rateNowBps,
+          cap: v.book.rule.capUsdc,
+          floor: v.book.rule.floorUsdc,
+          minInbound: v.book.rule.minInbound,
+        })
+      : null;
 
   return ok({
     at: now,
@@ -121,6 +135,7 @@ async function assemble(owner: string, opts: { refresh?: boolean }): Promise<Out
     priceUsd: v.asset ? (mkt?.rows.find((r) => r.mint === v.asset?.mint)?.priceUsd ?? null) : null,
     usdc: { balance: v.usdc.balance.toString(), watermark: (v.book?.rule.watermark ?? 0n).toString(), delegatedAmount: v.usdc.delegatedAmount.toString() },
     unswept: unswept.toString(),
+    sliceNext: sliceNow?.ok ? sliceNow.value.slice.toString() : "0",
     sweeps: v.book?.rule.sweeps ?? 0,
     floatLamports: v.floatLamports.toString(),
     sweepsCovered: v.sweepsCovered,
