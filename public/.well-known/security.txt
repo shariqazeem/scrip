@@ -1,0 +1,24 @@
+# Scrip — https://scrip.work
+#
+# A rule on a Solana wallet: a slice of every USDC arrival becomes a tokenised
+# stock in the same wallet, with a permanent on-chain receipt.
+#
+# Scrip is non-custodial by construction. The program holds no user funds. A
+# user's USDC and stock sit in token accounts they control; the program holds
+# only the rule and writes receipts. Turning the rule off is a token-program
+# `revoke` on the user's own account, which the program cannot prevent.
+
+Contact: mailto:bc230212964ssh@vu.edu.pk
+Expires: 2027-09-22T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://scrip.work/.well-known/security.txt
+Policy: https://scrip.work/security
+
+# The deployed program, verifiable by anyone:
+#   Solana mainnet-beta
+#   Program      Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj
+#   ProgramData  8agi582Xfi2cMBrQ4Tmb5JwAeDARhmigRgcezKiur12B
+#   sha256       92f9cbda1fee08a796e0273478bb660f00ccec31c4c6632b5cbf23efa15b8d7a
+#
+# `solana program dump Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj out.so`
+# reproduces that hash from the chain.
