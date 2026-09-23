@@ -1,36 +1,73 @@
-import { Transaction } from "@solana/web3.js";
+import { PublicKey, Transaction } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
-import { buildClaim, type ClaimParams } from "@/lib/claim/build";
+import { CLAIM_MIN_BALANCE_LAMPORTS, type ClaimMode, type ClaimParams, buildClaim } from "@/lib/claim/build";
 import { connection } from "@/lib/solana/connection";
 import { relayerKeypair } from "@/lib/relayer";
 
 export const dynamic = "force-dynamic";
 
 /**
- * BUILD A CLAIM — fee-sponsored, so an empty wallet can take a first position.
+ * BUILD A CLAIM — sponsored when Scrip's relayer can pay for it, the claimer's own when not.
  *
- *     [open_book (if the claimer has none), claim_payout]
+ *     [compute budget, open_book (if the claimer has none), claim_payout]
  *
- * The relayer is the fee payer, but it does NOT sign here. It used to, and that is why
- * Phantom blocked every claim: Phantom's Lighthouse guard adds assertion instructions before
- * the wallet signs, and it cannot do that to a transaction that already carries another
- * signature, so it flags it instead. The order Phantom asks for is the wallet first, other
- * signers afterwards — so this returns the claim unsigned, the wallet signs it (and the claim
- * key, for a link), and /api/relay checks it is still this claim before the relayer co-signs.
+ * Nothing here signs. The wallet signs first — the order Phantom requires — and for a
+ * sponsored claim /api/relay checks it is still this claim before the relayer co-signs.
+ *
+ * Who pays is decided here, from two balances, and never leaves a claim at a dead end:
+ *
+ *   the relayer can pay                     → sponsored: an empty wallet takes a position
+ *   it cannot, and the claimer can          → self: one signer, the claimer's own fee
+ *   neither can                             → refused, with the numbers, and nothing moves
+ *
+ * `mode: "self"` in the request skips the relayer — for a claimer who would rather pay, and
+ * for a retry after the relayer ran dry between building and sending.
  */
 export async function POST(req: NextRequest) {
-  let body: ClaimParams;
+  let body: ClaimParams & { mode?: unknown };
   try {
-    body = (await req.json()) as ClaimParams;
+    body = (await req.json()) as ClaimParams & { mode?: unknown };
   } catch {
     return NextResponse.json({ error: "That request could not be read." }, { status: 400 });
   }
+  let claimer: PublicKey;
+  try {
+    claimer = new PublicKey(String(body.claimer ?? ""));
+  } catch {
+    return NextResponse.json({ error: "That is not a Solana address." }, { status: 400 });
+  }
 
   const relayer = relayerKeypair();
-  if (!relayer) return NextResponse.json({ error: "Claims are not sponsored on this deployment (no relayer key)." }, { status: 503 });
-
   const conn = connection();
-  const built = await buildClaim(conn, body, relayer.publicKey);
+  let relayerLamports = 0;
+  let claimerLamports = 0;
+  try {
+    const infos = await conn.getMultipleAccountsInfo(relayer ? [relayer.publicKey, claimer] : [claimer], "confirmed");
+    if (relayer) {
+      relayerLamports = infos[0]?.lamports ?? 0;
+      claimerLamports = infos[1]?.lamports ?? 0;
+    } else {
+      claimerLamports = infos[0]?.lamports ?? 0;
+    }
+  } catch (err) {
+    return NextResponse.json({ error: `Could not reach Solana (${err instanceof Error ? err.message : String(err)}).` }, { status: 503 });
+  }
+
+  const mode: ClaimMode = body.mode !== "self" && relayer && relayerLamports >= CLAIM_MIN_BALANCE_LAMPORTS ? "sponsored" : "self";
+  if (mode === "self" && claimerLamports < CLAIM_MIN_BALANCE_LAMPORTS) {
+    const need = (CLAIM_MIN_BALANCE_LAMPORTS / 1e9).toFixed(3);
+    const have = (claimerLamports / 1e9).toFixed(4);
+    return NextResponse.json(
+      {
+        error: relayer
+          ? `The sponsor cannot cover claims right now, and this wallet holds ${have} SOL. Claiming it yourself needs about ${need} SOL. Add SOL and claim again — this position waits for you; nothing expires.`
+          : `This deployment does not sponsor claims, and this wallet holds ${have} SOL. Claiming needs about ${need} SOL. Add SOL and claim again — nothing expires.`,
+      },
+      { status: 402 },
+    );
+  }
+
+  const built = await buildClaim(conn, body, relayer?.publicKey ?? null, mode);
   if (!built.ok) return NextResponse.json({ error: built.why }, { status: built.status });
 
   let blockhash: string;
@@ -40,9 +77,10 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return NextResponse.json({ error: `Could not reach Solana (${err instanceof Error ? err.message : String(err)}).` }, { status: 503 });
   }
-  const tx = new Transaction({ feePayer: relayer.publicKey, blockhash, lastValidBlockHeight }).add(...built.value.instructions);
+  const tx = new Transaction({ feePayer: built.value.feePayer, blockhash, lastValidBlockHeight }).add(...built.value.instructions);
   return NextResponse.json({
     transactionBase64: Buffer.from(tx.serialize({ requireAllSignatures: false, verifySignatures: false })).toString("base64"),
+    mode,
     needsClaimKey: built.value.needsClaimKey,
     opensBook: built.value.opensBook,
     asset: built.value.asset,

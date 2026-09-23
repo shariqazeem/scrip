@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Keypair, Transaction } from "@solana/web3.js";
 import { Check, TriangleAlert, Wallet as WalletIcon } from "lucide-react";
 import { normalizeSlug, validateSlug } from "@/lib/handle";
-import { type Sendable, connect, fromBase64, signOnly, solanaWallets, toBase64 } from "@/lib/wallet/client";
+import { type Sendable, connect, fromBase64, signAndSend, signOnly, solanaWallets, toBase64 } from "@/lib/wallet/client";
 import { useTxToast } from "@/components/toast/use-tx-toast";
 
 /**
@@ -20,6 +20,7 @@ export function ClaimButton({
   needsClaimKey,
   asset,
   cluster,
+  sponsored,
 }: {
   payer: string;
   releaseId: string;
@@ -27,11 +28,16 @@ export function ClaimButton({
   needsClaimKey: boolean;
   asset: { symbol: string; decimals: number; xstocks: boolean };
   cluster: string;
+  /** Whether the relayer could pay when the page rendered. The copy only; the route decides. */
+  sponsored: boolean;
 }) {
   const router = useRouter();
   const [wallets, setWallets] = useState<readonly Sendable[]>([]);
   const [slug, setSlug] = useState("");
   const [attest, setAttest] = useState(false);
+  // Set after a sponsored send fails for want of the relayer's SOL: the next attempt skips the
+  // relayer and is claimed at the claimer's own cost, rather than failing the same way twice.
+  const [selfPay, setSelfPay] = useState(!sponsored);
   const [phase, setPhase] = useState<"idle" | "building" | "signing" | "sending" | "done">("idle");
   const [why, setWhy] = useState<string | null>(null);
   useTxToast(why ? "failed" : phase === "sending" ? "confirming" : phase, "Claim the share", { detail: why ?? undefined });
@@ -87,15 +93,28 @@ export function ClaimButton({
     const res = await fetch("/api/claim/tx", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(params),
+      body: JSON.stringify({ ...params, mode: selfPay ? "self" : undefined }),
     });
-    const built = (await res.json()) as { transactionBase64?: string; error?: string; opensBook?: boolean };
+    const built = (await res.json()) as { transactionBase64?: string; error?: string; opensBook?: boolean; mode?: "sponsored" | "self" };
     if (!res.ok || !built.transactionBase64) {
       setPhase("idle");
       setWhy(built.error ?? "The claim could not be built.");
       return;
     }
     setPhase("signing");
+    // Self-paid and addressed to this wallet: one signer, who also pays. Phantom signs AND sends
+    // it itself — the path it prefers, with nothing of ours in between.
+    if (built.mode === "self" && !key) {
+      const sent = await signAndSend(wallet, account.value, fromBase64(built.transactionBase64), cluster);
+      if (!sent.ok) {
+        setPhase("idle");
+        if (sent.why) setWhy(sent.why);
+        return;
+      }
+      setPhase("done");
+      setTimeout(() => router.push(`/receipt/${sent.value}`), 2000);
+      return;
+    }
     const signed = await signOnly(wallet, account.value, fromBase64(built.transactionBase64), cluster);
     if (!signed.ok) {
       setPhase("idle");
@@ -113,10 +132,22 @@ export function ClaimButton({
       bytes = new Uint8Array(tx.serialize({ requireAllSignatures: false, verifySignatures: false }));
     }
     setPhase("sending");
-    const relay = await fetch("/api/relay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ transactionBase64: toBase64(bytes), claim: params }) });
+    // Self-paid with a link's claim key: every signer is on it now, so it goes straight out.
+    // Sponsored: the relayer checks it is still the claim it built, then co-signs and sends.
+    const relay =
+      built.mode === "self"
+        ? await fetch("/api/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ transactionBase64: toBase64(bytes) }) })
+        : await fetch("/api/relay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ transactionBase64: toBase64(bytes), claim: params }) });
     const out = (await relay.json()) as { signature?: string; error?: string };
     if (!relay.ok || !out.signature) {
       setPhase("idle");
+      if (built.mode !== "self" && /insufficient|prior credit|rent/i.test(out.error ?? "")) {
+        // The relayer ran dry between building and sending. Nothing moved; the next attempt
+        // is claimed at the claimer's own cost instead of failing the same way twice.
+        setSelfPay(true);
+        setWhy("The sponsor ran out of SOL a moment ago. Nothing moved. Claim again and it will be claimed at your own cost — under 0.009 SOL.");
+        return;
+      }
       setWhy(out.error ?? "The claim was refused. Nothing moved.");
       return;
     }
@@ -130,7 +161,7 @@ export function ClaimButton({
     <div className="sp-form" style={{ maxWidth: 480 }}>
       <div className="sp-field">
         <label className="sp-label" htmlFor="slug">
-          Your handle <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>(if you have no book yet)</span>
+          Your handle <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>(if you have no register yet)</span>
         </label>
         <input id="slug" className="sp-input is-mono" placeholder="shariq" value={slug} onChange={(e) => setSlug(normalizeSlug(e.target.value))} />
         <p className="sp-hint">Becomes your pay link: /pay/{slug || "yourname"}. Leave it blank for one made from your address.</p>
@@ -184,8 +215,9 @@ export function ClaimButton({
         </p>
       ) : null}
       <p className="sp-doors-note">
-        Your wallet will ask you to sign, not to pay: the fee and the rent are covered. The signature moves the escrow into your own token
-        account and nowhere else.
+        {selfPay
+          ? "Your wallet will ask you to approve under 0.009 SOL: the fee, and the rent for your new register and its receipt. The register's rent comes back if you ever close it. The signature moves the escrow into your own token account and nowhere else."
+          : "Your wallet will ask you to sign, not to pay: the fee and the rent are covered. The signature moves the escrow into your own token account and nowhere else."}
       </p>
     </div>
   );

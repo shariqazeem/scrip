@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
   }
 
   const conn = connection();
-  const expected = await buildClaim(conn, body.claim, relayer.publicKey);
+  // Always the sponsored claim: a self-paid claim never comes here, because the relayer has
+  // nothing to sign in it — and it must never be tricked into rebuilding one and paying for it.
+  const expected = await buildClaim(conn, body.claim, relayer.publicKey, "sponsored");
   if (!expected.ok) return NextResponse.json({ error: expected.why }, { status: expected.status });
 
   const checked = verifySponsoredClaim({ feePayer: tx.feePayer, relayer: relayer.publicKey, instructions: tx.instructions, expected: expected.value.instructions });

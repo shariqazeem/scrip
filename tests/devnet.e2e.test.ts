@@ -40,6 +40,7 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 import { beforeAll, describe, expect, it } from "vitest";
+import { CLAIM_MIN_BALANCE_LAMPORTS } from "@/lib/claim/build";
 import { DEVNET_FEEDS } from "@/lib/assets/registry";
 import { decodeBook, decodeGrant, decodeHandle, decodeReceipt } from "@/lib/book/decode";
 import { closeGrantIx, grantEscrow, openGrantIx, revokeGrantIx, sealGrantIx, vestIx } from "@/lib/grant/instructions";
@@ -521,6 +522,41 @@ describe.skipIf(!LIVE)("the Scrip program on devnet", () => {
     expect(r.recipient).toBe(newcomer.publicKey.toBase58());
     expect(r.submitter).toBe(payer.publicKey.toBase58());
     expect((await readBook(newcomer.publicKey)).slug).toBe(`${slug}c`);
+  }, 180_000);
+
+  it("lets a claimer with SOL pay for their own claim, one signer, when no relayer can", async () => {
+    // The same gift, but nobody sponsors it: the claimer is owner, rent payer and fee payer at
+    // once, so one account fills `owner` and `payer` in open_book and `claimer` and `fee_payer`
+    // in claim_payout. The program says it allows this ("a relayer, or the claimer themselves")
+    // and the site now relies on it when the relayer runs dry — so it is proven here, not read.
+    const claimer = Keypair.generate();
+    await send(new Transaction().add(SystemProgram.transfer({ fromPubkey: payer.publicKey, toPubkey: claimer.publicKey, lamports: 20_000_000 })), [payer]);
+    const releaseId = newReleaseId();
+    const escrow = assetAta(payoutPda(payer.publicKey, releaseId), asset, true);
+    const fund = fundPayoutIx({ payer: payer.publicKey, releaseId, kind: "gift", recipient: claimer.publicKey, claimant: null, reason: "claimed at the claimer's own cost", declaredUsdc: 2_000_000n, minOutRaw: 1n, asset });
+    expect(fund.ok).toBe(true);
+    if (!fund.ok) return;
+    await send(new Transaction().add(fund.value, mockRoute(payer, escrow, 260_000n)), [payer]);
+
+    const before = await conn.getBalance(claimer.publicKey);
+    const open = openBookIx({ owner: claimer.publicKey, payer: claimer.publicKey, slug: `${slug}s`, asset, usdcMint: usdcMint.publicKey, termsVersion: 0 });
+    const claim = claimPayoutIx({ claimer: claimer.publicKey, feePayer: claimer.publicKey, claimKey: null, payer: payer.publicKey, releaseId, asset });
+    expect(open.ok && claim.ok).toBe(true);
+    if (!open.ok || !claim.ok) return;
+    const tx = new Transaction().add(open.value, claim.value);
+    tx.feePayer = claimer.publicKey;
+    await send(tx, [claimer]); // ONE signer: no relayer anywhere in it
+
+    expect(await balance(assetAta(claimer.publicKey, asset), TOKEN_2022_PROGRAM_ID)).toBe(260_000n);
+    expect(await conn.getAccountInfo(escrow)).toBeNull();
+    const r = await readReceipt(receiptPda(payoutPda(payer.publicKey, releaseId), releaseId));
+    expect(r.kind).toBe("gift");
+    expect(r.recipient).toBe(claimer.publicKey.toBase58());
+    expect(r.submitter).toBe(claimer.publicKey.toBase58());
+    // What it cost, against the balance the site demands before offering this path.
+    const spent = before - (await conn.getBalance(claimer.publicKey));
+    console.log(`self-paid claim cost the claimer ${spent} lamports`);
+    expect(spent).toBeLessThan(CLAIM_MIN_BALANCE_LAMPORTS);
   }, 180_000);
 
   // ── runs and grants ───────────────────────────────────────────────────────────────

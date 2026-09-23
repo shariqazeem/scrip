@@ -20,6 +20,28 @@ import { releaseIdFromHex } from "@/lib/solana/program";
  * The relayer chooses nothing here: the escrow goes to the claimer, the handle is theirs,
  * and the receipt names the sponsor.
  */
+/**
+ * WHO PAYS FOR A CLAIM. The program has always allowed either: `OpenBook.payer` is "the owner,
+ * or a relayer sponsoring a claim" and `ClaimPayout.fee_payer` is "a relayer, or the claimer
+ * themselves". The site only ever offered the relayer, so a relayer with an empty balance
+ * turned every claim into a dead end with an error about lamports — for a person who may
+ * well have had the SOL to pay for it themselves.
+ *
+ *   sponsored  the relayer pays the fee and the rents; an empty wallet can take a position
+ *   self       the claimer pays their own; one signer, which is also the path Phantom prefers
+ */
+export type ClaimMode = "sponsored" | "self";
+
+/**
+ * What a wallet must hold to pay for a claim and still be allowed to exist afterwards.
+ * Measured on mainnet: the first sponsored claim, which opened a register, cost 7,412,240
+ * lamports — fee, register and handle rent, the SPYx token account and the receipt. Solana
+ * refuses to leave any account below its rent minimum (650,240 for an empty wallet at today's
+ * 5,080 a byte), so the payer needs the cost PLUS that, not just the cost. 9,000,000 is both,
+ * with room for the priority fee.
+ */
+export const CLAIM_MIN_BALANCE_LAMPORTS = 9_000_000;
+
 export type ClaimParams = {
   readonly claimer: unknown;
   readonly payer: unknown;
@@ -33,6 +55,9 @@ export type BuiltClaim = {
   readonly instructions: TransactionInstruction[];
   readonly opensBook: boolean;
   readonly needsClaimKey: boolean;
+  readonly mode: ClaimMode;
+  /** Who pays the fee and the rents: the relayer when sponsored, the claimer when not. */
+  readonly feePayer: PublicKey;
   readonly asset: { readonly symbol: string; readonly decimals: number };
   readonly escrowRaw: bigint;
 };
@@ -45,7 +70,7 @@ const no = (status: number, why: string): ClaimBuild => ({ ok: false, why, statu
 export const CLAIM_COMPUTE_UNITS = 300_000;
 export const CLAIM_MICRO_LAMPORTS = 20_000;
 
-export async function buildClaim(conn: Connection, params: ClaimParams, relayer: PublicKey): Promise<ClaimBuild> {
+export async function buildClaim(conn: Connection, params: ClaimParams, relayer: PublicKey | null, mode: ClaimMode): Promise<ClaimBuild> {
   let claimer: PublicKey;
   let payer: PublicKey;
   try {
@@ -74,6 +99,9 @@ export async function buildClaim(conn: Connection, params: ClaimParams, relayer:
   const asset = assetByMint(p.asset);
   if (!asset) return no(422, "The sponsored asset is not on the registry.");
 
+  if (mode === "sponsored" && !relayer) return no(503, "Claims are not sponsored on this deployment (no relayer key).");
+  const feePayer = mode === "sponsored" && relayer ? relayer : claimer;
+
   const existing = await readBookOf(conn, claimer);
   if (!existing.ok) return no(503, existing.why);
   // The claim sets its own compute budget. Phantom adds a priority fee to any transaction that
@@ -92,11 +120,11 @@ export async function buildClaim(conn: Connection, params: ClaimParams, relayer:
     if (taken.ok && taken.value) return no(409, `@${slug.value} is taken.`);
     const tv = Number(params.termsVersion ?? 0);
     if (asset.issuer.name.includes("xStocks") && tv < 1) return no(400, "This asset needs the eligibility attestation.");
-    const open = openBookIx({ owner: claimer, payer: relayer, slug: slug.value, asset, usdcMint: usdcMintFor(null), termsVersion: tv });
+    const open = openBookIx({ owner: claimer, payer: feePayer, slug: slug.value, asset, usdcMint: usdcMintFor(null), termsVersion: tv });
     if (!open.ok) return no(400, open.why);
     instructions.push(open.value);
   }
-  const claim = claimPayoutIx({ claimer, feePayer: relayer, claimKey, payer, releaseId: rid.value, asset });
+  const claim = claimPayoutIx({ claimer, feePayer, claimKey, payer, releaseId: rid.value, asset });
   if (!claim.ok) return no(400, claim.why);
   instructions.push(claim.value);
 
@@ -106,6 +134,8 @@ export async function buildClaim(conn: Connection, params: ClaimParams, relayer:
       instructions,
       opensBook: !existing.value,
       needsClaimKey: !p.recipient,
+      mode,
+      feePayer,
       asset: { symbol: asset.symbol, decimals: asset.decimals },
       escrowRaw: p.escrowRaw,
     },
