@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   let ixs;
   switch (body.action) {
     case "open": {
-      if (view.value.book) return bad("This wallet already has a book.");
+      if (view.value.book) return bad("This wallet already has a register.");
       const slug = validateSlug(body.slug ?? "");
       if (!slug.ok) return bad(slug.why);
       const asset = body.assetMint ? assetByMint(body.assetMint) : defaultAsset();
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       // ONE SIGNATURE: open the book, approve the delegate, deposit the float, turn the rule
       // on. The delegate is the Book PDA, derivable before the account exists, and the
       // program checks the approve INSIDE enable_rule, which runs last.
-      if (view.value.book) return bad("This wallet already has a book.");
+      if (view.value.book) return bad("This wallet already has a register.");
       const slug = validateSlug(body.slug ?? "");
       if (!slug.ok) return bad(slug.why);
       const asset = body.assetMint ? assetByMint(body.assetMint) : defaultAsset();
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       break;
     }
     case "asset": {
-      if (!view.value.book) return bad("Open a book first.");
+      if (!view.value.book) return bad("Open a register first.");
       const asset = body.assetMint ? assetByMint(body.assetMint) : null;
       if (!asset || !asset.ruleEligible) return bad("Choose an asset from the registry.");
       const tv = Number(body.termsVersion ?? 0);
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       break;
     }
     case "enable": {
-      if (!view.value.book) return bad("Open a book first.");
+      if (!view.value.book) return bad("Open a register first.");
       const t = terms(body.terms);
       if (!t) return bad("Those terms are out of range.");
       const r = enableRuleIxs({ owner: ownerKey, usdcMint, terms: t, allowanceUsdc: BigInt(body.allowanceUsdc ?? "0"), floatLamports: BigInt(body.floatLamports ?? "0") });

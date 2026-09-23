@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     await indexBooks();
     row = (await db.select({ id: books.id, slug: books.slug }).from(books).where(eq(books.owner, owner)).limit(1))[0];
   }
-  if (!row) return NextResponse.json({ error: "Open a book first." }, { status: 404 });
+  if (!row) return NextResponse.json({ error: "Open a register first." }, { status: 404 });
   await db.update(books).set({ published }).where(eq(books.id, row.id));
   forgetLive(owner);
   return NextResponse.json({ published: published === 1, slug: row.slug });

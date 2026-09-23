@@ -288,7 +288,7 @@ export function RuleEditor({ owner, view: viewIn, assets, prices = {} }: { owner
                   </span>
                 </span>
                 <span className="note">
-                  The most the delegate may move in total before you approve again. The delegate is your own Book&rsquo;s address: it can move USDC only
+                  The most the delegate may move in total before you approve again. The delegate is your own register&rsquo;s address: it can move USDC only
                   through a sweep the program verifies, only into {asset.symbol}, only into your own account, never to a third party. Revoking it is one
                   instruction on the token program; Scrip cannot stop you.
                 </span>
@@ -441,9 +441,9 @@ export function RuleEditor({ owner, view: viewIn, assets, prices = {} }: { owner
         ) : null}
         <p className="sp-q-fine">
           {!owner
-            ? `Connecting is a signature, not a transaction; nothing moves. Then one signature opens your book at @${slug || "yourname"}, approves your own Book as delegate for ${usd(Number(allowance || 0))}, deposits ${sol(floatLamports)} of float, and turns the rule on. Whatever USDC is there becomes the watermark; only what lands from then on is income.`
+            ? `Connecting is a signature, not a transaction; nothing moves. Then one signature opens your register at @${slug || "yourname"}, approves your own register as delegate for ${usd(Number(allowance || 0))}, deposits ${sol(floatLamports)} of float, and turns the rule on. Whatever USDC is there becomes the watermark; only what lands from then on is income.`
             : !view.hasBook
-            ? `Starting costs ${sol(needed)}: ${sol(BigInt(view.openCostLamports))} of rent that comes back if you ever close the register, and ${sol(floatLamports)} that pays for your first ${sweepsCovered(floatLamports)} receipts. One signature opens your register at @${slug || "yourname"}, approves your own Book as delegate for ${usd(Number(allowance || 0))}, and turns the rule on. Your current ${usdc(BigInt(view.usdcBalance))} is the watermark; only what lands from now is income.`
+            ? `Starting costs ${sol(needed)}: ${sol(BigInt(view.openCostLamports))} of rent that comes back if you ever close the register, and ${sol(floatLamports)} that pays for your first ${sweepsCovered(floatLamports)} receipts. One signature opens your register at @${slug || "yourname"}, approves your own register as delegate for ${usd(Number(allowance || 0))}, and turns the rule on. Your current ${usdc(BigInt(view.usdcBalance))} is the watermark; only what lands from now is income.`
             : enabled
               ? `A new rate resets the watermark to today’s ${usdc(BigInt(view.usdcBalance))}; what already landed is not taxed. Allowance left ${usdc(BigInt(view.delegatedAmount))}; float ${sol(BigInt(view.floatLamports))}, about ${view.sweepsCovered} sweeps.`
               : `One signature: approve, float, on. Your current ${usdc(BigInt(view.usdcBalance))} becomes the watermark.`}{" "}

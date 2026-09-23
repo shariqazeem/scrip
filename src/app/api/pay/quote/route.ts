@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   const book = await readBookOf(connection(), ownerKey);
   if (!book.ok) return NextResponse.json({ error: book.why }, { status: 503 });
   const sponsor = req.nextUrl.searchParams.get("gift") === "1";
-  if (!book.value && !sponsor) return NextResponse.json({ error: "This address has no book yet.", sponsor: true }, { status: 404 });
+  if (!book.value && !sponsor) return NextResponse.json({ error: "This address has no register yet.", sponsor: true }, { status: 404 });
   // No book: the sponsored position is in the default asset; the recipient may change it after.
   const asset = book.value ? assetByMint(book.value.asset) : defaultAsset();
   if (!asset) return NextResponse.json({ error: "This book's asset is not on the registry." }, { status: 422 });

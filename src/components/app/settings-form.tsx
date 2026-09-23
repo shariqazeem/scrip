@@ -47,7 +47,7 @@ export function SettingsForm({ owner, delegatedAmount, floatLamports, sweepsCove
           </button>
         </span>
         <span className="note">
-          {usdc(BigInt(delegatedAmount))} left. The most your own Book may move in total before you approve again; only through a sweep the program verifies, only into your own account. Revoking it is a token-program instruction Scrip cannot stop.
+          {usdc(BigInt(delegatedAmount))} left. The most your own register may move in total before you approve again; only through a sweep the program verifies, only into your own account. Revoking it is a token-program instruction Scrip cannot stop.
         </span>
       </div>
       <div className="sp-q-row">

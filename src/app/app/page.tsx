@@ -21,7 +21,7 @@ export default async function HomePage() {
   const view = await liveView(owner, { refresh: false });
   if (!view.ok) {
     return (
-      <PageFrame eyebrow="Home" title="Your book" actions={<SignOut />}>
+      <PageFrame eyebrow="Home" title="Your register" actions={<SignOut />}>
         <div className="sp-held">
           <TriangleAlert size={16} strokeWidth={2} aria-hidden />
           <span>{view.why}</span>

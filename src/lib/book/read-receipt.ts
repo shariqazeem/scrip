@@ -6,7 +6,7 @@ import { resolveAsset } from "@/lib/assets/stand-in";
 import { MEMO_PROGRAM_ID, reasonMatches } from "@/lib/intake/memo";
 import { type Outcome, held, ok } from "@/lib/outcome";
 import { connection } from "@/lib/solana/connection";
-import { SCRIP_PROGRAM_ID, accountDiscriminator } from "@/lib/solana/program";
+import { SCRIP_PROGRAM_ID, accountDiscriminator, payoutPda, releaseIdFromHex } from "@/lib/solana/program";
 import { type Receipt, decodeReceipt } from "./decode";
 
 /**
@@ -81,6 +81,15 @@ export async function receiptFromTransaction(
     const r = decoded.value;
     const memo = memoOf(tx);
     const matches = memo !== null && reasonMatches(memo, r.reasonHash);
+    // The reason is usually the memo in the transaction that wrote the receipt. A gift is the
+    // exception: the payer's memo is in the transaction that FUNDED it, and the receipt is
+    // written later by the claim, which carries none — so every claimed gift showed no
+    // reason, breaking "a stock can remember why it arrived" on the very flow new people
+    // use. A vest is the same: the grant's memo is in the sealing transaction, and a keeper's
+    // vest carries none. Look where the reason actually is, and accept it only if it hashes
+    // to what the program stored, so nobody can substitute one after the fact.
+    const hasReason = !r.reasonHash.every((b) => b === 0);
+    const reason = matches ? memo : hasReason ? await reasonFromOrigin(conn, r) : null;
     return ok({
       ...r,
       address: candidates[i]!.toBase58(),
@@ -88,11 +97,49 @@ export async function receiptFromTransaction(
       slot: tx.slot ?? null,
       blockTime: tx.blockTime ?? null,
       asset_: await resolveAsset(r.asset, conn),
-      reason: matches ? memo : null,
-      reasonMismatch: memo !== null && !matches && !r.reasonHash.every((b) => b === 0),
+      reason,
+      reasonMismatch: memo !== null && !matches && hasReason && reason === null,
     });
   }
   return held("This transaction did not write a Scrip receipt.");
+}
+
+/**
+ * WHERE A REASON LIVES WHEN IT IS NOT IN THE RECEIPT'S OWN TRANSACTION.
+ *
+ *   pay / gift  the Payout ["payout", payer, release_id] — its first transaction funded it
+ *   vest        the Grant (the receipt's `book`) — its first transaction opened and sealed it
+ *
+ * The account may be closed by now (a claimed Payout always is); its signatures stay in the
+ * ledger's history either way. Oldest first, a handful at most, and only a memo that hashes to
+ * the receipt's own reason_hash counts.
+ */
+async function reasonFromOrigin(conn: Connection, r: Receipt): Promise<string | null> {
+  let origin: PublicKey | null = null;
+  try {
+    if ((r.kind === "gift" || r.kind === "pay") && r.payer) {
+      const rid = releaseIdFromHex(r.releaseId);
+      if (rid.ok) origin = payoutPda(new PublicKey(r.payer), rid.value);
+    } else if (r.kind === "vest") {
+      origin = new PublicKey(r.book);
+    }
+  } catch {
+    return null;
+  }
+  if (!origin) return null;
+  try {
+    const sigs = await conn.getSignaturesForAddress(origin, { limit: 1000 }, "confirmed");
+    const oldestFirst = sigs.filter((s) => !s.err).reverse().slice(0, 4);
+    for (const s of oldestFirst) {
+      const t = await conn.getTransaction(s.signature, { commitment: "confirmed", maxSupportedTransactionVersion: 0 });
+      if (!t) continue;
+      const m = memoOf(t);
+      if (m !== null && reasonMatches(m, r.reasonHash)) return m;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 /** The first SPL Memo in a transaction, decoded as UTF-8. */

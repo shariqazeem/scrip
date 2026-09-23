@@ -28,7 +28,7 @@ export default function AssetsPage() {
     <PageFrame
       eyebrow="Assets"
       title="What a rule can buy, and whose token it is."
-      sub="Read from the mint accounts, not from a docs page. Where an issuer can move, burn or freeze a token, the row says so. One asset per book; the default is the S&P 500."
+      sub="Read from the mint accounts, not from a docs page. Where an issuer can move, burn or freeze a token, the row says so. One asset per register; the default is the S&P 500."
     >
       <div className="sp-stack">
         <p className="sp-note">

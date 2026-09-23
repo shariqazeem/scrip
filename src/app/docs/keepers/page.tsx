@@ -36,7 +36,7 @@ export default function Page() {
 
       <h2>The price bound</h2>
       <p>
-        <span className="mono">finish_sweep</span> reads a Pyth price account for the book&rsquo;s asset, fully verified, under ten minutes old,
+        <span className="mono">finish_sweep</span> reads a Pyth price account for the register&rsquo;s asset, fully verified, under ten minutes old,
         with a confidence band under 1%. The minimum that must arrive is the slice divided by the price <em>plus</em> its confidence, less the
         owner&rsquo;s tolerance, in raw units. For a feed that prices one share rather than one token, the minimum is divided by the mint&rsquo;s
         live scaled-UI multiplier. Below the minimum, the whole transaction reverts.
@@ -53,7 +53,7 @@ export default function Page() {
       <pre>{`SCRIP_KEEPER_KEYPAIR=keeper.json PYTH_API_KEY=… NEXT_PUBLIC_SOLANA_CLUSTER=mainnet-beta npm run keeper`}</pre>
       <p>
         It watches every Book with the rule on, subscribes to each owner&rsquo;s USDC account, syncs watermarks after spends, and reports
-        the last sweep and the last reason per book on a health endpoint the app reads.
+        the last sweep and the last reason per register on a health endpoint the app reads.
       </p>
     </DocFrame>
   );

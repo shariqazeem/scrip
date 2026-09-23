@@ -21,7 +21,7 @@ import { short } from "@/lib/format";
  */
 const NAV = [
   {
-    group: "Your book",
+    group: "Your register",
     items: [
       { href: "/app", label: "Home", Icon: House },
       { href: "/app/rule", label: "Rule", Icon: SlidersHorizontal },
@@ -93,7 +93,7 @@ export function AppRail() {
           </span>
           <span className="app-rail-label">
             <span className="mono">{short(session.owner)}</span>
-            <span className="app-rail-sub">Your book</span>
+            <span className="app-rail-sub">Your register</span>
           </span>
         </div>
       ) : (

@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ han
   if (!ownerAddr.value) return NextResponse.json({ error: "Nobody has that handle." }, { status: 404, headers: CORS });
   const owner = new PublicKey(ownerAddr.value);
   const book = await readBookOf(connection(), owner);
-  if (!book.ok || !book.value) return NextResponse.json({ error: "This handle has no book." }, { status: 404, headers: CORS });
+  if (!book.ok || !book.value) return NextResponse.json({ error: "This handle has no register." }, { status: 404, headers: CORS });
   const asset = assetByMint(book.value.asset);
   if (!asset) return NextResponse.json({ error: "This book's asset is not on the registry." }, { status: 422, headers: CORS });
 

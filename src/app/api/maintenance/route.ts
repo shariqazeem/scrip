@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { chainReader, runWatcher } from "@/lib/corporate-actions/watcher";
 import { measureDue } from "@/lib/ledger/crank";
-import { indexBooks, indexGrants, indexReceipts, refreshMeasurements } from "@/lib/ledger/indexer";
+import { healReasons, indexBooks, indexGrants, indexReceipts, refreshMeasurements } from "@/lib/ledger/indexer";
 import { connection, mainnetConnection } from "@/lib/solana/connection";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   const grantsIndexed = await indexGrants(conn, now);
   const measure = await measureDue(conn, now);
   const refreshed = await refreshMeasurements(conn, now);
+  const healedReasons = await healReasons(conn);
 
   return NextResponse.json({
     at: now,
@@ -44,5 +45,6 @@ export async function POST(req: NextRequest) {
     grants: grantsIndexed.ok ? { indexed: grantsIndexed.value } : { error: grantsIndexed.why },
     measure: measure.ok ? measure.value : { error: measure.why },
     refreshed: refreshed.ok ? refreshed.value : { error: refreshed.why },
+    healedReasons: healedReasons.ok ? healedReasons.value : { error: healedReasons.why },
   });
 }

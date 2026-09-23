@@ -26,7 +26,7 @@ export default async function KeepersPage() {
   const reporting = healths.filter((h) => h.ok);
 
   return (
-    <PageFrame eyebrow="Keepers" title="Permissionless keepers. No discretion but the route." sub="A keeper watches books with the rule on and submits the sweep. The program computes the slice, checks the fill against Pyth, and writes the receipt; the keeper cannot change any of it. Anyone can run one.">
+    <PageFrame eyebrow="Keepers" title="Permissionless keepers. No discretion but the route." sub="A keeper watches registers with the rule on and submits the sweep. The program computes the slice, checks the fill against Pyth, and writes the receipt; the keeper cannot change any of it. Anyone can run one.">
       <div className="sp-live">
         <section className="sp-section">
           <p className="sp-section-label">
@@ -52,7 +52,7 @@ export default async function KeepersPage() {
           {health.ok ? (
             <div className="sp-ledger-facts">
               <Fact k="Reporting" v={`${since(health.value.at, now * 1000)}`} note={`keeper ${short(health.value.keeper)}`} />
-              <Fact k="Books watched" v={String(watched.length)} note={waiting.length > 0 ? `${waiting.length} waiting on something` : "all clear"} />
+              <Fact k="Registers watched" v={String(watched.length)} note={waiting.length > 0 ? `${waiting.length} waiting on something` : "all clear"} />
               <Fact k="Sweeps since start" v={String(health.value.sweeps)} note={`up since ${since(health.value.startedAt, now * 1000)}`} />
               <Fact k="Pyth updates" v={health.value.hermes === "keyed" ? "posts its own" : "on-chain only"} note={health.value.hermes === "keyed" ? "fully verified, from Hermes" : "needs PYTH_API_KEY to post"} />
             </div>

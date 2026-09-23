@@ -1,7 +1,7 @@
 import "server-only";
 
 import { type Connection, PublicKey } from "@solana/web3.js";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { readReceiptAccount, receiptFromTransaction } from "@/lib/book/read-receipt";
 import { decodeBook, decodeGrant, decodeHandle } from "@/lib/book/decode";
 import { db } from "@/lib/db";
@@ -191,6 +191,33 @@ export async function indexReceiptsFrom(
  * Re-read receipts whose windows may have been measured since we last looked, so the ledger's
  * keep-rate reflects the chain. Bounded: only receipts old enough to have a window due.
  */
+/**
+ * REASONS THAT WERE MISSED. Until 2026-09-23 a claimed gift was indexed with no reason: its
+ * memo is in the transaction that funded it, and the receipt is written by the claim, which
+ * carries none. receiptFromTransaction now looks where the reason actually lives; this pass
+ * re-reads receipts cached with an empty reason but a non-zero reason hash, a few per run,
+ * so the cache heals without a full re-index. Only a memo that hashes to the stored hash is
+ * ever written, so a heal can add a reason but never change one.
+ */
+export async function healReasons(conn: Connection = connection(), limit = 10): Promise<Outcome<number>> {
+  const zero = "0".repeat(64);
+  const rows = await db
+    .select({ id: receipts.id, sig: receipts.sig })
+    .from(receipts)
+    .where(and(eq(receipts.reason, ""), ne(receipts.reasonHash, zero)))
+    .limit(limit);
+  let healed = 0;
+  for (const row of rows) {
+    const tx = await conn.getTransaction(row.sig, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null);
+    if (!tx) continue;
+    const r = await receiptFromTransaction(conn, row.sig, tx);
+    if (!r.ok || !r.value.reason) continue;
+    await db.update(receipts).set({ reason: r.value.reason }).where(eq(receipts.id, row.id));
+    healed += 1;
+  }
+  return ok(healed);
+}
+
 export async function refreshMeasurements(conn: Connection = connection(), now = Math.floor(Date.now() / 1000), limit = 50): Promise<Outcome<number>> {
   const due = await db
     .select({ id: receipts.id, pda: receipts.pda })

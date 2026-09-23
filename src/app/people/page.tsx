@@ -15,7 +15,7 @@ export default function PeoplePage() {
       </SiteSection>
       <SiteSection label="How it works">
         <div className="sp-truths">
-          <Row k="Choose a rate">Five, ten or twenty percent, or another. One signature approves your own Book as a delegate on your USDC account, with an allowance you set.</Row>
+          <Row k="Choose a rate">Five, ten or twenty percent, or another. One signature approves your own register as a delegate on your USDC account, with an allowance you set.</Row>
           <Row k="Money lands">A client, a grant, a bounty, a friend: they send USDC to your address the way they always have. A keeper notices the balance rose.</Row>
           <Row k="Stock arrives, with a receipt">One atomic transaction moves exactly the slice, swaps it, checks the fill against Pyth, and writes a permanent receipt. If any step fails, nothing moves.</Row>
           <Row k="Pause is a revoke">Revoking the delegate is a token-program instruction on your own account. Scrip cannot prevent, delay or reverse it.</Row>

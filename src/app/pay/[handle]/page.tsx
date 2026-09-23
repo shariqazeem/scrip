@@ -82,11 +82,11 @@ export default async function PayPage({ params, searchParams }: Params) {
           <>
             <h1 className="sp-pay-h1">{r.handle ? `Nobody has @${r.handle} yet.` : "That link does not resolve."}</h1>
             <p className="sp-pay-lede">
-              {r.why ?? "A handle is three to twenty-four lowercase letters and digits, and somebody has to have opened a book with it."}
+              {r.why ?? "A handle is three to twenty-four lowercase letters and digits, and somebody has to have opened a register with it."}
             </p>
             {r.handle && !r.why ? (
               <p className="sp-pay-lede">
-                If it is yours, <Link href="/app/rule">open a book</Link> and take it.
+                If it is yours, <Link href="/app/rule">open a register</Link> and take it.
               </p>
             ) : null}
           </>
