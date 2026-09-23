@@ -30,6 +30,7 @@
 
 /* ── the dark ground ───────────────────────────────────────────────────── */
 .sp-dark {
+  --slice: var(--accent-inverse);
   --line: var(--border-inverse);
   --line-strong: var(--border-inverse);
   background: var(--surface-inverse);

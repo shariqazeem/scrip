@@ -27,13 +27,13 @@ export default function BrandPage() {
         </div>
         <p className="sp-body">Set in Fraunces at a heavy optical size, tight: the engraver&rsquo;s serif of a certificate. It appears in the wordmark and on the title line of a statement, nowhere else.</p>
       </SiteSection>
-      <SiteSection label="The mark" aside="the stub glyph">
+      <SiteSection label="The mark" aside="the slice S">
         <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
           <ScripMark size={64} />
           <ScripMark size={32} />
           <ScripMark size={20} />
         </div>
-        <p className="sp-body">A sheet with a perforated edge and two ruled lines, drawn in the same stroke as the icons beside it. The favicon, the app icon, the bot&rsquo;s avatar, the keeper&rsquo;s health dot.</p>
+        <p className="sp-body">The S of Scrip, whose first stretch — where the money lands — is cut off and lifted in document blue: a slice of every dollar that lands becomes stock. The S takes the colour of the text around it; the slice is always blue. The favicon, the app icon, the avatar on X, the last frame of every film.</p>
       </SiteSection>
       <SiteSection label="Palette">
         <div className="sp-truths">

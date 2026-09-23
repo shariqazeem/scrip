@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 /**
  * INSTALLABLE. A register on a phone's home screen opens straight to the moment, in paper,
- * with the stub glyph as its icon. Nothing here is offline: every figure is read from chain.
+ * with the slice S as its icon. Nothing here is offline: every figure is read from chain.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {

@@ -3,7 +3,7 @@ import { ScripMark } from "./scrip-mark";
 /**
  * THE WORDMARK — Scrip, set in Fraunces at a heavy optical size, tight: the engraver's
  * serif of a certificate. Fraunces appears in exactly two places, here and on the title
- * line of a statement; nowhere else. The mark beside it is the stub glyph.
+ * line of a statement; nowhere else. The mark beside it is the slice S.
  */
 export function Wordmark({ size = 22, withMark = true }: { size?: number; withMark?: boolean }) {
   return (
