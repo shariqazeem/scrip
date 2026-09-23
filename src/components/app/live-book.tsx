@@ -82,15 +82,29 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
     }
   }
 
+  // Why nothing is settling, when the answer is the price rather than the rule. Derived from
+  // the payload already polled: an equity has no price around the clock, and a register that
+  // says nothing while money sits in it reads as a product that stopped. Computed before the
+  // stub stack, because the front door shows the same stub: "a keeper is racing for this now"
+  // over money that cannot settle yet was the one sentence a visitor read while it waited.
+  const waiting = priceWait({ ruleOn: view.ruleOn, unswept: view.unswept, symbol: asset?.symbol ?? null, lastReason: view.keeper.lastReason });
+
   const register = (
     <div className={`stub-stack${mode === "front" ? " is-printed" : ""}`}>
       {unswept > 0n ? (
         <GhostStub
           landed={usdc(unswept)}
-          line={view.state === "on" ? "a keeper is racing for this now; the units print with the receipt" : `nothing converts while the rule is ${STATE_LINE[view.state]}`}
+          line={
+            waiting
+              ? `no ${asset?.symbol ?? "asset"} price can be verified right now; it stays in the wallet and converts when one returns`
+              : view.state === "on"
+                ? "a keeper is racing for this now; the units print with the receipt"
+                : `nothing converts while the rule is ${STATE_LINE[view.state]}`
+          }
           symbol={asset?.symbol ?? "stock"}
           rateBps={view.rateNowBps}
           slice={BigInt(view.sliceNext || "0") > 0n ? usdc(BigInt(view.sliceNext)) : undefined}
+          waiting={waiting !== null}
         />
       ) : null}
       {arrivals.length === 0 && unswept === 0n ? (
@@ -113,18 +127,13 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
             <span className="dot" aria-hidden />
             {view.handle ? `@${view.handle}` : short(view.owner)}, live
           </span>
-          <span>{view.ruleOn && asset ? `${bps(view.rateNowBps)} becomes ${asset.symbol}` : STATE_LINE[view.state]}</span>
+          <span>{waiting ? waiting.chip : view.ruleOn && asset ? `${bps(view.rateNowBps)} becomes ${asset.symbol}` : STATE_LINE[view.state]}</span>
         </div>
         {register}
         {children}
       </div>
     );
   }
-
-  // Why nothing is settling, when the answer is the price rather than the rule. Derived from
-  // the payload already polled: an equity has no price around the clock, and a register that
-  // says nothing while money sits in it reads as a product that stopped.
-  const waiting = priceWait({ ruleOn: view.ruleOn, unswept: view.unswept, symbol: asset?.symbol ?? null, lastReason: view.keeper.lastReason });
 
   return (
     <div className="sp-live">

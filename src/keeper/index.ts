@@ -8,10 +8,12 @@
  *
  *     [compute, begin_sweep, jupiter…, finish_sweep]
  *
- * The program decides the amount, the price bound and the receipt. The keeper's only
- * discretion is the route, and its only reward is the tip. It cannot omit the check, cannot
- * redirect the output and cannot take more than the rule allows — every one of those is
- * refused on chain, and this process finds out by paying a fee.
+ * The program decides the amount, the price bound and the receipt. It cannot omit the check
+ * or deliver less than the minimum — both are refused on chain, and this process finds out by
+ * paying a fee. The program does NOT require the whole slice to be delivered: a keeper could
+ * deliver the minimum and keep the rest, up to about the tolerance plus Pyth's band. This one
+ * never does: it quotes the whole slice with the owner's account as the destination. Making
+ * that a rule for every keeper is the next program upgrade.
  *
  * WHAT IT NEEDS: a keypair with SOL (fees, and rent it is repaid for), a Pyth API key (Hermes
  * has required one since 2026-08-26, and the on-chain SPYX/USD account is not kept fresh), and

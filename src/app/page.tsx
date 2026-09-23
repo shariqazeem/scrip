@@ -9,7 +9,7 @@ import { Roll } from "@/components/motion/roll";
 import { QrSvg } from "@/components/pay/qr-svg";
 import { StubFromRow } from "@/components/stub/from-row";
 import { ExampleStub } from "@/components/stub/stub";
-import { USDC_MINT } from "@/lib/assets/registry";
+import { USDC_MINT, assetByMint } from "@/lib/assets/registry";
 import { resolveAssets } from "@/lib/assets/stand-in";
 import { liveView } from "@/lib/book/live";
 import { resolveHandle } from "@/lib/book/read-book";
@@ -20,6 +20,7 @@ import { validateSlug } from "@/lib/handle";
 import { type ReceiptRow, keepRate } from "@/lib/keep-rate";
 import { floorView } from "@/lib/floor";
 import { allReceiptRows, ledgerTotals, recentReceipts } from "@/lib/ledger/indexer";
+import { settleableNow } from "@/lib/pyth/ready";
 import { MIN_SLICE } from "@/lib/rule/slice";
 import { cluster } from "@/lib/solana/cluster";
 import { siteUrl } from "@/lib/site";
@@ -40,6 +41,9 @@ export const dynamic = "force-dynamic";
 export default async function LandingPage() {
   const site = siteUrl();
   const [totals, recent, rows, floor, front] = await Promise.all([ledgerTotals(), recentReceipts(24), allReceiptRows(), floorView(), frontBook()]);
+  // "Within seconds" is true while a price the program would accept exists, and false on a
+  // Saturday. Read it, rather than promise it: null (unknown) promises no timing at all.
+  const priceReady = front?.asset ? await settleableNow(assetByMint(front.asset.mint)) : null;
   const mkt = floor.market;
   const labels = await resolveAssets(recent.map((r) => r.asset));
   const known = recent.filter((r) => labels.has(r.asset));
@@ -86,7 +90,7 @@ export default async function LandingPage() {
     { n: "02", title: "It obeys a rule on an address", body: "A standing instruction on the account money already lands in. Ten percent by default; a signature to start; a revoke to stop.", href: latestSweep ? `/receipt/${latestSweep.sig}` : "/app/rule", go: latestSweep ? "The latest sweep" : "Turn on the rule" },
     { n: "03", title: "It remembers why it arrived", body: "Every receipt carries the reason, from whom, at which price, and whether it is still held at 7 and 30 days.", href: latestWithReason ? `/receipt/${latestWithReason.sig}` : "/docs/receipts", go: latestWithReason ? `“${latestWithReason.reason.slice(0, 40)}${latestWithReason.reason.length > 40 ? "…" : ""}”` : "How receipts work" },
     { n: "04", title: "It vests, from anyone to anyone", body: "A grant is stock bought now that releases on a schedule: the retention instrument public companies use, in any listed company, from any organisation.", href: latestGrant ? `/receipt/${latestGrant.sig}` : "/grants", go: latestGrant ? "The latest grant" : "Grants that vest" },
-    { n: "05", title: "It arrives at 3am on a Sunday", body: floor.slept.total > 0 ? `${bps(floor.slept.bps)} of arrivals here settled while the NYSE was shut. Solana does not close.` : "The NYSE keeps hours; Solana does not. The floor counts every arrival that settled while the exchange was shut.", href: "#floor", go: "The clock on the floor" },
+    { n: "05", title: "It arrives before the opening bell", body: floor.slept.total > 0 ? `${bps(floor.slept.bps)} of arrivals here settled while the NYSE was shut. When no price can be verified, at a weekend, an arrival waits in the wallet instead of converting on a guess.` : "The NYSE keeps hours; Solana does not. The floor counts every arrival that settled while the exchange was shut.", href: "#floor", go: "The clock on the floor" },
     { n: "06", title: "It lands in an empty wallet", body: "A first share can be given to an address that has never held anything, and claimed with the fee paid.", href: latestGift ? `/receipt/${latestGift.sig}` : payHref, go: latestGift ? "The latest first share" : "Give a first share" },
     { n: "07", title: "It proves it was kept", body: "Keep-rate is measured on chain at 7 and 30 days from raw units, by anyone. It cannot be faked.", href: "/ledger", go: floor.keepRate7 ? `${bps(floor.keepRate7.bps)} kept at 7 days` : "The ledger" },
   ];
@@ -156,8 +160,23 @@ export default async function LandingPage() {
                         <p className="sp-front-try-h">Try it on @{front.handle}, for ${sendUsd}.</p>
                         <p className="sp-front-try-p">
                           This is <strong>@{front.handle}&rsquo;s own wallet</strong> on Solana mainnet. Scan with any wallet and send USDC —
-                          nothing to install, nothing to sign up for, no page to come back to — and within seconds{" "}
-                          {bps(front.rateNowBps)} of it is {front.asset?.symbol ?? "stock"} in that wallet, with a receipt anyone can open.
+                          nothing to install, nothing to sign up for, no page to come back to —{" "}
+                          {priceReady === false ? (
+                            <>
+                              and {bps(front.rateNowBps)} of it becomes {front.asset?.symbol ?? "stock"} in that wallet as soon as there is a price
+                              the program can verify. There is none right now, so it waits there, in the open, and this page says so.
+                            </>
+                          ) : priceReady === true ? (
+                            <>
+                              and within seconds {bps(front.rateNowBps)} of it is {front.asset?.symbol ?? "stock"} in that wallet, with a receipt
+                              anyone can open.
+                            </>
+                          ) : (
+                            <>
+                              and {bps(front.rateNowBps)} of it becomes {front.asset?.symbol ?? "stock"} in that wallet as soon as a keeper has a
+                              price it can verify, with a receipt anyone can open.
+                            </>
+                          )}
                         </p>
                         {/*
                           "Send this wallet $5 and watch" did not say whose wallet, or where

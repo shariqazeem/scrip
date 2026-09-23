@@ -9,15 +9,15 @@ export default function Page() {
       here="/docs/keepers"
       eyebrow="Docs"
       title="What a keeper can and cannot do."
-      lede="Keepers are permissionless and open source. Anyone can run one; the tip pays them. Their only discretion is the route."
+      lede="Keepers are permissionless and open source. Anyone can run one; the tip pays them. The program guarantees the owner a minimum against Pyth, not the whole slice — the fourth line says what that allows."
     >
       <h2>Five lines</h2>
       <ul>
         <li>A keeper <strong>cannot choose the amount</strong>. The program computes the slice from on-chain state.</li>
         <li>A keeper <strong>cannot omit the check</strong>. <span className="mono">begin_sweep</span> reads the instructions sysvar and refuses unless a <span className="mono">finish_sweep</span> for the same book and release id follows in the same transaction.</li>
-        <li>A keeper <strong>cannot redirect the output</strong>. The owner&rsquo;s own token account is the destination the program verifies, before and after.</li>
-        <li>A keeper&rsquo;s <strong>only discretion is the route</strong>, bounded by the owner&rsquo;s tolerance against Pyth&rsquo;s price net of confidence.</li>
-        <li>A keeper&rsquo;s <strong>only reward is the fixed tip</strong>, 0.0005 SOL, plus the rent it advanced for the receipt, paid from the owner&rsquo;s float.</li>
+        <li>A keeper <strong>must deliver the minimum</strong>. The owner&rsquo;s own token account, read before and after, must gain at least the slice&rsquo;s worth at Pyth&rsquo;s price net of confidence, less the owner&rsquo;s tolerance, or everything reverts.</li>
+        <li>A keeper <strong>may keep what it does not deliver</strong>. The program checks the minimum, not the whole slice, so a keeper that delivers exactly the minimum keeps the difference: about the owner&rsquo;s tolerance plus Pyth&rsquo;s band, plus any move in the ten minutes a price stays valid. Scrip&rsquo;s own keepers swap the whole slice into the owner&rsquo;s account. Requiring every keeper to — the swap&rsquo;s input and destination checked through the same instructions sysvar — is the first change in the next program upgrade. Until then, a lower tolerance narrows it.</li>
+        <li>A keeper <strong>is paid the fixed tip</strong>, 0.0005 SOL, plus the rent it advanced for the receipt, from the owner&rsquo;s float.</li>
       </ul>
 
       <h2>The sweep transaction, atomic without a Jupiter CPI</h2>

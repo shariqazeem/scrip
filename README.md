@@ -33,15 +33,16 @@ a surface in this repository, not a claim.
 | 01 | be paid | `/app/org/pay` — an organisation pays a person in stock, one signature | [`NFZucZvh…`](https://solscan.io/tx/NFZucZvh5QJAeid7WNxZECeUxuMsJgRUbFxyn57gCxmBmym5C1cP4X3yvnERN4JShde9PxLodVcohYawq3gVcza) |
 | 02 | obey a rule on an address | `/app/rule` — a slice of every arrival becomes stock | [`3ZEDeZLW…`](https://solscan.io/tx/3ZEDeZLWUqTLgMe77QmEfy3DfZBVHT5rWE8mDNhbfqo2FqP9EFAgxzjdCRYs2a3JLd4wcoJW2sNfVuPJAC7WqmVn) |
 | 03 | remember why it arrived | `/receipt/<sig>` — the reason is hashed onto the receipt | [`NFZucZvh…`](https://scrip.work/receipt/NFZucZvh5QJAeid7WNxZECeUxuMsJgRUbFxyn57gCxmBmym5C1cP4X3yvnERN4JShde9PxLodVcohYawq3gVcza) |
-| 04 | vest from anyone to anyone | `/grant/<pda>` — an escrow the payer cannot spend, released by keepers | devnet only, so far |
-| 05 | arrive at 3am on a Sunday | `/floor` — the share of arrivals while the NYSE was closed | 4 of the first 5 did: [`5h9QtobT…`](https://solscan.io/tx/5h9QtobTeBzNhvVzpPdL6MNLVRco6DJUx95L2HSmy6XQnbjTwGexXSPn3Q6E6vSNt1us4FxGuMCACfghNPdT5VnY) settled at 06:04 ET, before the bell |
+| 04 | vest from anyone to anyone | `/grant/<pda>` — an escrow the payer cannot spend, released by keepers | in the mainnet program; the first mainnet grant is not opened yet |
+| 05 | arrive before the opening bell | `/floor` — the share of arrivals that settled while the NYSE was shut | most have: [`5h9QtobT…`](https://solscan.io/tx/5h9QtobTeBzNhvVzpPdL6MNLVRco6DJUx95L2HSmy6XQnbjTwGexXSPn3Q6E6vSNt1us4FxGuMCACfghNPdT5VnY) settled at 06:04 ET; the floor counts them live |
 | 06 | be given to an empty wallet | `/claim/<payer>/<id>` — a relayer pays the fee | [`3tbreDda…`](https://solscan.io/tx/3tbreDdapAgVF7XdXGzucBiSAFK75x1xgHsALj2NVLcVRscX19J1x4J9LxZijTsh2337FRoRvWgjtWLmcMBan9vL) |
 | 07 | prove it was kept | `/ledger` — keep-rate measured on chain at 7 and 30 days | first marks 28 Sep 2026 |
 
 Every one is exercised by the on-chain battery (`npm run test:devnet`). The mainnet column is
-filled only where a real transaction exists; one is still honestly empty, and 06 is the one
-worth opening — a wallet holding **zero SOL** opened a register and took a stock position in
-a single transaction, because the fee was sponsored.
+filled only where a real transaction exists: 04 waits for the first grant on mainnet, and 07
+for 28 September, when the first receipt's 7-day window closes. 06 is the one worth opening —
+a wallet holding **zero SOL** opened a register and took a stock position in a single
+transaction, because the fee was sponsored.
 
 A person paid in stablecoins on Solana — a freelancer, a contractor, a grant recipient, a
 bounty earner — can receive USDC from anyone, anywhere, at any hour, and cannot own the
@@ -68,19 +69,31 @@ npm install && npm run dev
 
 | | |
 | --- | --- |
-| **Program** | `Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj` on **devnet**, upgradeable (Anchor 0.31.1) |
-| **Instructions** | `open_book` · `set_asset` · `close_book` · `enable_rule` · `set_rule` · `disable_rule` · `sync_watermark` · `withdraw_float` · `begin_sweep` · `finish_sweep` · `fund_payout` · `release_payout` · `claim_payout` · `cancel_payout` · `open_grant` · `seal_grant` · `vest` · `revoke_grant` · `close_grant` · `measure_receipt` (the grant build is on a local validator today; devnet carries the 2026-09-15 build until it is redeployed) |
+| **Program** | `Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj` on **Solana mainnet** since 21 September 2026 (and on devnet, for the test battery). Anchor 0.31.1, upgradeable by one key until a multisig |
+| **Instructions** | `open_book` · `set_asset` · `close_book` · `enable_rule` · `set_rule` · `disable_rule` · `sync_watermark` · `withdraw_float` · `begin_sweep` · `finish_sweep` · `fund_payout` · `release_payout` · `claim_payout` · `cancel_payout` · `open_grant` · `seal_grant` · `vest` · `revoke_grant` · `close_grant` · `measure_receipt` |
 | **Assets** | SPYx (default), QQQx, Oro GOLD, and eleven single-name xStocks — every mint read off mainnet, issuer powers on every row |
-| **Prices** | Pyth, on chain, fully verified, under ten minutes old, confidence under 1% — enforced by the program |
+| **Prices** | Pyth, on chain, fully verified, under ten minutes old, confidence under 1% — enforced by the program. SPYx settles against `Equity.US.SPY/USD`, which is published on weekdays, before the bell too; when no price can be verified, at a weekend, an arrival waits in the wallet and the page says so |
 | **Routing** | Jupiter, as top-level instructions the program makes atomic without a CPI |
-| **Tests** | the offline suite; 43 Rust unit tests; a live registry battery against mainnet; a 19-test on-chain battery, on devnet or a local validator with Pyth's accounts cloned |
+| **Keepers** | two, on different keys, racing for every sweep — [scrip.work/keepers](https://scrip.work/keepers) |
+| **Tests** | the offline suite; 43 Rust unit tests; a live registry battery against mainnet; a 20-test on-chain battery, on devnet or a local validator with Pyth's accounts cloned |
 
-## Try it
+## Try it in a minute
 
-Live on devnet at **https://scrip.80.225.209.190.sslip.io** — the front door prints the `@demo` book, the
-ledger and keepers pages read the chain, and every receipt opens. Until the mainnet deploy is funded, the
-money is a devnet stand-in and the site says so. The whole moment, on the deployed program,
-with stand-in mints and a transfer standing in for the route — the price is real Pyth:
+1. **Open a receipt — no wallet, no account.** [$25.05 landed · 10% became 0.0032 SPYx](https://scrip.work/receipt/3ZEDeZLWUqTLgMe77QmEfy3DfZBVHT5rWE8mDNhbfqo2FqP9EFAgxzjdCRYs2a3JLd4wcoJW2sNfVuPJAC7WqmVn).
+   The Pyth price it settled against, that price's age and band, and the 7- and 30-day checks
+   are all read from the chain.
+2. **Watch money become stock.** The front door of [scrip.work](https://scrip.work) is `@scrip`'s
+   own register, live. Scan its Solana Pay code with any wallet and send $5 of USDC: when a
+   price can be verified, the stub prints within seconds; when none can, it says so and
+   waits. The $5 stays with `@scrip`.
+3. **Turn it on for your own wallet.** [scrip.work/app/rule](https://scrip.work/app/rule): one
+   question, one signature, about 0.024 SOL — most of it prepaid receipts you can withdraw.
+   Not offered to US persons.
+
+## Run it yourself
+
+The whole moment on devnet, on the deployed program, with stand-in mints and a transfer
+standing in for the route — the price is real Pyth:
 
 ```bash
 npm run demo:devnet -- setup      # two mints, a book at @demo, the rule on at 10%, one signature
@@ -90,16 +103,16 @@ npm run demo:devnet -- status
 ```
 
 Sign in at `/app` as the demo owner (`demo:devnet -- sign <nonce> <issuedAt>` signs the
-sign-in message; a wallet does the same with one click), or watch `/book/demo` and the front
-door without signing in at all. The on-chain battery (`npm run test:devnet`) runs every path
-the same way. `docs/deploy.md` is the mainnet runbook: host, RPC, keys, the program, the
-keeper, and the front wallet anyone can pay from the front door.
+sign-in message; a wallet does the same with one click), or watch the front door without
+signing in at all. The on-chain battery (`npm run test:devnet`) runs every path the same way.
+`docs/deploy.md` is the mainnet runbook: host, RPC, keys, the program, the keeper, and the
+front wallet anyone can pay from the front door.
 
-A mainnet deploy needs about 6 SOL on the deployer at the moment it runs: about 3 SOL of
-buffer that comes straight back, and about 3 SOL that stays as the program's rent deposit,
-recoverable by closing the program. Fees are about 0.05 SOL. It also needs a Pyth API key
-for the keeper (Hermes has required one since 2026-08-26). `npm run preflight -- --mainnet` reads the chain and prints exactly what is
-missing; `NEXT_PUBLIC_SOLANA_CLUSTER` is the only switch.
+The mainnet deploy cost **2.978549209 SOL**, measured: 2.97 of it is the program's rent
+deposit, which comes back if the program is ever closed, and the buffer is not a second
+deposit. The keeper reads Pyth's accounts on chain; a Pyth API key is only a fallback.
+`npm run preflight -- --mainnet` reads the chain and prints exactly what is missing;
+`NEXT_PUBLIC_SOLANA_CLUSTER` is the only switch.
 
 ## How the rule sees money
 
@@ -114,9 +127,9 @@ keeper acts is not taxed. Swap proceeds count. `docs/how-the-rule-sees-money` on
 
 - cannot choose the amount: the program computes the slice from on-chain state
 - cannot omit the check: `begin_sweep` refuses unless a `finish_sweep` for the same book and release follows in the same transaction
-- cannot redirect the output: the owner's own token account is verified before and after
-- its only discretion is the route, inside the owner's tolerance against Pyth net of confidence
-- its only reward is a fixed tip of 0.0005 SOL plus the rent it advanced, from the owner's float
+- must deliver the minimum: the owner's own token account, read before and after, must gain at least the slice's worth at Pyth's price net of confidence, less the owner's tolerance (1% by default)
+- **may keep what it does not deliver**: the program checks that minimum, not the whole slice, so a keeper that delivers only the minimum keeps the difference — about the tolerance plus Pyth's band, plus any move in the ten minutes a price stays valid. Scrip's own keepers swap the whole slice into the owner's account (the first two sweeps filled 0.04% above and 0.12% below Pyth). Requiring every keeper to is the first change in the next program upgrade
+- is paid a fixed tip of 0.0005 SOL plus the rent it advanced, from the owner's float
 
 ## Atomic without a Jupiter CPI
 
@@ -205,4 +218,6 @@ wallets first. Zero fee in v1; then basis points on the slice.
 - **Dividends are reinvested, not paid.** There is no equity income on chain.
 - **Net, not gross.** The rule sees the net increase since the last sweep.
 - **Savings-grade, not stable.** Equities fall as well as rise.
+- **A keeper is held to a minimum, not to the whole slice** — see what a keeper can do,
+  above. The tolerance you set is also the most a keeper other than Scrip's could keep.
 - **The program is upgradeable** by the deployer key until a multisig.

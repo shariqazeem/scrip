@@ -120,19 +120,22 @@ export function GhostStub({
   symbol,
   rateBps,
   slice,
+  waiting = false,
 }: {
   landed: string;
   line: string;
   symbol: string;
   rateBps: number;
   slice?: string;
+  /** No price the program would accept exists right now: say so, never "converting now". */
+  waiting?: boolean;
 }) {
   return (
     <article className="stub is-ghost is-compact" aria-live="polite">
       <div className="stub-head">
         <span className="pending">
           <span className="dot" aria-hidden />
-          Landed, converting now
+          {waiting ? "Landed, waiting for a price" : "Landed, converting now"}
         </span>
         <span>Scrip</span>
       </div>

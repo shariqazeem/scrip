@@ -30,9 +30,9 @@ export default async function SecurityPage() {
         <ul>
           <li><strong>Cannot choose the amount.</strong> The program computes the slice from on-chain state.</li>
           <li><strong>Cannot skip the check.</strong> <span className="mono">begin_sweep</span> refuses unless a <span className="mono">finish_sweep</span> for the same register and release follows in the same transaction.</li>
-          <li><strong>Cannot redirect the output.</strong> The owner&rsquo;s own token account is verified before and after.</li>
-          <li><strong>Only discretion: the route,</strong> inside the owner&rsquo;s tolerance against Pyth&rsquo;s price net of confidence.</li>
-          <li><strong>Only reward: the tip,</strong> 0.0005 SOL plus the receipt&rsquo;s rent, from the owner&rsquo;s float. The same for a vest, from the grant&rsquo;s float.</li>
+          <li><strong>Must deliver the minimum.</strong> The owner&rsquo;s own token account must gain at least the slice&rsquo;s worth at Pyth&rsquo;s price net of confidence, less the owner&rsquo;s tolerance (1% by default), or the whole sweep reverts.</li>
+          <li><strong>May keep what it does not deliver.</strong> The program checks that minimum, not the whole slice, so a keeper that delivers only the minimum keeps the rest: about the owner&rsquo;s tolerance plus Pyth&rsquo;s band, plus any move in the ten minutes a price stays valid. Scrip&rsquo;s own keepers swap the whole slice into the owner&rsquo;s account. Requiring every keeper to is the first change in the next program upgrade.</li>
+          <li><strong>Is paid the tip,</strong> 0.0005 SOL plus the receipt&rsquo;s rent, from the owner&rsquo;s float. The same for a vest, from the grant&rsquo;s float.</li>
         </ul>
       </SiteSection>
       <SiteSection label="What the escrow can and cannot do">

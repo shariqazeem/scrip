@@ -104,9 +104,9 @@ export default async function KeepersPage() {
             <div>
               <Line k="Cannot choose the amount" v="the program computes the slice from on-chain state" />
               <Line k="Cannot skip the check" v="begin_sweep refuses unless finish_sweep follows in the same transaction" />
-              <Line k="Cannot redirect the output" v="the owner’s own token account is verified before and after" />
-              <Line k="Only discretion: the route" v="inside the owner’s tolerance against Pyth, net of confidence" />
-              <Line k="Only reward: the tip" v="0.0005 SOL plus the receipt’s rent, from the owner’s float" />
+              <Line k="Must deliver the minimum" v="into the owner’s own token account: Pyth’s price net of confidence, less the owner’s tolerance" />
+              <Line k="May keep the rest" v="the program checks the minimum, not the whole slice: about the tolerance plus Pyth’s band. Scrip’s keepers deliver all of it; the next upgrade requires it" />
+              <Line k="Is paid the tip" v="0.0005 SOL plus the receipt’s rent, from the owner’s float" />
             </div>
           </section>
           <section className="sp-section">
