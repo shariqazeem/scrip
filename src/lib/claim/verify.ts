@@ -1,4 +1,4 @@
-import { PublicKey, type TransactionInstruction } from "@solana/web3.js";
+import { ComputeBudgetProgram, PublicKey, type TransactionInstruction } from "@solana/web3.js";
 import { held, ok, type Outcome } from "@/lib/outcome";
 
 /**
@@ -62,6 +62,56 @@ export function isLighthouseAssertion(ix: TransactionInstruction): boolean {
   return d !== undefined && d >= ASSERTION_FIRST && d <= ASSERTION_LAST;
 }
 
+/**
+ * THE PRIORITY FEE, BOUNDED. Phantom adds its own compute-budget instructions to every
+ * transaction that arrives unsigned and without them — in signTransaction too, not only
+ * signAndSend (docs.phantom.com/developer-powertools/solana-priority-fees). Once the relayer
+ * stopped signing first, the claim arrived unsigned, Phantom added SetComputeUnitLimit and
+ * SetComputeUnitPrice, and the first real claim was refused for carrying four instructions
+ * where two were built.
+ *
+ * The claim now carries its own budget (src/lib/claim/build.ts), which is what Phantom's docs
+ * say makes it leave the transaction alone. But the relayer pays whatever price ends up in
+ * it, so the budget is not matched byte for byte: it is BOUNDED. Only a limit and a price,
+ * each at most once, and the fee they imply — the price times the limit — must stay under a
+ * ceiling. A wallet that nudges the price for congestion is fine; a price that would bill the
+ * relayer real money is refused. Without this, a compute-unit price was the cheapest way to
+ * drain the relayer through an otherwise honest claim.
+ */
+export const COMPUTE_BUDGET_PROGRAM_ID = ComputeBudgetProgram.programId;
+/** 0.0001 SOL. The claim itself asks for 6,000 lamports; this leaves a wallet ~16x room. */
+export const MAX_RELAYER_PRIORITY_LAMPORTS = 100_000n;
+const DEFAULT_UNITS_PER_INSTRUCTION = 200_000n;
+const MAX_UNITS = 1_400_000n;
+
+export function priorityFeeLamports(budget: readonly TransactionInstruction[], otherInstructions: number): Outcome<bigint> {
+  let units: bigint | null = null;
+  let price: bigint | null = null;
+  for (const ix of budget) {
+    const d = ix.data[0];
+    if (d === 2 && ix.data.length >= 5) {
+      if (units !== null) return held("The compute-unit limit is set twice.");
+      units = BigInt(ix.data.readUInt32LE(1));
+    } else if (d === 3 && ix.data.length >= 9) {
+      if (price !== null) return held("The compute-unit price is set twice.");
+      price = ix.data.readBigUInt64LE(1);
+    } else {
+      return held(`A compute-budget instruction other than a limit or a price (discriminator ${d ?? "none"}) was added.`);
+    }
+  }
+  let limit = units ?? DEFAULT_UNITS_PER_INSTRUCTION * BigInt(Math.max(1, otherInstructions));
+  if (limit > MAX_UNITS) limit = MAX_UNITS;
+  const micro = (price ?? 0n) * limit;
+  return ok((micro + 999_999n) / 1_000_000n); // the runtime rounds up
+}
+
+function programName(id: PublicKey): string {
+  if (id.equals(COMPUTE_BUDGET_PROGRAM_ID)) return "ComputeBudget";
+  if (id.equals(LIGHTHOUSE_PROGRAM_ID)) return "Lighthouse";
+  if (id.equals(new PublicKey("11111111111111111111111111111111"))) return "System";
+  return `${id.toBase58().slice(0, 8)}…`;
+}
+
 function sameInstruction(a: TransactionInstruction, b: TransactionInstruction): boolean {
   if (!a.programId.equals(b.programId)) return false;
   if (!a.data.equals(b.data)) return false;
@@ -84,12 +134,13 @@ export function verifySponsoredClaim(input: {
   relayer: PublicKey;
   instructions: readonly TransactionInstruction[];
   expected: readonly TransactionInstruction[];
-}): Outcome<{ guards: number }> {
+}): Outcome<{ guards: number; priorityLamports: bigint }> {
   if (!input.feePayer || !input.feePayer.equals(input.relayer)) {
     return held("The claim's fee payer is not Scrip's relayer.");
   }
 
   const rest: TransactionInstruction[] = [];
+  const budget: TransactionInstruction[] = [];
   let guards = 0;
   for (const ix of input.instructions) {
     if (ix.programId.equals(LIGHTHOUSE_PROGRAM_ID)) {
@@ -99,16 +150,31 @@ export function verifySponsoredClaim(input: {
       guards++;
       continue;
     }
+    if (ix.programId.equals(COMPUTE_BUDGET_PROGRAM_ID)) {
+      budget.push(ix);
+      continue;
+    }
     rest.push(ix);
   }
 
-  if (rest.length !== input.expected.length) {
-    return held(`The claim carries ${rest.length} instruction(s) where ${input.expected.length} were built.`);
+  // The claim's own instructions, matched exactly. The budget is checked separately, below.
+  const core = input.expected.filter((ix) => !ix.programId.equals(COMPUTE_BUDGET_PROGRAM_ID));
+  if (rest.length !== core.length) {
+    const extra = rest.filter((ix) => !core.some((c) => sameInstruction(c, ix))).map((ix) => programName(ix.programId));
+    return held(
+      `The claim carries ${rest.length} instruction(s) where ${core.length} were built${extra.length ? `; unexpected: ${extra.join(", ")}` : ""}.`,
+    );
   }
   for (let i = 0; i < rest.length; i++) {
-    if (!sameInstruction(rest[i]!, input.expected[i]!)) {
+    if (!sameInstruction(rest[i]!, core[i]!)) {
       return held(`Instruction ${i + 1} is not the one Scrip built for this claim.`);
     }
   }
-  return ok({ guards });
+
+  const fee = priorityFeeLamports(budget, rest.length + guards);
+  if (!fee.ok) return fee;
+  if (fee.value > MAX_RELAYER_PRIORITY_LAMPORTS) {
+    return held(`The priority fee would cost the relayer ${fee.value} lamports; the ceiling is ${MAX_RELAYER_PRIORITY_LAMPORTS}.`);
+  }
+  return ok({ guards, priorityLamports: fee.value });
 }

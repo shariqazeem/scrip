@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
   try {
     const sig = await conn.sendRawTransaction(raw, { skipPreflight: false, maxRetries: 3 });
-    return NextResponse.json({ signature: sig, guards: checked.value.guards });
+    return NextResponse.json({ signature: sig, guards: checked.value.guards, priorityLamports: checked.value.priorityLamports.toString() });
   } catch (err) {
     return NextResponse.json({ error: `The claim was refused (${err instanceof Error ? err.message.slice(0, 200) : String(err)}).` }, { status: 422 });
   }

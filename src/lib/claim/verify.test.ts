@@ -3,7 +3,7 @@
  */
 import { ComputeBudgetProgram, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { describe, expect, it } from "vitest";
-import { LIGHTHOUSE_PROGRAM_ID, isLighthouseAssertion, verifySponsoredClaim } from "./verify";
+import { LIGHTHOUSE_PROGRAM_ID, isLighthouseAssertion, priorityFeeLamports, verifySponsoredClaim } from "./verify";
 
 /**
  * The relayer's money is on the other side of this function. Every case round-trips through
@@ -190,5 +190,66 @@ describe("the signing order Phantom asks for, end to end", () => {
     expect(arrived.signatures.some((s) => s.signature !== null)).toBe(true);
     const now = Transaction.from(unsigned);
     expect(now.signatures.every((s) => s.signature === null)).toBe(true);
+  });
+});
+
+describe("the priority fee the relayer pays, bounded", () => {
+  const ourLimit = ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 });
+  const ourPrice = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 20_000 });
+  const built = [ourLimit, ourPrice, openBook, claim];
+  function verifyBuilt(ixs: TransactionInstruction[]) {
+    const r = received(ixs);
+    return verifySponsoredClaim({ feePayer: r.feePayer, relayer, instructions: r.instructions, expected: built });
+  }
+
+  it("accepts the budget the claim sets itself, and it costs the relayer 6,000 lamports", () => {
+    const v = verifyBuilt(built);
+    expect(v.ok && v.value.priorityLamports).toBe(6_000n);
+  });
+
+  it("accepts what Phantom actually returned on 2026-09-23: its own budget added to a claim that had none", () => {
+    // The first real claim after the relayer stopped signing first: four instructions where
+    // two were built. Phantom's docs: it adds a priority fee to any transaction that arrives
+    // unsigned and without one. Bounded, that is fine.
+    const phantomLimit = ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 });
+    const phantomPrice = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 });
+    const r = received([phantomLimit, phantomPrice, openBook, claim]);
+    const v = verifySponsoredClaim({ feePayer: r.feePayer, relayer, instructions: r.instructions, expected });
+    expect(v.ok && v.value.priorityLamports).toBe(20_000n);
+  });
+
+  it("accepts a wallet raising the price, while the fee stays under the ceiling", () => {
+    const raised = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 300_000 });
+    expect(verifyBuilt([ourLimit, raised, openBook, claim]).ok).toBe(true); // 90,000 lamports
+  });
+
+  it("refuses a price that would bill the relayer above the ceiling", () => {
+    const greedy = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 400_000 }); // 120,000
+    const v = verifyBuilt([ourLimit, greedy, openBook, claim]);
+    expect(v.ok).toBe(false);
+    expect(!v.ok && v.why).toMatch(/ceiling/);
+  });
+
+  it("refuses the limit or the price set twice", () => {
+    expect(verifyBuilt([ourLimit, ourLimit, ourPrice, openBook, claim]).ok).toBe(false);
+    expect(verifyBuilt([ourLimit, ourPrice, ourPrice, openBook, claim]).ok).toBe(false);
+  });
+
+  it("refuses any compute-budget instruction other than a limit or a price", () => {
+    const heap = ComputeBudgetProgram.requestHeapFrame({ bytes: 256 * 1024 });
+    expect(verifyBuilt([heap, ourLimit, ourPrice, openBook, claim]).ok).toBe(false);
+  });
+
+  it("names what was unexpected, so the next surprise is diagnosed from the message", () => {
+    const drain = SystemProgram.transfer({ fromPubkey: relayer, toPubkey: thief, lamports: 1 });
+    const v = verifyBuilt([ourLimit, ourPrice, openBook, claim, drain]);
+    expect(!v.ok && v.why).toMatch(/unexpected: System/);
+  });
+
+  it("the fee is price times limit, rounded up, as the runtime charges it", () => {
+    const p = priorityFeeLamports([ComputeBudgetProgram.setComputeUnitLimit({ units: 3 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 })], 1);
+    expect(p.ok && p.value).toBe(1n); // 3 microlamports rounds up to one lamport
+    const none = priorityFeeLamports([], 2);
+    expect(none.ok && none.value).toBe(0n);
   });
 });

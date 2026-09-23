@@ -1,4 +1,4 @@
-import { type Connection, PublicKey, type TransactionInstruction } from "@solana/web3.js";
+import { ComputeBudgetProgram, type Connection, PublicKey, type TransactionInstruction } from "@solana/web3.js";
 import { assetByMint } from "@/lib/assets/registry";
 import { readBookOf, resolveHandle, usdcMintFor } from "@/lib/book/read-book";
 import { readPayout } from "@/lib/book/read-payout";
@@ -42,6 +42,9 @@ export type ClaimBuild = { ok: true; value: BuiltClaim } | { ok: false; why: str
 
 const no = (status: number, why: string): ClaimBuild => ({ ok: false, why, status });
 
+export const CLAIM_COMPUTE_UNITS = 300_000;
+export const CLAIM_MICRO_LAMPORTS = 20_000;
+
 export async function buildClaim(conn: Connection, params: ClaimParams, relayer: PublicKey): Promise<ClaimBuild> {
   let claimer: PublicKey;
   let payer: PublicKey;
@@ -73,7 +76,15 @@ export async function buildClaim(conn: Connection, params: ClaimParams, relayer:
 
   const existing = await readBookOf(conn, claimer);
   if (!existing.ok) return no(503, existing.why);
-  const instructions: TransactionInstruction[] = [];
+  // The claim sets its own compute budget. Phantom adds a priority fee to any transaction that
+  // reaches it unsigned and without one, and the relayer — not the claimer — would pay it; with
+  // these present, Phantom leaves the budget alone. 119,772 units measured on the first mainnet
+  // claim, which opened a register; the limit leaves room for the Lighthouse guards Phantom may
+  // add. At the keeper's price this asks the relayer for 6,000 lamports.
+  const instructions: TransactionInstruction[] = [
+    ComputeBudgetProgram.setComputeUnitLimit({ units: CLAIM_COMPUTE_UNITS }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: CLAIM_MICRO_LAMPORTS }),
+  ];
   if (!existing.value) {
     const slug = validateSlug(String(params.slug ?? ""));
     if (!slug.ok) return no(400, slug.why);
