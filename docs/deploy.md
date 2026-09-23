@@ -39,8 +39,14 @@ Node 22 on PATH**, `npm install && npm run build`, and restart from the config f
 ssh -i ~/Documents/ssh-key3.key ubuntu@80.225.209.190
 export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; nvm use 22
 cd ~/scrip && npm install --no-audit --no-fund && npm run build
-pm2 delete scrip-web scrip-keeper; pm2 start ecosystem.config.cjs; pm2 save
+cp deploy/ecosystem.vm.cjs ecosystem.config.cjs   # rsync brings the first; start from a fresh copy
+pm2 delete scrip-web; pm2 start ecosystem.config.cjs --only scrip-web; pm2 save
 ```
+
+Restart only what changed: `--only scrip-web` for the site, `--only scrip-keeper` and
+`--only scrip-keeper-2` for the keepers. **Copy the config before deleting anything.** On
+23 September the untracked `ecosystem.config.cjs` was missing from the box, `pm2 start` failed
+after `pm2 delete` had already stopped the site, and scrip.work was down for four minutes.
 
 **Never `pm2 restart … --update-env` from a plain SSH shell.** It replaces the process
 environment with that shell's, whose PATH finds the system Node 20; `next start` then runs
