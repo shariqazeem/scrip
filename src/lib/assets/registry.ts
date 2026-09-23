@@ -76,6 +76,8 @@ export type Asset = {
   readonly disclosure: string;
   readonly feedRaw: PriceFeed | null;
   readonly feedAdjusted: PriceFeed | null;
+  /** No fresh on-chain Pyth price: listed, but never offered to a new rule. */
+  readonly unpriced?: boolean;
   /** True when a rule may buy it. USDC is the pay-in asset, never a rule asset. */
   readonly ruleEligible: boolean;
   /** The underlying the tracker follows, for copy. */
@@ -137,6 +139,14 @@ function xstock(a: {
   feedAdjustedId: string;
   rawAccount?: string;
   adjustedAccount?: string;
+  /**
+   * No fully verified Pyth price for this stock is kept fresh on chain, so a rule on it could
+   * never settle: Coinbase, Robinhood and Circle, read on 2026-09-23 (no fresh account in Pyth's
+   * shards 0–7, and Hermes refuses equities below the Pro tier). Still on the program's table
+   * and on /assets; the rule page does not offer it, because a rule that can only wait is a
+   * promise the product cannot keep.
+   */
+  unpriced?: boolean;
   liquidityUsd: number;
   volume24hUsd: number;
   holders: number;
@@ -167,6 +177,7 @@ function xstock(a: {
       maxDisplayAgeSeconds: 50 * 3600,
     },
     ruleEligible: true,
+    ...(a.unpriced ? { unpriced: true } : {}),
     underlying: a.underlying,
     depth: { liquidityUsd: a.liquidityUsd, volume24hUsd: a.volume24hUsd, holders: a.holders, readAt: READ_AT },
     singleName: a.kind === "equity",
@@ -216,7 +227,9 @@ export const ASSETS: readonly Asset[] = [
     kind: "index",
     feedRawId: "2817b78438c769357182c04346fddaad1178c82f4048828fe0997c3c64624e14",
     feedAdjustedId: "19e09bb805456ada3979a7d1cbb4b6d63babc3a0f8e8a9509f68afa5c4c11cd5",
-    // Sponsored accounts found by scanning the receiver program (write authority = self).
+    // Sponsored accounts found by scanning the receiver program (write authority = self). The
+    // share feeds live in Pyth's shard 1 — PDA([1u16 LE, feed id], push oracle) — which is also
+    // where every other stock's fresh account was found; shard 0 is weeks stale for all of them.
     // The SPYX one measured 65 hours stale on 2026-09-15, which is why the keeper posts.
     rawAccount: "jf8MarLKgBte4f3NWufbNpGRCuBfJLhuZPuFigvSQR2",
     adjustedAccount: "CRDaGwcVnKdRNRtx6fjHtvrBgKM5U55AhbqBWhtPMDA",
@@ -231,7 +244,7 @@ export const ASSETS: readonly Asset[] = [
     underlying: "QQQ",
     kind: "index",
     feedRawId: "178a6f73a5aede9d0d682e86b0047c9f333ed0efe5c6537ca937565219c4054d",
-    feedAdjustedId: "9695e2b96ea7b3859da9ed25b7a46a920a776e2fdae19a7bcfdf2b219230452d",
+    feedAdjustedId: "9695e2b96ea7b3859da9ed25b7a46a920a776e2fdae19a7bcfdf2b219230452d", adjustedAccount: "TWtoAxPvaXy46uy3Vr4UwFxmWdgyMjpZAJSFxV4RGbF",
     liquidityUsd: 1_683_353,
     volume24hUsd: 3_350_780,
     holders: 38_351,
@@ -271,17 +284,17 @@ export const ASSETS: readonly Asset[] = [
     depth: { liquidityUsd: 381_086, volume24hUsd: 275_284, holders: 10_888, readAt: READ_AT },
     singleName: false,
   },
-  xstock({ symbol: "CRCLx", name: "Circle xStock", mint: "XsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1", underlying: "CRCL", kind: "equity", feedRawId: "c13184461c0c80d98ffcd89be627c2220b94a96c7c67f0c4b16bc12fd3b17758", feedAdjustedId: "92b8527aabe59ea2b12230f7b532769b133ffb118dfbd48ff676f14b273f1365", liquidityUsd: 2_287_325, volume24hUsd: 11_240_474, holders: 17_888 }),
-  xstock({ symbol: "NVDAx", name: "NVIDIA xStock", mint: "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", underlying: "NVDA", kind: "equity", feedRawId: "4244d07890e4610f46bbde67de8f43a4bf8b569eebe904f136b469f148503b7f", feedAdjustedId: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593", liquidityUsd: 1_720_476, volume24hUsd: 7_227_402, holders: 92_835 }),
-  xstock({ symbol: "MSFTx", name: "Microsoft xStock", mint: "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX", underlying: "MSFT", kind: "equity", feedRawId: "bb723a70af731ab56b9a650eb7e8ac22b7bc07ea77f8670bd1fa9a37bf6df3f5", feedAdjustedId: "d0ca23c1cc005e004ccf1db5bf76aeb6a49218f43dac3d4b275e92de12ded4d1", liquidityUsd: 546_166, volume24hUsd: 5_342_990, holders: 23_263 }),
-  xstock({ symbol: "GOOGLx", name: "Alphabet xStock", mint: "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN", underlying: "GOOGL", kind: "equity", feedRawId: "b911b0329028cd0283e4259c33809d62942bd2716a58084e5f31d64c00b5424e", feedAdjustedId: "5a48c03e9b9cb337801073ed9d166817473697efff0d138874e0f6a33d6d5aa6", liquidityUsd: 439_774, volume24hUsd: 3_108_429, holders: 27_224 }),
-  xstock({ symbol: "TSLAx", name: "Tesla xStock", mint: "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB", underlying: "TSLA", kind: "equity", feedRawId: "47a156470288850a440df3a6ce85a55917b813a19bb5b31128a33a986566a362", feedAdjustedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1", liquidityUsd: 1_201_927, volume24hUsd: 2_538_373, holders: 39_342 }),
-  xstock({ symbol: "METAx", name: "Meta xStock", mint: "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu", underlying: "META", kind: "equity", feedRawId: "bf3e5871be3f80ab7a4d1f1fd039145179fb58569e159aee1ccd472868ea5900", feedAdjustedId: "78a3e3b8e676a8f73c439f5d749737034b139bbbe899ba5775216fba596607fe", liquidityUsd: 250_116, volume24hUsd: 2_442_076, holders: 11_505 }),
-  xstock({ symbol: "AAPLx", name: "Apple xStock", mint: "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp", underlying: "AAPL", kind: "equity", feedRawId: "978e6cc68a119ce066aa830017318563a9ed04ec3a0a6439010fc11296a58675", feedAdjustedId: "49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688", liquidityUsd: 716_894, volume24hUsd: 2_415_935, holders: 33_315 }),
-  xstock({ symbol: "AMZNx", name: "Amazon xStock", mint: "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg", underlying: "AMZN", kind: "equity", feedRawId: "7148fbe6e493ff2580305c92a8d7f8628c9943b11b9b253aebc24863fec290e8", feedAdjustedId: "b5d0e0fa58a1f8b81498ae670ce93c872d14434b72c364885d4fa1b257cbb07a", liquidityUsd: 239_578, volume24hUsd: 1_843_559, holders: 14_958 }),
-  xstock({ symbol: "MSTRx", name: "MicroStrategy xStock", mint: "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ", underlying: "MSTR", kind: "equity", feedRawId: "53f95ba4e23ed15ea56083e2ee9a5eec48055d6f59033d4bb95f1ca2a2349c28", feedAdjustedId: "e1e80251e5f5184f2195008382538e847fafc36f751896889dd3d1b1f6111f09", liquidityUsd: 788_456, volume24hUsd: 1_806_333, holders: 13_304 }),
-  xstock({ symbol: "COINx", name: "Coinbase xStock", mint: "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu", underlying: "COIN", kind: "equity", feedRawId: "641435d5dffb5311140b480517c79986d8488d5cf08a11eec53b83ad02cab33f", feedAdjustedId: "fee33f2a978bf32dd6b662b65ba8083c6773b494f8401194ec1870c640860245", liquidityUsd: 582_730, volume24hUsd: 1_730_224, holders: 8_220 }),
-  xstock({ symbol: "HOODx", name: "Robinhood xStock", mint: "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg", underlying: "HOOD", kind: "equity", feedRawId: "dd49a9ac6df5cbfa9d8fc6371f7ae927a74d5c6763c1c01b4220d70314c647f9", feedAdjustedId: "306736a4035846ba15a3496eed57225b64cc19230a50d14f3ed20fd7219b7849", liquidityUsd: 504_056, volume24hUsd: 1_407_471, holders: 12_893 }),
+  xstock({ symbol: "CRCLx", unpriced: true, name: "Circle xStock", mint: "XsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1", underlying: "CRCL", kind: "equity", feedRawId: "c13184461c0c80d98ffcd89be627c2220b94a96c7c67f0c4b16bc12fd3b17758", feedAdjustedId: "92b8527aabe59ea2b12230f7b532769b133ffb118dfbd48ff676f14b273f1365", liquidityUsd: 2_287_325, volume24hUsd: 11_240_474, holders: 17_888 }),
+  xstock({ symbol: "NVDAx", name: "NVIDIA xStock", mint: "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh", underlying: "NVDA", kind: "equity", feedRawId: "4244d07890e4610f46bbde67de8f43a4bf8b569eebe904f136b469f148503b7f", feedAdjustedId: "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593", adjustedAccount: "5VETJ8h3p4JrESYrzhjTDAWPEjDjfcnduqe9CjxgqBNd", liquidityUsd: 1_720_476, volume24hUsd: 7_227_402, holders: 92_835 }),
+  xstock({ symbol: "MSFTx", name: "Microsoft xStock", mint: "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX", underlying: "MSFT", kind: "equity", feedRawId: "bb723a70af731ab56b9a650eb7e8ac22b7bc07ea77f8670bd1fa9a37bf6df3f5", feedAdjustedId: "d0ca23c1cc005e004ccf1db5bf76aeb6a49218f43dac3d4b275e92de12ded4d1", adjustedAccount: "EKhrgXYwqsjgxF71Gxznui1zdoeqgxJzzPzfefEmm5un", liquidityUsd: 546_166, volume24hUsd: 5_342_990, holders: 23_263 }),
+  xstock({ symbol: "GOOGLx", name: "Alphabet xStock", mint: "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN", underlying: "GOOGL", kind: "equity", feedRawId: "b911b0329028cd0283e4259c33809d62942bd2716a58084e5f31d64c00b5424e", feedAdjustedId: "5a48c03e9b9cb337801073ed9d166817473697efff0d138874e0f6a33d6d5aa6", adjustedAccount: "7aUtbtC3o3GVwRWvaDp5fxKjBq53QL3UrVmDzDgeNo8M", liquidityUsd: 439_774, volume24hUsd: 3_108_429, holders: 27_224 }),
+  xstock({ symbol: "TSLAx", name: "Tesla xStock", mint: "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB", underlying: "TSLA", kind: "equity", feedRawId: "47a156470288850a440df3a6ce85a55917b813a19bb5b31128a33a986566a362", feedAdjustedId: "16dad506d7db8da01c87581c87ca897a012a153557d4d578c3b9c9e1bc0632f1", adjustedAccount: "FQB8c4zB8Emrp9W8bmyk6GanCLq4aRytHYPDAnaEpq9z", liquidityUsd: 1_201_927, volume24hUsd: 2_538_373, holders: 39_342 }),
+  xstock({ symbol: "METAx", name: "Meta xStock", mint: "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu", underlying: "META", kind: "equity", feedRawId: "bf3e5871be3f80ab7a4d1f1fd039145179fb58569e159aee1ccd472868ea5900", feedAdjustedId: "78a3e3b8e676a8f73c439f5d749737034b139bbbe899ba5775216fba596607fe", adjustedAccount: "6NJCSCAWy1yB1jEGhPbsMTrT4WH13o8BGD5wgPbBtdY9", liquidityUsd: 250_116, volume24hUsd: 2_442_076, holders: 11_505 }),
+  xstock({ symbol: "AAPLx", name: "Apple xStock", mint: "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp", underlying: "AAPL", kind: "equity", feedRawId: "978e6cc68a119ce066aa830017318563a9ed04ec3a0a6439010fc11296a58675", feedAdjustedId: "49f6b65cb1de6b10eaf75e7c03ca029c306d0357e91b5311b175084a5ad55688", adjustedAccount: "D9uk39pqZMcnmtPP9WeC8cREUpKZmyXLga9mSQ79SphW", liquidityUsd: 716_894, volume24hUsd: 2_415_935, holders: 33_315 }),
+  xstock({ symbol: "AMZNx", name: "Amazon xStock", mint: "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg", underlying: "AMZN", kind: "equity", feedRawId: "7148fbe6e493ff2580305c92a8d7f8628c9943b11b9b253aebc24863fec290e8", feedAdjustedId: "b5d0e0fa58a1f8b81498ae670ce93c872d14434b72c364885d4fa1b257cbb07a", adjustedAccount: "4eT5d4SJ7GjD8HMpMysSNoPV7RBVTBGzoSEkynmPLMPS", liquidityUsd: 239_578, volume24hUsd: 1_843_559, holders: 14_958 }),
+  xstock({ symbol: "MSTRx", name: "MicroStrategy xStock", mint: "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ", underlying: "MSTR", kind: "equity", feedRawId: "53f95ba4e23ed15ea56083e2ee9a5eec48055d6f59033d4bb95f1ca2a2349c28", feedAdjustedId: "e1e80251e5f5184f2195008382538e847fafc36f751896889dd3d1b1f6111f09", adjustedAccount: "KDQSrjsiur6YxyuY4veB7Gd13MKhwNoMZTQWvx1c93S", liquidityUsd: 788_456, volume24hUsd: 1_806_333, holders: 13_304 }),
+  xstock({ symbol: "COINx", unpriced: true, name: "Coinbase xStock", mint: "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu", underlying: "COIN", kind: "equity", feedRawId: "641435d5dffb5311140b480517c79986d8488d5cf08a11eec53b83ad02cab33f", feedAdjustedId: "fee33f2a978bf32dd6b662b65ba8083c6773b494f8401194ec1870c640860245", liquidityUsd: 582_730, volume24hUsd: 1_730_224, holders: 8_220 }),
+  xstock({ symbol: "HOODx", unpriced: true, name: "Robinhood xStock", mint: "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg", underlying: "HOOD", kind: "equity", feedRawId: "dd49a9ac6df5cbfa9d8fc6371f7ae927a74d5c6763c1c01b4220d70314c647f9", feedAdjustedId: "306736a4035846ba15a3496eed57225b64cc19230a50d14f3ed20fd7219b7849", liquidityUsd: 504_056, volume24hUsd: 1_407_471, holders: 12_893 }),
 ];
 
 const BY_MINT = new Map(ASSETS.map((a) => [a.mint, a]));
@@ -298,6 +311,11 @@ export function assetBySymbol(symbol: string): Asset | undefined {
 /** What a rule may buy, in listing order. */
 export function ruleAssets(): readonly Asset[] {
   return ASSETS.filter((a) => a.ruleEligible);
+}
+
+/** What the rule page offers: every rule asset a keeper can price on chain today. */
+export function offeredAssets(): readonly Asset[] {
+  return ruleAssets().filter((a) => !a.unpriced);
 }
 
 export function defaultAsset(): Asset {

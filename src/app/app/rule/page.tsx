@@ -3,7 +3,7 @@ import { TriangleAlert } from "lucide-react";
 import { PageFrame } from "@/components/app/page-frame";
 import { RuleEditor } from "@/components/app/rule-editor";
 import { SignOut } from "@/components/auth/connect";
-import { ruleAssets } from "@/lib/assets/registry";
+import { offeredAssets, ruleAssets } from "@/lib/assets/registry";
 import { loadBook } from "@/lib/book/read-book";
 import { currentOwner } from "@/lib/session/server";
 import { market, solUsd } from "@/lib/market";
@@ -19,7 +19,8 @@ export const dynamic = "force-dynamic";
  */
 export default async function RulePage() {
   const owner = await currentOwner();
-  const assets = ruleAssets();
+  // Only what a keeper can price on chain today: a rule on anything else could only wait.
+  const assets = offeredAssets();
 
   // Jupiter's display price, so the worked example shows real units for the rate the person
   // is choosing. Display only — a sweep still settles against Pyth on chain, and the stub's

@@ -79,3 +79,15 @@ describe("the registry", () => {
     expect(assetByMint("nope")).toBeUndefined();
   });
 });
+
+import { offeredAssets as offered, ruleAssets as rules } from "./registry";
+
+describe("what the rule page offers", () => {
+  it("leaves out only the stocks with no fresh on-chain price", () => {
+    const left = rules().filter((a) => !offered().includes(a)).map((a) => a.symbol).sort();
+    expect(left).toEqual(["COINx", "CRCLx", "HOODx"]);
+  });
+  it("offers every stock whose share price is pinned, and the index and the metal", () => {
+    for (const a of offered()) expect(Boolean(a.feedAdjusted?.account || a.feedRaw?.account), `${a.symbol} has a pinned price account`).toBe(true);
+  });
+});

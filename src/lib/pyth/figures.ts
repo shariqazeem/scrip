@@ -1,7 +1,7 @@
 import "server-only";
 
 import { PublicKey } from "@solana/web3.js";
-import { type Asset, assetByFeedId, assetBySymbol } from "@/lib/assets/registry";
+import { type Asset, assetByFeedId, offeredAssets } from "@/lib/assets/registry";
 import { db } from "@/lib/db";
 import { receipts } from "@/lib/db/schema";
 import { parsePriceAccount, settleable } from "@/lib/pyth/price";
@@ -58,10 +58,10 @@ export async function pythFigures(): Promise<PythFigures> {
     if (fill) fills.push(Math.abs(fill.deviationBps));
   }
 
-  // Right now: the pinned accounts of the default asset and the metal.
+  // Right now: the pinned account of every asset a rule can be set on, and SPYx's token feed.
   const watched: Array<{ label: string; account: string }> = [];
-  for (const a of [assetBySymbol("SPYx"), assetBySymbol("GOLD")]) {
-    for (const feed of [a?.feedAdjusted, a?.feedRaw]) if (feed?.account) watched.push({ label: feed.label, account: feed.account });
+  for (const a of offeredAssets()) {
+    for (const feed of [a.feedAdjusted, a.feedRaw]) if (feed?.account) watched.push({ label: feed.label, account: feed.account });
   }
   let now: PythFigures["now"] = [];
   try {
