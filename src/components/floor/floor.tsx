@@ -36,7 +36,12 @@ export function Floor({ view, dark = true }: { view: FloorView; dark?: boolean }
             <p className="k">Keep-rate at 7 days</p>
             <p className="v">{view.keepRate7 ? <Roll value={view.keepRate7.bps / 100} kind="pct2" /> : "—"}</p>
             <p className="n">
-              {view.keepRate7 ? `over ${view.keepRate7.receipts} receipts` : "the first receipt matures in 7 days"} · <Link href="/docs/keep-rate">method</Link>
+              {view.keepRate7
+                ? `over ${view.keepRate7.receipts} receipts`
+                : view.firstMaturesAt
+                  ? `the first receipt is measured ${new Date(view.firstMaturesAt * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })}`
+                  : "measured seven days after the first receipt"}{" "}
+              · <Link href="/docs/keep-rate">method</Link>
             </p>
           </div>
           <div className="sp-floor-fact">
@@ -45,12 +50,13 @@ export function Floor({ view, dark = true }: { view: FloorView; dark?: boolean }
             <p className="n">{view.keepRate30 ? `over ${view.keepRate30.receipts} receipts` : "measured on chain, by anyone"}</p>
           </div>
           <div className="sp-floor-fact">
-            <p className="k">Keepers</p>
+            <p className="k">Keepers racing</p>
             <p className="v">
-              <Roll value={view.keepers.roster} kind="int" />
+              <Roll value={view.keepers.running} kind="int" />
             </p>
             <p className="n">
-              {view.keepers.sweeps} sweeps, {view.keepers.vests} vests{view.keepers.lastAt ? `, last ${since(view.keepers.lastAt, now * 1000)}` : ""}
+              {view.keepers.roster} {view.keepers.roster === 1 ? "has" : "have"} won a sweep · {view.keepers.sweeps} sweeps, {view.keepers.vests} vests
+              {view.keepers.lastAt ? `, last ${since(view.keepers.lastAt, now * 1000)}` : ""}
               {view.keepers.alive ? `, ${view.keepers.watched} registers watched now` : ", none reporting now"} · <Link href="/keepers">run one</Link>
             </p>
           </div>

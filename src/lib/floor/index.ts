@@ -5,7 +5,7 @@ import { resolveAssets } from "@/lib/assets/stand-in";
 import { db } from "@/lib/db";
 import { books, multipliers, receipts } from "@/lib/db/schema";
 import { type ReceiptRow, keepRate } from "@/lib/keep-rate";
-import { keeperHealth } from "@/lib/keeper/health";
+import { keeperHealth, keeperHealths } from "@/lib/keeper/health";
 import { allReceiptRows, keepersFromReceipts, ledgerTotals } from "@/lib/ledger/indexer";
 import { type Market, market } from "@/lib/market";
 import { nyseSession, newYork } from "@/lib/market/nyse";
@@ -37,8 +37,14 @@ export type FloorView = {
   /** Arrivals that settled while the NYSE was closed, as a share of all arrivals. */
   readonly slept: { readonly count: number; readonly total: number; readonly bps: number };
   readonly keepRate7: { readonly bps: number; readonly receipts: number } | null;
+  /**
+   * When the first receipt turns seven days old, while there is no 7-day keep-rate yet. The
+   * floor said "the first receipt matures in 7 days" as a fixed sentence, which was true on
+   * the first day and false every day after. A date cannot go stale in a cache.
+   */
+  readonly firstMaturesAt: number | null;
   readonly keepRate30: { readonly bps: number; readonly receipts: number } | null;
-  readonly keepers: { readonly roster: number; readonly sweeps: number; readonly vests: number; readonly lastAt: number | null; readonly alive: number; readonly watched: number };
+  readonly keepers: { readonly roster: number; readonly sweeps: number; readonly vests: number; readonly lastAt: number | null; readonly alive: number; readonly watched: number; readonly running: number };
   readonly actions: ReadonlyArray<{ readonly symbol: string; readonly mint: string; readonly multiplier: string | null; readonly lastEffectiveAt: number | null; readonly lastValue: string | null }>;
   readonly totals: { readonly receipts: number; readonly paidUsdc: string; readonly rulesOn: number; readonly people: number; readonly orgs: number };
   readonly market: Market;
@@ -87,12 +93,13 @@ function settledWhileClosed(unix: number): boolean {
 
 export async function floorView(): Promise<FloorView> {
   const now = Math.floor(Date.now() / 1000);
-  const [rows, all, totals, roster, health, mkt, orgCount] = await Promise.all([
+  const [rows, all, totals, roster, health, healths, mkt, orgCount] = await Promise.all([
     db.select().from(receipts).orderBy(desc(receipts.settledUnix)).limit(40),
     allReceiptRows(),
     ledgerTotals(),
     keepersFromReceipts(),
     keeperHealth(),
+    keeperHealths(),
     market(),
     db.select({ n: sql<number>`count(*)` }).from(books).where(sql`${books.kind} = 'org'`),
   ]);
@@ -113,6 +120,7 @@ export async function floorView(): Promise<FloorView> {
     tape,
     slept: { count: slept, total: deliveries.length, bps: deliveries.length > 0 ? Math.round((slept / deliveries.length) * 10_000) : 0 },
     keepRate7: kr(7),
+    firstMaturesAt: deliveries.length > 0 ? Math.min(...deliveries.map((r) => r.settledUnix)) + 7 * 86_400 : null,
     keepRate30: kr(30),
     keepers: {
       roster: roster.length,
@@ -121,6 +129,10 @@ export async function floorView(): Promise<FloorView> {
       lastAt: roster[0]?.lastAt ?? null,
       alive: health.ok ? 1 : 0,
       watched: health.ok ? Object.keys(health.value.books).length : 0,
+      // Keepers reporting right now, every one this deployment runs. `roster` counts only those
+      // that have WRITTEN a receipt — and when two race, the loser writes none — so the floor
+      // said "1 keeper" beside a /keepers page saying "Scrip runs 2 keepers, racing".
+      running: healths.filter((h) => h.ok).length,
     },
     actions: mkt.rows
       .filter((r) => r.multiplier !== null || r.multiplierWhy !== null)
