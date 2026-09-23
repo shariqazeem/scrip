@@ -46,7 +46,7 @@ pm2 delete scrip-web; pm2 start ecosystem.config.cjs --only scrip-web; pm2 save
 Restart only what changed: `--only scrip-web` for the site, `--only scrip-keeper` and
 `--only scrip-keeper-2` for the keepers. **Copy the config before deleting anything.** On
 23 September the untracked `ecosystem.config.cjs` was missing from the box, `pm2 start` failed
-after `pm2 delete` had already stopped the site, and scrip.work was down for four minutes.
+after `pm2 delete` had already stopped the site, and scrip.work was down for a few minutes.
 
 **Never `pm2 restart … --update-env` from a plain SSH shell.** It replaces the process
 environment with that shell's, whose PATH finds the system Node 20; `next start` then runs
