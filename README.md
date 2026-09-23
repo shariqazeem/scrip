@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/brand/scrip-lockup.png" width="380" alt="Scrip — the slice S"></p>
+
 # Scrip
 
 **Scrip is where income becomes ownership.**
