@@ -119,6 +119,26 @@ async function jupiterTokens(mints: readonly string[]): Promise<Map<string, Toke
   return out;
 }
 
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+let solCache: { at: number; value: Promise<number | null> } | null = null;
+
+/**
+ * SOL in dollars on Jupiter, for DISPLAY: what a lamport figure means in money a person reads —
+ * a receipt's cost, the rule's float. Never an input to a settlement. Cached thirty seconds.
+ */
+export function solUsd(): Promise<number | null> {
+  if (solCache && Date.now() - solCache.at < TTL_MS) return solCache.value;
+  const headers: Record<string, string> = { accept: "application/json" };
+  const key = process.env.JUPITER_API_KEY?.trim();
+  if (key) headers["x-api-key"] = key;
+  const value = fetch(`${BASE()}/price/v3?ids=${SOL_MINT}`, { headers, cache: "no-store", signal: AbortSignal.timeout(6_000) })
+    .then((r) => (r.ok ? (r.json() as Promise<Record<string, Record<string, unknown> | undefined>>) : null))
+    .then((j) => num(j?.[SOL_MINT]?.usdPrice))
+    .catch(() => null);
+  solCache = { at: Date.now(), value };
+  return value;
+}
+
 function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }

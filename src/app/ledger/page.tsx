@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { outsideTeam } from "@/lib/team";
 import Link from "next/link";
 import { after } from "next/server";
 import { inArray } from "drizzle-orm";
@@ -44,6 +45,7 @@ export default async function LedgerPage() {
 
   const now = Math.floor(Date.now() / 1000);
   const asRows = rows.map(toRow);
+  const outside = outsideTeam(rows);
   const rates = WINDOWS.map((w) => ({ w, rate: keepRate(asRows, w, now), first: firstMaturity(asRows, w, now) }));
   const registered = units.filter((u) => assetByMint(u.asset));
   const unregistered = units.filter((u) => !assetByMint(u.asset));
@@ -58,6 +60,11 @@ export default async function LedgerPage() {
           </p>
           <div className="sp-ledger-facts">
             <Fact k="Receipts" v={totals.receipts.toLocaleString("en-US")} note={`${totals.sweeps.toLocaleString("en-US")} sweeps, ${(totals.receipts - totals.sweeps).toLocaleString("en-US")} payments`} />
+            <Fact
+              k="To wallets outside the team"
+              v={outside.receipts.toLocaleString("en-US")}
+              note={`${outside.wallets} wallet${outside.wallets === 1 ? "" : "s"}. The team's own are named on /security and marked "team" on their stubs`}
+            />
             <Fact k="Value converted" v={usdc(totals.paidUsdc)} note="the slices and the payments, at the dollars that went in" />
             <Fact
               k="Units delivered"

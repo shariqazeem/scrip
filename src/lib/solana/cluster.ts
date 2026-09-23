@@ -28,6 +28,15 @@ function parse(raw: string | undefined): Cluster {
  * Defaults to devnet, not mainnet. An unset env var must fail toward "this is not real
  * money", never toward a claim we cannot back.
  */
+/** Scrip's program went live on mainnet on 21 September 2026 (UTC). */
+export const MAINNET_SINCE_UNIX = 1_789_948_800;
+
+/** Day 1 is 21 September 2026. Null off mainnet, where the count means nothing. */
+export function mainnetDay(nowUnix: number, c: Cluster = cluster()): number | null {
+  if (c !== "mainnet-beta" || nowUnix < MAINNET_SINCE_UNIX) return null;
+  return Math.floor((nowUnix - MAINNET_SINCE_UNIX) / 86_400) + 1;
+}
+
 export function cluster(): Cluster {
   return parse(process.env.NEXT_PUBLIC_SOLANA_CLUSTER);
 }

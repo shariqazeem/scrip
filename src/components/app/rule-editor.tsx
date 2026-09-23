@@ -15,6 +15,7 @@ import {
   MAX_RATE_BPS,
   RATE_PRESETS_BPS,
   SUGGESTED_FLOAT_LAMPORTS,
+  SWEEP_COST_LAMPORTS,
   preview,
   sweepsCovered,
   validateRule,
@@ -51,7 +52,20 @@ type View = {
 /** What the page shows before a wallet is connected: the question, answerable, with nothing to sign yet. */
 const SIGNED_OUT: View = { hasBook: false, slug: null, assetMint: null, state: "off", rule: null, usdcBalance: "0", usdcExists: true, delegatedAmount: "0", floatLamports: "0", sweepsCovered: 0, ownerLamports: "0", openCostLamports: "0" };
 
-export function RuleEditor({ owner, view: viewIn, assets, prices = {} }: { owner: string | null; view: View | null; assets: AssetOpt[]; prices?: Record<string, number> }) {
+export function RuleEditor({
+  owner,
+  view: viewIn,
+  assets,
+  prices = {},
+  solPrice = null,
+}: {
+  owner: string | null;
+  view: View | null;
+  assets: AssetOpt[];
+  prices?: Record<string, number>;
+  /** SOL in dollars on Jupiter, for DISPLAY: what a receipt costs in money a person reads. */
+  solPrice?: number | null;
+}) {
   const router = useRouter();
   const view: View = viewIn ?? SIGNED_OUT;
   const r = view.rule;
@@ -213,6 +227,20 @@ export function RuleEditor({ owner, view: viewIn, assets, prices = {} }: { owner
                   : "Arithmetic. The price could not be read just now, so the units are left out rather than guessed."
               }
             />
+            {/*
+              WHAT EACH RECEIPT COSTS, beside the receipt. Every sweep pays the keeper 0.0005 SOL
+              and the rent of the receipt it writes, which stays on chain with it: 0.00302 SOL. In
+              dollars and as a share of the slice, because "0.003 SOL" is a number nobody can weigh
+              — and on a small payment it is most of the slice. Said before the signature.
+            */}
+            <p className="sp-q-preview-cost">
+              Each receipt costs your register {sol(SWEEP_COST_LAMPORTS)}
+              {solPrice ? ` — about ${usd((Number(SWEEP_COST_LAMPORTS) / 1e9) * solPrice)} at today’s SOL price` : ""}: 0.0005 SOL to the keeper who
+              settles it, the rest the receipt&rsquo;s rent, kept on chain with it.
+              {solPrice && terms.rateBps > 0
+                ? ` On this $500 example that is ${(((Number(SWEEP_COST_LAMPORTS) / 1e9) * solPrice) / ((500 * terms.rateBps) / 10_000) * 100).toFixed(1)}% of the ${usd((500 * terms.rateBps) / 10_000)} slice; on a $50 payment, ${(((Number(SWEEP_COST_LAMPORTS) / 1e9) * solPrice) / ((50 * terms.rateBps) / 10_000) * 100).toFixed(0)}%.`
+                : ""}
+            </p>
           </div>
         ) : null}
       </section>

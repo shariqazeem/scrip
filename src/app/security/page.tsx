@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Row, SiteFrame, SiteSection } from "@/components/site/site-frame";
 import { securityFacts } from "@/lib/security";
-import { cluster } from "@/lib/solana/cluster";
+import { cluster, explorerUrl } from "@/lib/solana/cluster";
+import { TEAM } from "@/lib/team";
 
 export const metadata: Metadata = { title: "Security", description: "Program ids, the upgrade authority, the build hash, what a keeper can and cannot do, what the escrow can and cannot do, and the bug bounty." };
 export const dynamic = "force-dynamic";
@@ -34,6 +35,21 @@ export default async function SecurityPage() {
           <li><strong>May keep what it does not deliver.</strong> The program checks that minimum, not the whole slice, so a keeper that delivers only the minimum keeps the rest: about the owner&rsquo;s tolerance plus Pyth&rsquo;s band, plus any move in the ten minutes a price stays valid. Scrip&rsquo;s own keepers swap the whole slice into the owner&rsquo;s account. Requiring every keeper to is the first change in the next program upgrade.</li>
           <li><strong>Is paid the tip,</strong> 0.0005 SOL plus the receipt&rsquo;s rent, from the owner&rsquo;s float. The same for a vest, from the grant&rsquo;s float.</li>
         </ul>
+      </SiteSection>
+      <SiteSection label="The team's own wallets" aside="marked on every stub">
+        <p className="sp-body">
+          Receipts to these wallets are Scrip paying itself or its founder testing the product. The ledger marks their stubs &ldquo;team&rdquo;, and
+          every count of people reached leaves them out.
+        </p>
+        <div className="sp-truths">
+          {[...TEAM].map(([address, who]) => (
+            <Row key={address} k={who}>
+              <a className="mono" href={explorerUrl("address", address)}>
+                {address}
+              </a>
+            </Row>
+          ))}
+        </div>
       </SiteSection>
       <SiteSection label="What the escrow can and cannot do">
         <ul>

@@ -1,4 +1,6 @@
 import "server-only";
+import { mainnetDay } from "@/lib/solana/cluster";
+import { outsideTeam } from "@/lib/team";
 
 import { desc, gt, inArray, sql } from "drizzle-orm";
 import { resolveAssets } from "@/lib/assets/stand-in";
@@ -32,6 +34,8 @@ export type TapeRow = {
 
 export type FloorView = {
   readonly at: number;
+  /** Day N on mainnet (day 1 = 21 September 2026), so small totals read as early, not idle. */
+  readonly mainnetDay: number | null;
   readonly session: { readonly open: boolean; readonly line: string; readonly until: number };
   readonly tape: readonly TapeRow[];
   /** Arrivals that settled while the NYSE was closed, as a share of all arrivals. */
@@ -46,7 +50,7 @@ export type FloorView = {
   readonly keepRate30: { readonly bps: number; readonly receipts: number } | null;
   readonly keepers: { readonly roster: number; readonly sweeps: number; readonly vests: number; readonly lastAt: number | null; readonly alive: number; readonly watched: number; readonly running: number };
   readonly actions: ReadonlyArray<{ readonly symbol: string; readonly mint: string; readonly multiplier: string | null; readonly lastEffectiveAt: number | null; readonly lastValue: string | null }>;
-  readonly totals: { readonly receipts: number; readonly paidUsdc: string; readonly rulesOn: number; readonly people: number; readonly orgs: number };
+  readonly totals: { readonly receipts: number; readonly paidUsdc: string; readonly rulesOn: number; readonly people: number; readonly orgs: number; readonly outsideTeam: number };
   readonly market: Market;
 };
 
@@ -137,8 +141,9 @@ export async function floorView(): Promise<FloorView> {
     actions: mkt.rows
       .filter((r) => r.multiplier !== null || r.multiplierWhy !== null)
       .map((r) => ({ symbol: r.symbol, mint: r.mint, multiplier: r.multiplier, lastEffectiveAt: lastByMint.get(r.mint)?.effectiveAt ?? null, lastValue: lastByMint.get(r.mint)?.value ?? null })),
-    totals: { receipts: totals.receipts, paidUsdc: totals.paidUsdc.toString(), rulesOn: totals.rulesOn, people: totals.recipients, orgs: Number(orgCount[0]?.n ?? 0) },
+    totals: { receipts: totals.receipts, paidUsdc: totals.paidUsdc.toString(), rulesOn: totals.rulesOn, people: totals.recipients, orgs: Number(orgCount[0]?.n ?? 0), outsideTeam: outsideTeam(all).receipts },
     market: mkt,
+    mainnetDay: mainnetDay(now),
   };
 }
 

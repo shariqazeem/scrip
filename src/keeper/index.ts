@@ -67,7 +67,9 @@ const RPC =
  */
 const POLL_SECONDS = Number(process.env.KEEPER_POLL_SECONDS ?? (/api\.(devnet|testnet|mainnet-beta)\.solana\.com/.test(RPC) ? "45" : "15"));
 const HEALTH_PORT = Number(process.env.KEEPER_HEALTH_PORT ?? "8787");
-const PRIORITY_MICRO_LAMPORTS = Number(process.env.KEEPER_PRIORITY_MICRO_LAMPORTS ?? "20000");
+// 100,000 microlamports on the 600,000 units a sweep reserves is 60,000 lamports: an eighth of
+// the tip the sweep repays, for a transaction that lands in the first slots instead of later.
+const PRIORITY_MICRO_LAMPORTS = Number(process.env.KEEPER_PRIORITY_MICRO_LAMPORTS ?? "100000");
 /** The tip + receipt rent the program will take from the float. Mirrors the program. */
 const KEEPER_TIP = 500_000n;
 /** How often a linear schedule is vested. Every vest costs the payer's float a receipt's rent. */
@@ -367,8 +369,13 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     if (!built.tx.ok) throw new Error(built.tx.why);
 
     built.tx.value.sign([keeper]);
-    const sig = await conn.sendTransaction(built.tx.value, { skipPreflight: false, maxRetries: 3 });
-    const landed = await confirmSignature(conn, sig, built.lastValidBlockHeight);
+    const raw = built.tx.value.serialize();
+    const sig = await conn.sendRawTransaction(raw, { skipPreflight: false, preflightCommitment: "confirmed", maxRetries: 0 });
+    // Re-broadcast the same bytes until the network has seen them: a dropped sweep otherwise
+    // waits out its blockhash, and "seconds later" becomes a minute.
+    const landed = await confirmSignature(conn, sig, built.lastValidBlockHeight, "confirmed", () =>
+      conn.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }),
+    );
     if (!landed.ok) throw new Error(landed.why);
     sweeps += 1;
     report(key, book.owner, { lastSweepAt: Math.floor(Date.now() / 1000), lastSweepSig: sig, lastReason: null });

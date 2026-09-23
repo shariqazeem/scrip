@@ -6,7 +6,7 @@ import { SignOut } from "@/components/auth/connect";
 import { ruleAssets } from "@/lib/assets/registry";
 import { loadBook } from "@/lib/book/read-book";
 import { currentOwner } from "@/lib/session/server";
-import { market } from "@/lib/market";
+import { market, solUsd } from "@/lib/market";
 
 export const metadata: Metadata = { title: "The rule" };
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export default async function RulePage() {
   // stranger meets first, and it is the whole point of answering the question before asking
   // for a wallet — so it is the last page that should be missing the number.
   const prices = new Map<string, number>();
-  const m = await market().catch(() => null);
+  const [m, solPrice] = await Promise.all([market().catch(() => null), solUsd().catch(() => null)]);
   for (const row of m?.rows ?? []) if (row.priceUsd !== null) prices.set(row.mint, row.priceUsd);
   const priceProps = Object.fromEntries(prices);
 
@@ -38,7 +38,7 @@ export default async function RulePage() {
     // The question first, the wallet second: choose a rate before anything asks for a signature.
     return (
       <PageFrame eyebrow="The rule" title="The share of your income you never want to think about again." sub="A habit, not a trading setting. Payers keep sending USDC to the address you already use; a slice of every inflow becomes stock in this wallet, with a receipt.">
-        <RuleEditor owner={null} view={null} assets={assets.map(opt)} prices={priceProps} />
+        <RuleEditor owner={null} view={null} assets={assets.map(opt)} prices={priceProps} solPrice={solPrice} />
       </PageFrame>
     );
   }
@@ -82,6 +82,7 @@ export default async function RulePage() {
             openCostLamports: view.value.openCostLamports.toString(),
           }}
           prices={priceProps}
+          solPrice={solPrice}
           assets={[...assets, ...(view.value.asset && !assets.some((a) => a.mint === view.value.asset?.mint) ? [view.value.asset] : [])].map(opt)}
         />
       )}

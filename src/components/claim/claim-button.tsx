@@ -138,9 +138,16 @@ export function ClaimButton({
       built.mode === "self"
         ? await fetch("/api/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ transactionBase64: toBase64(bytes) }) })
         : await fetch("/api/relay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ transactionBase64: toBase64(bytes), claim: params }) });
-    const out = (await relay.json()) as { signature?: string; error?: string };
+    const out = (await relay.json()) as { signature?: string; error?: string; selfPay?: boolean };
     if (!relay.ok || !out.signature) {
       setPhase("idle");
+      if (built.mode !== "self" && out.selfPay) {
+        // This payer's claims are not sponsored. Nothing moved; the next attempt is the
+        // claimer's own, one signature, sent by the wallet.
+        setSelfPay(true);
+        setWhy(`${out.error ?? "This claim is not sponsored."} Claim again to pay it yourself.`);
+        return;
+      }
       if (built.mode !== "self" && /insufficient|prior credit|rent/i.test(out.error ?? "")) {
         // The relayer ran dry between building and sending. Nothing moved; the next attempt
         // is claimed at the claimer's own cost instead of failing the same way twice.

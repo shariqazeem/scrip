@@ -9,7 +9,7 @@ import { short, unitsFromRaw, usdc } from "@/lib/format";
 import { cluster } from "@/lib/solana/cluster";
 import { connection } from "@/lib/solana/connection";
 import { CLAIM_MIN_BALANCE_LAMPORTS } from "@/lib/claim/build";
-import { relayerKeypair } from "@/lib/relayer";
+import { relayerKeypair, sponsorsPayer } from "@/lib/relayer";
 import "../../../pay/pay.css";
 import "@/styles/app.css";
 
@@ -31,7 +31,7 @@ export default async function ClaimPage({ params }: Params) {
   // covered" only when it is. The route decides again at the moment of claiming; this only
   // keeps the words honest before anyone clicks.
   const relayer = relayerKeypair();
-  const sponsored = relayer
+  const sponsored = relayer && sponsorsPayer(payer)
     ? await connection()
         .getBalance(relayer.publicKey, "confirmed")
         .then((l) => l >= CLAIM_MIN_BALANCE_LAMPORTS)

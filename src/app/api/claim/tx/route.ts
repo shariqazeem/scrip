@@ -2,7 +2,7 @@ import { PublicKey, Transaction } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
 import { CLAIM_MIN_BALANCE_LAMPORTS, type ClaimMode, type ClaimParams, buildClaim } from "@/lib/claim/build";
 import { connection } from "@/lib/solana/connection";
-import { relayerKeypair } from "@/lib/relayer";
+import { relayerKeypair, sponsorsPayer } from "@/lib/relayer";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,9 @@ export const dynamic = "force-dynamic";
  *   the relayer can pay                     → sponsored: an empty wallet takes a position
  *   it cannot, and the claimer can          → self: one signer, the claimer's own fee
  *   neither can                             → refused, with the numbers, and nothing moves
+ *
+ * The relayer only sponsors payments from the wallets in SPONSOR_PAYERS (src/lib/relayer.ts):
+ * any other payer's recipient claims at their own cost.
  *
  * `mode: "self"` in the request skips the relayer — for a claimer who would rather pay, and
  * for a retry after the relayer ran dry between building and sending.
@@ -53,14 +56,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Could not reach Solana (${err instanceof Error ? err.message : String(err)}).` }, { status: 503 });
   }
 
-  const mode: ClaimMode = body.mode !== "self" && relayer && relayerLamports >= CLAIM_MIN_BALANCE_LAMPORTS ? "sponsored" : "self";
+  const mode: ClaimMode =
+    body.mode !== "self" && relayer && relayerLamports >= CLAIM_MIN_BALANCE_LAMPORTS && sponsorsPayer(String(body.payer ?? "")) ? "sponsored" : "self";
   if (mode === "self" && claimerLamports < CLAIM_MIN_BALANCE_LAMPORTS) {
     const need = (CLAIM_MIN_BALANCE_LAMPORTS / 1e9).toFixed(3);
     const have = (claimerLamports / 1e9).toFixed(4);
     return NextResponse.json(
       {
         error: relayer
-          ? `The sponsor cannot cover claims right now, and this wallet holds ${have} SOL. Claiming it yourself needs about ${need} SOL. Add SOL and claim again — this position waits for you; nothing expires.`
+          ? `${sponsorsPayer(String(body.payer ?? "")) ? "The sponsor cannot cover claims right now" : "Scrip sponsors claims only on payments from organisations it has onboarded"}, and this wallet holds ${have} SOL. Claiming it yourself needs about ${need} SOL. Add SOL and claim again — this position waits for you; nothing expires.`
           : `This deployment does not sponsor claims, and this wallet holds ${have} SOL. Claiming needs about ${need} SOL. Add SOL and claim again — nothing expires.`,
       },
       { status: 402 },

@@ -8,7 +8,10 @@ import { readBookOf } from "@/lib/book/read-book";
 import { readReceiptBySignature, NOT_YET_SETTLED } from "@/lib/book/read-receipt";
 import { db } from "@/lib/db";
 import { receipts as receiptsTable } from "@/lib/db/schema";
-import { age, bps, dateUTC, pythToUsd, short, stampUTC, unitsFromRaw, usd, usdc } from "@/lib/format";
+import { age, bps, dateUTC, pythToUsd, short, sol, stampUTC, unitsFromRaw, usd, usdc } from "@/lib/format";
+import { solUsd } from "@/lib/market";
+import { describeDeviation, describeSeconds, fillVsPyth, landedToStock, splitCost } from "@/lib/receipt/figures";
+import { multiplierAt } from "@/lib/receipt/multiplier";
 import { assetByFeedId } from "@/lib/assets/registry";
 import { explorerUrl } from "@/lib/solana/cluster";
 import { connection } from "@/lib/solana/connection";
@@ -19,6 +22,22 @@ import "../receipt.css";
 export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ sig: string }> };
+
+/**
+ * When an arrival landed: from the attribution when the indexer recorded it, otherwise from
+ * the arrival's own transaction. Block times never change, so each is read once per process.
+ */
+const arrivalTimes = new Map<string, number | null>();
+async function arrivalTime(a: { sig: string; at?: number | null }): Promise<number | null> {
+  if (typeof a.at === "number") return a.at;
+  if (arrivalTimes.has(a.sig)) return arrivalTimes.get(a.sig) ?? null;
+  const tx = await connection()
+    .getTransaction(a.sig, { commitment: "confirmed", maxSupportedTransactionVersion: 0 })
+    .catch(() => null);
+  const at = tx?.blockTime ?? null;
+  if (tx) arrivalTimes.set(a.sig, at);
+  return at;
+}
 
 /**
  * THE RECEIPT — built from ONE signature and nothing else.
@@ -90,7 +109,21 @@ export default async function ReceiptPage({ params }: Params) {
 
   // Attribution comes from the cache and is labelled as such on the row.
   const cached = isSweep ? (await db.select({ attributedJson: receiptsTable.attributedJson }).from(receiptsTable).where(eq(receiptsTable.pda, r.address)).limit(1))[0] : undefined;
-  const attributed: Array<{ from: string; usdc: string; sig: string }> = cached ? (JSON.parse(cached.attributedJson) as Array<{ from: string; usdc: string; sig: string }>) : [];
+  const attributed: Array<{ from: string; usdc: string; sig: string; at?: number | null }> = cached ? (JSON.parse(cached.attributedJson) as Array<{ from: string; usdc: string; sig: string; at?: number | null }>) : [];
+
+  // What the receipt DID, in three figures a stranger can check: how fast the stock followed
+  // the money, what it paid against the Pyth price it was bound by, and what it cost.
+  const seconds = isSweep && attributed.length > 0 ? landedToStock(r.settledUnix, await Promise.all(attributed.map(arrivalTime))) : null;
+  const stamped = r.price ? assetByFeedId(r.price.feed) : undefined;
+  const inShares = stamped?.basis === "adjusted";
+  const multiplier = inShares && stamped ? await multiplierAt(stamped.asset, r.settledUnix) : null;
+  const fill =
+    r.price && asset && (!inShares || multiplier !== null)
+      ? fillVsPyth({ paidUsdc: r.paidUsdc, amountRaw: r.amountRaw, decimals: asset.decimals, price: r.price.price, expo: r.price.expo, multiplier: inShares ? multiplier : null })
+      : null;
+  const perWhat = inShares ? "a share" : asset?.unit === "troy-ounce" ? "an ounce" : "a token";
+  const cost = isSweep || r.kind === "vest" ? splitCost(r.floatSpentLamports, r.rentLamports) : null;
+  const solPrice = cost ? await solUsd() : null;
 
   const sections: StubSection[] = [];
   if (isSweep) {
@@ -101,6 +134,9 @@ export default async function ReceiptPage({ params }: Params) {
           ? attributed.map((a) => ({ k: a.from ? short(a.from) : "unknown sender", v: <a href={explorerUrl("tx", a.sig)}>{usdc(BigInt(a.usdc))}</a> }))
           : [{ k: "not attributed yet", v: "the indexer reads senders after the sweep", tone: "muted" as const }],
     });
+    if (seconds !== null) {
+      sections.push({ rows: [{ k: "Became stock", v: `${describeSeconds(seconds)} after the money landed` }] });
+    }
   } else {
     sections.push({
       rows: [
@@ -117,6 +153,17 @@ export default async function ReceiptPage({ params }: Params) {
       rows: [
         { k: "Price", v: `${usd(pythToUsd(r.price.price, r.price.expo))} · ${feed ? feed.asset.symbol === symbol ? (feed.basis === "raw" ? "Pyth, the token" : "Pyth, the underlying") : "Pyth" : "Pyth"} · ${age(r.settledUnix - r.price.publishTime)} old` },
         { k: "Band", v: `±${usd(pythToUsd(r.price.conf, r.price.expo))}` },
+        ...(fill ? [{ k: "Filled at", v: `${usd(fill.perUnitUsd)} ${perWhat} · ${describeDeviation(fill.deviationBps)}` }] : []),
+      ],
+    });
+  }
+  if (cost) {
+    const parts = [`${sol(cost.rentLamports)} rent, kept with this receipt`, `${sol(cost.tipLamports)} to the keeper`];
+    if (cost.accountLamports > 0) parts.push(`${sol(cost.accountLamports)} for a new ${symbol} account`);
+    sections.push({
+      rows: [
+        { k: "Cost", v: `${sol(cost.totalLamports)} from ${r.kind === "vest" ? "the grant’s" : "the register’s"} float${solPrice ? ` · ≈ ${usd((cost.totalLamports / 1e9) * solPrice)} at today’s SOL price` : ""}` },
+        { k: "Of which", v: parts.join(" · "), tone: "muted" as const },
       ],
     });
   }

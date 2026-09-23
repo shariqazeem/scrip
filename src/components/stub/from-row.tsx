@@ -2,6 +2,7 @@ import { assetByMint } from "@/lib/assets/registry";
 import type { LiveArrival } from "@/lib/book/live-types";
 import type { receipts } from "@/lib/db/schema";
 import { bps, dateUTC, short, stampUTC, unitsFromRaw, usdc } from "@/lib/format";
+import { isTeam } from "@/lib/team";
 import { type StubSection, Stub } from "./stub";
 
 type Row = typeof receipts.$inferSelect;
@@ -48,12 +49,15 @@ export function StubFromArrival({
   compact = true,
   printing = false,
   showHeld = false,
+  team = false,
 }: {
   a: LiveArrival;
   handle?: string | null;
   compact?: boolean;
   printing?: boolean;
   showHeld?: boolean;
+  /** The recipient is one of the team's own wallets (src/lib/team.ts): say so on the stub. */
+  team?: boolean;
 }) {
   const { units, symbol } = arrivalUnits(a);
   const isSweep = a.kind === "sweep";
@@ -91,11 +95,12 @@ export function StubFromArrival({
       where={handle ? "in" : undefined}
       whereName={handle ? `@${handle}’s wallet` : undefined}
       sections={sections}
+      tag={team ? "team" : undefined}
     />
   );
 }
 
 /** The same, from a database row. */
 export function StubFromRow(props: { row: Row; handle?: string | null; compact?: boolean; printing?: boolean; showHeld?: boolean; resolve?: (mint: string) => AssetLabel | null | undefined }) {
-  return <StubFromArrival a={rowToArrival(props.row, props.resolve)} handle={props.handle} compact={props.compact} printing={props.printing} showHeld={props.showHeld} />;
+  return <StubFromArrival a={rowToArrival(props.row, props.resolve)} handle={props.handle} compact={props.compact} printing={props.printing} showHeld={props.showHeld} team={isTeam(props.row.recipient)} />;
 }

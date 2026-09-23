@@ -66,7 +66,8 @@ export function Floor({ view, dark = true }: { view: FloorView; dark?: boolean }
               <Roll value={view.totals.receipts} kind="int" />
             </p>
             <p className="n">
-              {usdc(BigInt(view.totals.paidUsdc))} became stock · {view.totals.rulesOn} rules on · {view.totals.orgs} organisation{view.totals.orgs === 1 ? "" : "s"} · <Link href="/ledger">the ledger</Link>
+              {usdc(BigInt(view.totals.paidUsdc))} became stock · {view.totals.outsideTeam} to wallets outside the team · {view.totals.rulesOn} rules on · {view.totals.orgs} organisation{view.totals.orgs === 1 ? "" : "s"}
+              {view.mainnetDay ? ` · day ${view.mainnetDay} on mainnet` : ""} · <Link href="/ledger">the ledger</Link>
             </p>
           </div>
         </Reveal>

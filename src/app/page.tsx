@@ -22,7 +22,7 @@ import { floorView } from "@/lib/floor";
 import { allReceiptRows, ledgerTotals, recentReceipts } from "@/lib/ledger/indexer";
 import { settleableNow } from "@/lib/pyth/ready";
 import { MIN_SLICE } from "@/lib/rule/slice";
-import { cluster } from "@/lib/solana/cluster";
+import { cluster, mainnetDay } from "@/lib/solana/cluster";
 import { siteUrl } from "@/lib/site";
 import "./landing.css";
 
@@ -96,6 +96,7 @@ export default async function LandingPage() {
   ];
   const sendUsd = front ? Math.max(5, Math.ceil(Number(MIN_SLICE) / 1e6 / Math.max(front.rateNowBps, 1) / 1e-4)) : 5;
   const onMainnet = cluster() === "mainnet-beta";
+  const day = mainnetDay(Math.floor(Date.now() / 1000));
   const payQr = front && onMainnet ? `solana:${front.owner}?amount=${sendUsd}&spl-token=${USDC_MINT}&label=${encodeURIComponent(`Scrip @${front.handle}`)}&message=${encodeURIComponent("Watch it become stock on Scrip")}` : null;
 
   return (
@@ -128,25 +129,35 @@ export default async function LandingPage() {
             <p className="sp-kicker is-live">
               <span className="dot" aria-hidden />
               Live on Solana {onMainnet ? "mainnet" : cluster()}
+              {day ? ` · day ${day}` : ""}
             </p>
             <h1 className="sp-display">
               Your income
               <br />
               invests itself.
             </h1>
+            {/*
+              ONE WEDGE. The brief: "Pick one wedge and make it excellent." The wedge is the person
+              paid in USDC and the rule on their wallet — the thing no venue, broker or wallet has.
+              Paying people in stock is how a first share reaches someone, so it stays one quiet
+              line lower down instead of a second button competing with the first.
+            */}
             <p className="sp-lede">
-              Set a rate once on the wallet you already get paid to. A slice of every USDC that lands becomes S&amp;P 500 in the same
-              wallet, seconds later, with a receipt anyone can open.
+              For anyone paid in USDC on Solana. Set a rate once on the wallet you already use, and a slice of every dollar that lands
+              becomes S&amp;P 500 in that same wallet, with a receipt anyone can open.
             </p>
             <div className="sp-hero-cta">
               <Link href="/app/rule" className="sp-btn is-primary">
                 Turn on the rule
               </Link>
-              <Link href={payHref} className="sp-btn is-ghost">
-                Pay someone in stock
-              </Link>
             </div>
-            <p className="sp-hero-note">Payers never open Scrip. Pausing is a token-program revoke that Scrip cannot prevent. Ten percent by default; one signature to start.</p>
+            <p className="sp-hero-note">
+              Scrip invests a slice of your wallet&rsquo;s USDC inflows. Payers never open Scrip; pausing is a token-program revoke that Scrip
+              cannot prevent. Ten percent by default, one signature to start.
+            </p>
+            <p className="sp-hero-note">
+              Paying a team? <Link href="/teams">Pay them in stock</Link> — their first share arrives with a receipt, even in an empty wallet.
+            </p>
           </div>
 
           <aside className="sp-hero-stub" aria-label={front ? `@${front.handle}, live` : latest ? "The latest receipt" : "A worked example"}>

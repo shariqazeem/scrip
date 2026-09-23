@@ -209,6 +209,16 @@ wallets first. Zero fee in v1; then basis points on the slice.
 | `src/keeper/` | the keeper |
 | `src/styles/tokens.css` · `.claude/skills/scrip-ui/` | the design system |
 
+## Open source
+
+MIT — see [`LICENSE`](LICENSE). Everything in this repository was written for Scrip; it stands
+on these open-source projects, used as published: [Anchor](https://github.com/solana-foundation/anchor),
+[`@solana/web3.js`](https://github.com/solana-foundation/solana-web3.js) and `@solana/spl-token`,
+Pyth's [`pyth-solana-receiver`](https://github.com/pyth-network/pyth-crosschain) and Hermes client,
+the Wallet Standard, [Next.js](https://github.com/vercel/next.js) and React, drizzle-orm and
+better-sqlite3, zod, and Vitest. Routes come from Jupiter's public API, which is a service,
+not a dependency in this repository.
+
 ## Honesty, before you ask
 
 - **Not our custody.** Your USDC and your stock sit in token accounts you own. The program

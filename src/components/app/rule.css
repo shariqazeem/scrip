@@ -287,3 +287,11 @@
 @media (max-width: 900px) {
   .sp-q-preview { max-width: none; }
 }
+
+/* What each receipt costs, under the example stub: a price, not a setting. */
+.sp-q-preview-cost {
+  margin: var(--s-3) 0 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}

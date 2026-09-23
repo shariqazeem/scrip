@@ -26,6 +26,7 @@ export function Stub({
   printing = false,
   kicker = "Settled on Solana",
   foot,
+  tag,
 }: {
   landed: ReactNode;
   became: string;
@@ -40,6 +41,8 @@ export function Stub({
   printing?: boolean;
   kicker?: string;
   foot?: ReactNode;
+  /** A word beside the brand in the head: "team" on a receipt to the team's own wallet. */
+  tag?: string;
 }) {
   const body = (
     <>
@@ -48,7 +51,7 @@ export function Stub({
           <span className="dot" aria-hidden />
           {kicker}
         </span>
-        <span>Scrip</span>
+        <span>{tag ? `Scrip · ${tag}` : "Scrip"}</span>
       </div>
       <p className="stub-landed">{landed}</p>
       <p className="stub-became">{became}</p>

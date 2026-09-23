@@ -15,11 +15,19 @@ import { type Outcome, held, ok } from "@/lib/outcome";
  */
 const EVERY_MS = 1_500;
 
+/**
+ * `resend`, when given, re-broadcasts the SAME signed bytes while the signature is unseen. A
+ * leader that drops a transaction does not say so: without a resend the only signal is the
+ * blockhash expiring, a minute later. On mainnet that minute was the whole gap between "money
+ * landed" and "stock arrived" on the second sweep ever made. The same signature cannot land
+ * twice, so resending is always safe; it stops the moment the network has seen it.
+ */
 export async function confirmSignature(
   conn: Connection,
   signature: string,
   lastValidBlockHeight: number,
   commitment: "confirmed" | "finalized" = "confirmed",
+  resend?: () => Promise<unknown>,
 ): Promise<Outcome<string>> {
   for (;;) {
     const statuses = await conn.getSignatureStatuses([signature], { searchTransactionHistory: false });
@@ -27,6 +35,8 @@ export async function confirmSignature(
     if (status) {
       if (status.err) return held(`The transaction failed on chain: ${JSON.stringify(status.err)}`);
       if (status.confirmationStatus === commitment || status.confirmationStatus === "finalized") return ok(signature);
+    } else if (resend) {
+      await resend().catch(() => undefined);
     }
     const height = await conn.getBlockHeight("confirmed");
     if (height > lastValidBlockHeight) return held("The transaction was not confirmed before its blockhash expired; nothing was signed twice, so it can be sent again.");

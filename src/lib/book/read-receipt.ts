@@ -28,6 +28,14 @@ export type ReceiptView = Receipt & {
   readonly reason: string | null;
   /** True when a memo was present but did not match — shown, never hidden. */
   readonly reasonMismatch: boolean;
+  /** The receipt account's lamports: its rent, which stays with it on chain. */
+  readonly rentLamports: number;
+  /**
+   * What the `book` account (the register's float, or a grant's) lost in this transaction.
+   * For a sweep or a vest that is exactly what the program paid out: tip, receipt rent, and
+   * any account it advanced. Null when the transaction carried no balances.
+   */
+  readonly floatSpentLamports: number | null;
 };
 
 /**
@@ -90,6 +98,10 @@ export async function receiptFromTransaction(
     // to what the program stored, so nobody can substitute one after the fact.
     const hasReason = !r.reasonHash.every((b) => b === 0);
     const reason = matches ? memo : hasReason ? await reasonFromOrigin(conn, r) : null;
+    // Balances follow the same key order as getAccountKeys with lookups: static, then loaded.
+    const bookIdx = candidates.findIndex((k) => k.toBase58() === r.book);
+    const pre = bookIdx >= 0 ? tx.meta?.preBalances?.[bookIdx] : undefined;
+    const post = bookIdx >= 0 ? tx.meta?.postBalances?.[bookIdx] : undefined;
     return ok({
       ...r,
       address: candidates[i]!.toBase58(),
@@ -99,6 +111,8 @@ export async function receiptFromTransaction(
       asset_: await resolveAsset(r.asset, conn),
       reason,
       reasonMismatch: memo !== null && !matches && hasReason && reason === null,
+      rentLamports: info.lamports,
+      floatSpentLamports: pre !== undefined && post !== undefined ? pre - post : null,
     });
   }
   return held("This transaction did not write a Scrip receipt.");

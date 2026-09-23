@@ -13,7 +13,8 @@ import { transactionsFor } from "@/lib/solana/batch";
  * transfers until it has covered the receipt's basis, and attaches the senders — labelled on
  * the page as "attributed from the account's transfer history", because that is what it is.
  */
-export type Attribution = { readonly from: string; readonly usdc: string; readonly sig: string };
+/** `at` is the arrival's block time, when the RPC reported one: the start of "landed to stock". */
+export type Attribution = { readonly from: string; readonly usdc: string; readonly sig: string; readonly at?: number | null };
 
 export async function attributeSweep(
   conn: Connection,
@@ -64,7 +65,7 @@ export async function attributeSweep(
         break;
       }
     }
-    out.push({ from, usdc: delta.toString(), sig: s.signature });
+    out.push({ from, usdc: delta.toString(), sig: s.signature, at: s.blockTime ?? null });
     covered += delta;
   }
   return ok(out);
