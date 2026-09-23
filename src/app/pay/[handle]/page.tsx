@@ -107,7 +107,7 @@ export default async function PayPage({ params, searchParams }: Params) {
               ) : (
                 <>
                   This address has no Scrip book yet, so your payment becomes {asset.symbol} and waits in escrow. They claim it into their
-                  own wallet with one tap, from an empty wallet, and a receipt is written then.
+                  own wallet with one signature, for under 0.009 SOL, and a receipt is written then.
                 </>
               )}
             </p>

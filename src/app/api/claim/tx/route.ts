@@ -2,7 +2,7 @@ import { PublicKey, Transaction } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
 import { CLAIM_MIN_BALANCE_LAMPORTS, type ClaimMode, type ClaimParams, buildClaim } from "@/lib/claim/build";
 import { connection } from "@/lib/solana/connection";
-import { relayerKeypair, sponsorsPayer } from "@/lib/relayer";
+import { claimsSponsored, relayerKeypair, sponsorsPayer } from "@/lib/relayer";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +64,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: relayer
-          ? `${sponsorsPayer(String(body.payer ?? "")) ? "The sponsor cannot cover claims right now" : "Scrip sponsors claims only on payments from organisations it has onboarded"}, and this wallet holds ${have} SOL. Claiming it yourself needs about ${need} SOL. Add SOL and claim again — this position waits for you; nothing expires.`
+          ? !claimsSponsored()
+            ? `Claiming costs about ${need} SOL — the network fee and the rent for the accounts it opens in your name, which stay yours. This wallet holds ${have} SOL. Add a little SOL and claim again — this position waits for you; nothing expires.`
+            : `${sponsorsPayer(String(body.payer ?? "")) ? "The sponsor cannot cover claims right now" : "Scrip sponsors claims only on payments from organisations it has onboarded"}, and this wallet holds ${have} SOL. Claiming it yourself needs about ${need} SOL. Add SOL and claim again — this position waits for you; nothing expires.`
           : `This deployment does not sponsor claims, and this wallet holds ${have} SOL. Claiming needs about ${need} SOL. Add SOL and claim again — nothing expires.`,
       },
       { status: 402 },

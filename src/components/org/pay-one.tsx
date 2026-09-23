@@ -177,8 +177,8 @@ export function PayOne({ owner, cluster, site }: { owner: string; cluster: strin
               <CopyText text={`${site}/claim/${owner}/${done.releaseId}`} label="Copy the link" />
             </div>
             <p className="sp-claim-fine">
-              They need no SOL and no Scrip account — claiming is fee-sponsored, so an empty wallet can take its first
-              position. Until they claim it, you can cancel and take the stock back.
+              They need no Scrip account. Claiming costs them under 0.009 SOL, most of it rent for accounts that stay theirs.
+              Until they claim it, you can cancel and take the stock back.
             </p>
           </div>
         ) : null}

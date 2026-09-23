@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: "Claim into your wallet" };
 
 /**
  * A SPONSORED POSITION, WAITING. "0.2617 SPYx is waiting for you, from @shariq." One action:
- * claim into your wallet. Fee-sponsored. The claim secret, when there is one, stays in the
+ * claim into your wallet, sponsored only where SPONSOR_CLAIMS allows it. The claim secret, when there is one, stays in the
  * URL fragment and never reaches this server.
  */
 export default async function ClaimPage({ params }: Params) {
@@ -79,8 +79,9 @@ export default async function ClaimPage({ params }: Params) {
             </h1>
             <p className="sp-pay-lede">
               {usdc(p.value.declaredUsdc)} was paid for it. Claim it into your own wallet:{" "}
-              {sponsored ? "the fee is covered, " : ""}a register opens for you on the way if you have none, and a receipt is written that anyone
-              can open. Nothing about this asks you to decide to invest; it already happened.
+              {sponsored ? "the fee is covered, " : "it costs under 0.009 SOL, most of it rent for accounts that stay yours; "}a register opens for you
+              on the way if you have none, and a receipt is written that anyone can open. Nothing about this asks you to decide to invest; it
+              already happened.
             </p>
             <ClaimButton
               payer={payer}

@@ -4,7 +4,7 @@ import { buildClaim, type ClaimParams } from "@/lib/claim/build";
 import { verifySponsoredClaim } from "@/lib/claim/verify";
 import { confirmSignature } from "@/lib/solana/confirm";
 import { connection } from "@/lib/solana/connection";
-import { relayerKeypair, sponsorsPayer } from "@/lib/relayer";
+import { claimsSponsored, relayerKeypair, sponsorsPayer } from "@/lib/relayer";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,10 @@ export async function POST(req: NextRequest) {
   const relayer = relayerKeypair();
   if (!relayer) return NextResponse.json({ error: "Claims are not sponsored on this deployment (no relayer key).", selfPay: true }, { status: 503 });
   if (!sponsorsPayer(String(body.claim.payer ?? ""))) {
-    return NextResponse.json({ error: "Scrip sponsors claims only on payments from organisations it has onboarded. Claim this one at your own cost — under 0.009 SOL.", selfPay: true }, { status: 403 });
+    const why = claimsSponsored()
+      ? "Scrip sponsors claims only on payments from organisations it has onboarded. Claim this one at your own cost — under 0.009 SOL."
+      : "Claims are paid by the claimer — under 0.009 SOL, most of it rent for accounts that stay yours.";
+    return NextResponse.json({ error: why, selfPay: true }, { status: 403 });
   }
 
   let tx: Transaction;

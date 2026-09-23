@@ -10,7 +10,7 @@ const FIRSTS = [
   ["A stock can remember why it arrived", "The receipt with a reason", "/docs/receipts"],
   ["A stock can vest from anyone to anyone", "Grants", "/grants"],
   ["A stock can arrive before the opening bell", "The clock on the floor", "/#floor"],
-  ["A stock can be given to an empty wallet", "Claim links", "/teams"],
+  ["A stock can be given, and claimed into any wallet", "Claim links", "/teams"],
   ["A stock can prove it was kept", "Keep-rate on chain", "/docs/keep-rate"],
 ] as const;
 

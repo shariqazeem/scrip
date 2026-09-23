@@ -91,7 +91,7 @@ export default async function LandingPage() {
     { n: "03", title: "It remembers why it arrived", body: "Every receipt carries the reason, from whom, at which price, and whether it is still held at 7 and 30 days.", href: latestWithReason ? `/receipt/${latestWithReason.sig}` : "/docs/receipts", go: latestWithReason ? `“${latestWithReason.reason.slice(0, 40)}${latestWithReason.reason.length > 40 ? "…" : ""}”` : "How receipts work" },
     { n: "04", title: "It vests, from anyone to anyone", body: "A grant is stock bought now that releases on a schedule: the retention instrument public companies use, in any listed company, from any organisation.", href: latestGrant ? `/receipt/${latestGrant.sig}` : "/grants", go: latestGrant ? "The latest grant" : "Grants that vest" },
     { n: "05", title: "It arrives before the opening bell", body: floor.slept.total > 0 ? `${bps(floor.slept.bps)} of arrivals here settled while the NYSE was shut. When no price can be verified, at a weekend, an arrival waits in the wallet instead of converting on a guess.` : "The NYSE keeps hours; Solana does not. The floor counts every arrival that settled while the exchange was shut.", href: "#floor", go: "The clock on the floor" },
-    { n: "06", title: "It lands in an empty wallet", body: "A first share can be given to an address that has never held anything, and claimed with the fee paid.", href: latestGift ? `/receipt/${latestGift.sig}` : payHref, go: latestGift ? "The latest first share" : "Give a first share" },
+    { n: "06", title: "It can be given", body: "A first share can be sent to someone who has never held one. They claim it into their own wallet, and a receipt says who gave it and why.", href: latestGift ? `/receipt/${latestGift.sig}` : payHref, go: latestGift ? "The latest first share" : "Give a first share" },
     { n: "07", title: "It proves it was kept", body: "Keep-rate is measured on chain at 7 and 30 days from raw units, by anyone. It cannot be faked.", href: "/ledger", go: floor.keepRate7 ? `${bps(floor.keepRate7.bps)} kept at 7 days` : "The ledger" },
   ];
   const sendUsd = front ? Math.max(5, Math.ceil(Number(MIN_SLICE) / 1e6 / Math.max(front.rateNowBps, 1) / 1e-4)) : 5;
@@ -156,7 +156,7 @@ export default async function LandingPage() {
               cannot prevent. Ten percent by default, one signature to start.
             </p>
             <p className="sp-hero-note">
-              Paying a team? <Link href="/teams">Pay them in stock</Link> — their first share arrives with a receipt, even in an empty wallet.
+              Paying a team? <Link href="/teams">Pay them in stock</Link> — their first share arrives with a receipt that says why.
             </p>
           </div>
 

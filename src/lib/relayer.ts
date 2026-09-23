@@ -17,7 +17,18 @@ import { Keypair } from "@solana/web3.js";
  * still claim — at their own cost, under 0.009 SOL — so nothing is ever a dead end.
  * Unset: every payer is sponsored, which is what a local or devnet deployment wants.
  */
+/**
+ * WHETHER SCRIP PAYS FOR CLAIMS AT ALL. `SPONSOR_CLAIMS=off` makes every claim the claimer's
+ * own — one signer, their wallet sends it, under 0.009 SOL, most of it rent for accounts that
+ * stay theirs. Mainnet runs off since 24 September: a claim is the claimer's, like every other
+ * transaction in the product. Unset, claims are sponsored as before (local and devnet).
+ */
+export function claimsSponsored(flag: string | undefined = process.env.SPONSOR_CLAIMS): boolean {
+  return (flag ?? "on").trim().toLowerCase() !== "off";
+}
+
 export function sponsorsPayer(payer: string | null | undefined, list: string | undefined = process.env.SPONSOR_PAYERS): boolean {
+  if (!claimsSponsored()) return false;
   const allowed = (list ?? "")
     .split(",")
     .map((s) => s.trim())
