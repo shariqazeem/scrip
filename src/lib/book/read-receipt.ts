@@ -30,6 +30,16 @@ export type ReceiptView = Receipt & {
   readonly reasonMismatch: boolean;
 };
 
+/**
+ * NOT FOUND IS USUALLY "NOT YET". Every flow in the product sends a transaction and opens its
+ * receipt a moment later, and a transaction that is seconds old is often not yet readable at
+ * `confirmed`. The page used to answer that moment with "There is no receipt at that
+ * signature" — final-sounding, and false: the first claim under Phantom's signing order was
+ * finalized on mainnet while its receipt page said it did not exist. So the page tells this
+ * case apart, says the receipt is settling, and keeps looking before it ever says "none".
+ */
+export const NOT_YET_SETTLED = "No transaction with that signature has settled on this cluster.";
+
 export async function readReceiptBySignature(signature: string): Promise<Outcome<ReceiptView>> {
   if (!/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(signature)) return held("That is not a transaction signature.");
   const conn = connection();
@@ -39,7 +49,7 @@ export async function readReceiptBySignature(signature: string): Promise<Outcome
   } catch (err) {
     return held(`Could not reach Solana (${err instanceof Error ? err.message : String(err)}).`);
   }
-  if (!tx) return held("No transaction with that signature has settled on this cluster.");
+  if (!tx) return held(NOT_YET_SETTLED);
   if (tx.meta?.err) return held("That transaction failed, so nothing moved and no receipt was written.");
   return receiptFromTransaction(conn, signature, tx);
 }

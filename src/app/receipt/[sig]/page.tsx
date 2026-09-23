@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ScripMark } from "@/components/brand/scrip-mark";
+import { SettlingReceipt } from "@/components/receipt/settling";
 import { CopyLink } from "@/components/receipt/copy-link";
 import { type StubSection, Stub } from "@/components/stub/stub";
 import { readBookOf } from "@/lib/book/read-book";
-import { readReceiptBySignature } from "@/lib/book/read-receipt";
+import { readReceiptBySignature, NOT_YET_SETTLED } from "@/lib/book/read-receipt";
 import { db } from "@/lib/db";
 import { receipts as receiptsTable } from "@/lib/db/schema";
 import { age, bps, dateUTC, pythToUsd, short, stampUTC, unitsFromRaw, usd, usdc } from "@/lib/format";
@@ -44,6 +45,18 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function ReceiptPage({ params }: Params) {
   const { sig } = await params;
   const receipt = await readReceiptBySignature(sig);
+
+  if (!receipt.ok && receipt.why === NOT_YET_SETTLED) {
+    return (
+      <main className="sp-receipt">
+        <div className="sp-receipt-col">
+          <Header />
+          <SettlingReceipt short={short(sig)} />
+          <Foot />
+        </div>
+      </main>
+    );
+  }
 
   if (!receipt.ok) {
     return (

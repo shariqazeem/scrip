@@ -2,6 +2,7 @@ import { Transaction } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
 import { buildClaim, type ClaimParams } from "@/lib/claim/build";
 import { verifySponsoredClaim } from "@/lib/claim/verify";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { connection } from "@/lib/solana/connection";
 import { relayerKeypair } from "@/lib/relayer";
 
@@ -58,6 +59,13 @@ export async function POST(req: NextRequest) {
   }
   try {
     const sig = await conn.sendRawTransaction(raw, { skipPreflight: false, maxRetries: 3 });
+    // Answer only once it has CONFIRMED. The button says "Claimed" when this returns, and the
+    // page it opens reads the receipt — both were running ahead of the chain, which is how the
+    // first claim under the new signing order was finalized while its receipt page said it did
+    // not exist. A blockhash lives about 150 blocks, so that bounds the wait.
+    const height = await conn.getBlockHeight("confirmed");
+    const confirmed = await confirmSignature(conn, sig, height + 150);
+    if (!confirmed.ok) return NextResponse.json({ error: `${confirmed.why} Nothing moved.` }, { status: 422 });
     return NextResponse.json({ signature: sig, guards: checked.value.guards, priorityLamports: checked.value.priorityLamports.toString() });
   } catch (err) {
     return NextResponse.json({ error: `The claim was refused (${err instanceof Error ? err.message.slice(0, 200) : String(err)}).` }, { status: 422 });

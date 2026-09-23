@@ -1,5 +1,6 @@
 import { VersionedTransaction } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
+import { confirmSignature } from "@/lib/solana/confirm";
 import { connection } from "@/lib/solana/connection";
 import { SCRIP_PROGRAM_ID } from "@/lib/solana/program";
 
@@ -30,6 +31,11 @@ export async function POST(req: NextRequest) {
   const conn = connection();
   try {
     const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
+    // Answer only once it has confirmed, so the caller never reports a line paid, or a claim
+    // made, ahead of the chain. A blockhash lives about 150 blocks, which bounds the wait.
+    const height = await conn.getBlockHeight("confirmed");
+    const confirmed = await confirmSignature(conn, sig, height + 150);
+    if (!confirmed.ok) return NextResponse.json({ error: `${confirmed.why} Nothing moved.` }, { status: 422 });
     return NextResponse.json({ signature: sig });
   } catch (err) {
     return NextResponse.json({ error: `Refused (${err instanceof Error ? err.message.slice(0, 200) : String(err)}).` }, { status: 422 });

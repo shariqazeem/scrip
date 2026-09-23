@@ -238,3 +238,25 @@
   background: var(--gold-soft);
   color: var(--gold);
 }
+
+/* Settling: the receipt exists in a transaction that is seconds old. The dot breathes, in the
+   same --warn the register uses for money in motion, and stops under reduced motion. */
+.sp-receipt-settling {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.sp-receipt-settling .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--warn);
+  animation: sp-receipt-settling 1.6s var(--ease-out) infinite;
+}
+@keyframes sp-receipt-settling {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-receipt-settling .dot { animation: none; }
+}
