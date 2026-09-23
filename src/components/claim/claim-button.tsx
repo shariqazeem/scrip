@@ -81,10 +81,13 @@ export function ClaimButton({
       return;
     }
     const chosen = slug || normalizeSlug(account.value.address).slice(0, 12);
+    // The same parameters go to both routes: /api/claim/tx builds the claim from them, and
+    // /api/relay rebuilds it from them to check nothing changed before the relayer co-signs.
+    const params = { claimer: account.value.address, payer, releaseId, claimKey: key?.publicKey.toBase58() ?? null, slug: chosen, termsVersion: attest ? 1 : 0 };
     const res = await fetch("/api/claim/tx", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ claimer: account.value.address, payer, releaseId, claimKey: key?.publicKey.toBase58() ?? null, slug: chosen, termsVersion: attest ? 1 : 0 }),
+      body: JSON.stringify(params),
     });
     const built = (await res.json()) as { transactionBase64?: string; error?: string; opensBook?: boolean };
     if (!res.ok || !built.transactionBase64) {
@@ -99,14 +102,18 @@ export function ClaimButton({
       if (signed.why) setWhy(signed.why);
       return;
     }
+    // The wallet signed first, which is what Phantom requires; the claim key signs after it,
+    // over whatever the wallet returned (Phantom may have added Lighthouse assertions). The
+    // relayer has not signed yet — it signs last, on the server, after checking the claim —
+    // so its signature is still missing here, and that is expected.
     let bytes = signed.value;
     if (key) {
       const tx = Transaction.from(bytes);
       tx.partialSign(key);
-      bytes = new Uint8Array(tx.serialize({ requireAllSignatures: true, verifySignatures: false }));
+      bytes = new Uint8Array(tx.serialize({ requireAllSignatures: false, verifySignatures: false }));
     }
     setPhase("sending");
-    const relay = await fetch("/api/relay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ transactionBase64: toBase64(bytes) }) });
+    const relay = await fetch("/api/relay", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ transactionBase64: toBase64(bytes), claim: params }) });
     const out = (await relay.json()) as { signature?: string; error?: string };
     if (!relay.ok || !out.signature) {
       setPhase("idle");
