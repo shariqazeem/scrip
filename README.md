@@ -34,12 +34,12 @@ a surface in this repository, not a claim.
 | 02 | obey a rule on an address | `/app/rule` — a slice of every arrival becomes stock | [`3ZEDeZLW…`](https://solscan.io/tx/3ZEDeZLWUqTLgMe77QmEfy3DfZBVHT5rWE8mDNhbfqo2FqP9EFAgxzjdCRYs2a3JLd4wcoJW2sNfVuPJAC7WqmVn) |
 | 03 | remember why it arrived | `/receipt/<sig>` — the reason is hashed onto the receipt | [`NFZucZvh…`](https://scrip.work/receipt/NFZucZvh5QJAeid7WNxZECeUxuMsJgRUbFxyn57gCxmBmym5C1cP4X3yvnERN4JShde9PxLodVcohYawq3gVcza) |
 | 04 | vest from anyone to anyone | `/grant/<pda>` — an escrow the payer cannot spend, released by keepers | devnet only, so far |
-| 05 | arrive at 3am on a Sunday | `/floor` — the share of arrivals while the NYSE was closed | no weekend arrival yet |
+| 05 | arrive at 3am on a Sunday | `/floor` — the share of arrivals while the NYSE was closed | 4 of the first 5 did: [`5h9QtobT…`](https://solscan.io/tx/5h9QtobTeBzNhvVzpPdL6MNLVRco6DJUx95L2HSmy6XQnbjTwGexXSPn3Q6E6vSNt1us4FxGuMCACfghNPdT5VnY) settled at 06:04 ET, before the bell |
 | 06 | be given to an empty wallet | `/claim/<payer>/<id>` — a relayer pays the fee | [`3tbreDda…`](https://solscan.io/tx/3tbreDdapAgVF7XdXGzucBiSAFK75x1xgHsALj2NVLcVRscX19J1x4J9LxZijTsh2337FRoRvWgjtWLmcMBan9vL) |
 | 07 | prove it was kept | `/ledger` — keep-rate measured on chain at 7 and 30 days | first marks 28 Sep 2026 |
 
 Every one is exercised by the on-chain battery (`npm run test:devnet`). The mainnet column is
-filled only where a real transaction exists; two are still honestly empty, and 06 is the one
+filled only where a real transaction exists; one is still honestly empty, and 06 is the one
 worth opening — a wallet holding **zero SOL** opened a register and took a stock position in
 a single transaction, because the fee was sponsored.
 
