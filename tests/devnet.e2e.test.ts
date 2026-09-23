@@ -556,7 +556,11 @@ describe.skipIf(!LIVE)("the Scrip program on devnet", () => {
     // What it cost, against the balance the site demands before offering this path.
     const spent = before - (await conn.getBalance(claimer.publicKey));
     console.log(`self-paid claim cost the claimer ${spent} lamports`);
-    expect(spent).toBeLessThan(CLAIM_MIN_BALANCE_LAMPORTS);
+    // The site's floor is sized for mainnet's rent, 5,080 lamports a byte. A local validator
+    // still charges the old 6,960, so the same claim costs 1.37× there: hold it to the floor
+    // scaled to this cluster's own rent, which is exactly the floor on mainnet and devnet.
+    const perByte = ((await conn.getMinimumBalanceForRentExemption(1_000)) - (await conn.getMinimumBalanceForRentExemption(0))) / 1_000;
+    expect(spent).toBeLessThan((CLAIM_MIN_BALANCE_LAMPORTS * perByte) / 5_080);
   }, 180_000);
 
   // ── runs and grants ───────────────────────────────────────────────────────────────
