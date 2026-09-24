@@ -34,6 +34,8 @@ type View = {
   rule: { enabled: boolean; rateBps: number; escalateBps: number; floorUsdc: string; capUsdc: string; toleranceBps: number } | null;
   usdcBalance: string;
   usdcExists: boolean;
+  /** Rent for the USDC account the turn-on signature opens when it is missing; "0" when it exists. */
+  usdcAccountRentLamports: string;
   delegatedAmount: string;
   floatLamports: string;
   sweepsCovered: number;
@@ -50,7 +52,7 @@ type View = {
  * be told their rate is out of range.
  */
 /** What the page shows before a wallet is connected: the question, answerable, with nothing to sign yet. */
-const SIGNED_OUT: View = { hasBook: false, slug: null, assetMint: null, state: "off", rule: null, usdcBalance: "0", usdcExists: true, delegatedAmount: "0", floatLamports: "0", sweepsCovered: 0, ownerLamports: "0", openCostLamports: "0" };
+const SIGNED_OUT: View = { hasBook: false, slug: null, assetMint: null, state: "off", rule: null, usdcBalance: "0", usdcExists: true, usdcAccountRentLamports: "0", delegatedAmount: "0", floatLamports: "0", sweepsCovered: 0, ownerLamports: "0", openCostLamports: "0" };
 
 export function RuleEditor({
   owner,
@@ -144,7 +146,8 @@ export function RuleEditor({
 
   const FEE_HEADROOM = 100_000n;
   const ownerLamports = BigInt(view.ownerLamports || "0");
-  const needed = (view.hasBook ? 0n : BigInt(view.openCostLamports || "0")) + floatLamports + FEE_HEADROOM;
+  const usdcRent = BigInt(view.usdcAccountRentLamports || "0");
+  const needed = (view.hasBook ? 0n : BigInt(view.openCostLamports || "0")) + usdcRent + floatLamports + FEE_HEADROOM;
   const short = owner !== null && ownerLamports < needed ? needed - ownerLamports : 0n;
 
   async function run(label: string, body: Record<string, unknown>, message: string, then?: () => void) {
@@ -164,7 +167,7 @@ export function RuleEditor({
   }
 
   const goHome = () => setTimeout(() => router.push("/app"), 900);
-  const canStart = validity.ok && (view.hasBook || (slugCheck?.ok ?? false)) && (!needsAttest || attest) && allowanceUsdc > 0n && view.usdcExists;
+  const canStart = validity.ok && (view.hasBook || (slugCheck?.ok ?? false)) && (!needsAttest || attest) && allowanceUsdc > 0n;
 
   return (
     <div className="sp-rulepage">
@@ -365,7 +368,9 @@ export function RuleEditor({
             <TriangleAlert size={14} strokeWidth={2} aria-hidden /> {validity.why}
           </p>
         ) : null}
-        {owner && !view.usdcExists && !enabled ? <p className="sp-why">This wallet has no USDC account yet. The rule watches it; receive any USDC first and come back.</p> : null}
+        {owner && !view.usdcExists && !enabled ? (
+          <p className="sp-q-cost-foot">This wallet has never held USDC, so the same signature opens its USDC account — {sol(usdcRent)} of rent that stays yours.</p>
+        ) : null}
         {!owner ? (
           <div className="sp-q-connect">
             <p className="sp-q-connect-h">Connect the wallet you get paid to.</p>
@@ -428,6 +433,11 @@ export function RuleEditor({
               <span className="mono">{sol(BigInt(view.openCostLamports))}</span> rent for your register and its handle —{" "}
               <strong>it comes back</strong> if you ever close the register.
             </p>
+            {usdcRent > 0n ? (
+              <p className="sp-q-cost-row">
+                <span className="mono">{sol(usdcRent)}</span> rent for your USDC account, opened in the same signature — yours, like any token account.
+              </p>
+            ) : null}
             <p className="sp-q-cost-row">
               <span className="sp-input-wrap is-inline">
                 <span className="sp-input-prefix">◎</span>

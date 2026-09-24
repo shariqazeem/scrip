@@ -4,6 +4,7 @@ import {
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   createApproveCheckedInstruction,
+  createAssociatedTokenAccountIdempotentInstruction,
   createRevokeInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
@@ -38,6 +39,21 @@ export type UsdcMint = { readonly mint: PublicKey; readonly decimals: number };
 export function usdcAta(owner: PublicKey, usdcMint: PublicKey): PublicKey {
   return getAssociatedTokenAddressSync(usdcMint, owner, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
 }
+
+/**
+ * THE OWNER'S USDC ACCOUNT, OPENED IN THE SAME SIGNATURE WHEN IT IS MISSING. The rule watches
+ * this account and approves the Book as its delegate, so it has to exist before `approve` runs.
+ * A wallet that had never held USDC used to be told to go and receive some first — a dead end
+ * on step one for exactly the new person the rule is for. Now turning the rule on opens it,
+ * idempotently, and the owner pays its rent, which stays theirs like any token account's.
+ */
+export function openUsdcIfMissing(owner: PublicKey, usdcMint: PublicKey, exists: boolean): TransactionInstruction[] {
+  if (exists) return [];
+  return [createAssociatedTokenAccountIdempotentInstruction(owner, usdcAta(owner, usdcMint), owner, usdcMint, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID)];
+}
+
+/** A classic SPL token account (USDC's) is 165 bytes: what its rent is quoted on. */
+export const USDC_ACCOUNT_BYTES = 165;
 
 export function tokenProgramFor(asset: Pick<Asset, "program">): PublicKey {
   return asset.program === "token-2022" ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;

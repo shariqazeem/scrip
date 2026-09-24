@@ -3,18 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { assetByMint, defaultAsset } from "@/lib/assets/registry";
 import { loadBook, usdcMintFor } from "@/lib/book/read-book";
 import { validateSlug } from "@/lib/handle";
-import {
-  changeRuleIxs,
-  disableRuleIxs,
-  enableRuleIxs,
-  openBookIx,
-  pauseIxs,
-  resumeIxs,
-  setAssetIx,
-  topUpAllowanceIxs,
-  withdrawFloatIx,
-  depositFloatIx,
-} from "@/lib/rule/instructions";
+import { changeRuleIxs, disableRuleIxs, enableRuleIxs, openBookIx, pauseIxs, resumeIxs, setAssetIx, topUpAllowanceIxs, withdrawFloatIx, depositFloatIx, openUsdcIfMissing } from "@/lib/rule/instructions";
 import { type RuleTerms, validateRule } from "@/lib/rule/slice";
 import { currentOwner } from "@/lib/session/server";
 import { cluster } from "@/lib/solana/cluster";
@@ -95,12 +84,12 @@ export async function POST(req: NextRequest) {
       if (asset.issuer.name.includes("xStocks") && tv < 1) return bad("This asset needs the eligibility attestation.");
       const t = terms(body.terms);
       if (!t) return bad("Those terms are out of range.");
-      if (!view.value.usdc.exists) return bad("This wallet has no USDC account yet. The rule watches it; receive any USDC first.");
       const open = openBookIx({ owner: ownerKey, slug: slug.value, asset, usdcMint, termsVersion: tv });
       if (!open.ok) return bad(open.why);
       const r = enableRuleIxs({ owner: ownerKey, usdcMint, terms: t, allowanceUsdc: BigInt(body.allowanceUsdc ?? "0"), floatLamports: BigInt(body.floatLamports ?? "0") });
       if (!r.ok) return bad(r.why);
-      ixs = [open.value, ...r.value];
+      // A wallet that has never held USDC gets its USDC account in the same signature.
+      ixs = [...openUsdcIfMissing(ownerKey, usdcMint, view.value.usdc.exists), open.value, ...r.value];
       break;
     }
     case "asset": {
@@ -120,7 +109,8 @@ export async function POST(req: NextRequest) {
       if (!t) return bad("Those terms are out of range.");
       const r = enableRuleIxs({ owner: ownerKey, usdcMint, terms: t, allowanceUsdc: BigInt(body.allowanceUsdc ?? "0"), floatLamports: BigInt(body.floatLamports ?? "0") });
       if (!r.ok) return bad(r.why);
-      ixs = r.value;
+      // A register opened by a claim has no USDC account yet; the same signature opens it.
+      ixs = [...openUsdcIfMissing(ownerKey, usdcMint, view.value.usdc.exists), ...r.value];
       break;
     }
     case "change": {

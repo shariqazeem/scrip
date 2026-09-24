@@ -76,6 +76,7 @@ export default async function RulePage() {
               : null,
             usdcBalance: view.value.usdc.balance.toString(),
             usdcExists: view.value.usdc.exists,
+            usdcAccountRentLamports: view.value.usdcAccountRentLamports.toString(),
             delegatedAmount: view.value.usdc.delegatedAmount.toString(),
             floatLamports: view.value.floatLamports.toString(),
             sweepsCovered: view.value.sweepsCovered,

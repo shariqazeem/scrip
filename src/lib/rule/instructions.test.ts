@@ -146,3 +146,21 @@ describe("sync_watermark and withdraw_float", () => {
     expect(withdrawFloatIx(owner, 0n).ok).toBe(false);
   });
 });
+
+import { ASSOCIATED_TOKEN_PROGRAM_ID as ATA_PROGRAM } from "@solana/spl-token";
+import { openUsdcIfMissing, usdcAta as usdcAtaOf } from "./instructions";
+
+describe("turning the rule on from a wallet that has never held USDC", () => {
+  it("opens nothing when the USDC account exists", () => {
+    expect(openUsdcIfMissing(owner, usdc, true)).toEqual([]);
+  });
+  it("opens exactly the account the delegate is approved on, paid by the owner, idempotently", () => {
+    const [ix, ...rest] = openUsdcIfMissing(owner, usdc, false);
+    expect(rest).toHaveLength(0);
+    expect(ix!.programId.equals(ATA_PROGRAM)).toBe(true);
+    expect(ix!.keys[0]!.pubkey.equals(owner)).toBe(true); // payer
+    expect(ix!.keys[1]!.pubkey.equals(usdcAtaOf(owner, usdc))).toBe(true); // the account the rule watches
+    expect(ix!.keys[2]!.pubkey.equals(owner)).toBe(true); // its owner
+    expect(Array.from(ix!.data)).toEqual([1]); // CreateIdempotent: never fails if it already exists
+  });
+});

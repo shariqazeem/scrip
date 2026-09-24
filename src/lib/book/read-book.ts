@@ -8,7 +8,7 @@ import { multiplierInForce, noMultiplier } from "@/lib/corporate-actions/multipl
 import { readMintMultiplier } from "@/lib/corporate-actions/read-mint";
 import { mulBase } from "@/lib/money";
 import { type Outcome, attempt, held, ok } from "@/lib/outcome";
-import { assetAta, tokenProgramFor, usdcAta } from "@/lib/rule/instructions";
+import { assetAta, tokenProgramFor, usdcAta, USDC_ACCOUNT_BYTES } from "@/lib/rule/instructions";
 import { FIRST_SWEEP_LAMPORTS, MIN_SLICE, effectiveRate, sweepsCovered } from "@/lib/rule/slice";
 import { cluster } from "@/lib/solana/cluster";
 import { connection } from "@/lib/solana/connection";
@@ -63,6 +63,8 @@ export type BookView = {
   readonly ownerLamports: bigint;
   /** Rent for a Book plus a Handle, read from this cluster: what `start` costs before float. */
   readonly openCostLamports: bigint;
+  /** Rent for the owner's USDC account when turning the rule on must open it; 0 when it exists. */
+  readonly usdcAccountRentLamports: bigint;
   readonly state: RuleState;
   /** The rate in force now, after escalation. */
   readonly rateNowBps: number;
@@ -191,6 +193,7 @@ async function readBookView(ownerAddress: string, now: number): Promise<Outcome<
   // What `start` must pay before a lamport of float: the Book and the Handle it creates.
   // 356 and 42 bytes, read off mainnet on 2026-09-21; `rentFor` caches by size.
   const openCostLamports = (await rentFor(conn, 356)) + (await rentFor(conn, 42));
+  const usdcAccountRentLamports = usdc.exists ? 0n : await rentFor(conn, USDC_ACCOUNT_BYTES);
   const rentLamports = bookInfo ? await rentFor(conn, bookInfo.data.length) : 0n;
   const floatLamports = bookInfo ? BigInt(bookInfo.lamports) - rentLamports : 0n;
   const state = ruleState(book, usdc, pda.toBase58(), floatLamports);
@@ -208,6 +211,7 @@ async function readBookView(ownerAddress: string, now: number): Promise<Outcome<
     rentLamports,
     ownerLamports,
     openCostLamports,
+    usdcAccountRentLamports,
     state,
     rateNowBps,
     sweepsCovered: sweepsCovered(floatLamports > 0n ? floatLamports : 0n, assetAtaExists),
