@@ -4,7 +4,9 @@ import { ComputeBudgetProgram, type PublicKey, type TransactionInstruction, Tran
 import { type Asset, USDC_MINT } from "@/lib/assets/registry";
 import { memoIx } from "@/lib/intake/instructions";
 import { validateReason } from "@/lib/intake/memo";
-import { INTAKE_SLIPPAGE_BPS, quoteIntake } from "@/lib/intake/build";
+import { INTAKE_MICRO_LAMPORTS, INTAKE_SLIPPAGE_BPS, quoteIntake } from "@/lib/intake/build";
+import { simulateFirst } from "@/lib/intake/preflight";
+import { sol } from "@/lib/format";
 import { lookupTables, quote as jupQuote, swapInstructions } from "@/lib/jupiter/client";
 import { type Outcome, held, ok } from "@/lib/outcome";
 import { connection } from "@/lib/solana/connection";
@@ -80,6 +82,7 @@ export async function buildGrant(input: {
 
   const ixs: TransactionInstruction[] = [
     ComputeBudgetProgram.setComputeUnitLimit({ units: GRANT_COMPUTE_UNITS }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: INTAKE_MICRO_LAMPORTS }),
     ...(reason.value ? [memoIx(input.payer, reason.value)] : []),
     open.value,
     ...swap.value.setup,
@@ -96,6 +99,19 @@ export async function buildGrant(input: {
   const bytes = tx.serialize();
   if (bytes.length > 1232) {
     return held(`This route needs ${bytes.length} bytes and a transaction holds 1232. The route is unavailable right now; try again shortly.`);
+  }
+  // Ask the chain before asking the wallet, as every payment in stock does.
+  const refusal = await simulateFirst(connection() as never, tx);
+  if (refusal) {
+    if (refusal.kind === "sol") {
+      const balance = await connection().getBalance(input.payer, "confirmed").catch(() => 0);
+      return held(
+        `This wallet needs more SOL to open this grant: the ${sol(input.floatLamports)} float that pays for its vests, and the rent for the grant's accounts, which comes back when it closes. It has ${sol(BigInt(balance))}. Add some SOL and try again; nothing was signed.`,
+      );
+    }
+    if (refusal.kind === "usdc") return held("This wallet holds less USDC than this grant. Nothing was signed.");
+    if (refusal.kind === "price") return held("The price moved while the route was being quoted. Try again; nothing was signed.");
+    return held(`This grant would fail right now (${refusal.detail}). Nothing was signed; try again in a moment.`);
   }
   return ok({
     transactionBase64: Buffer.from(bytes).toString("base64"),

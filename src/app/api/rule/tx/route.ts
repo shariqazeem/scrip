@@ -1,4 +1,4 @@
-import { PublicKey, Transaction } from "@solana/web3.js";
+import { ComputeBudgetProgram, PublicKey, Transaction } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
 import { assetByMint, defaultAsset } from "@/lib/assets/registry";
 import { loadBook, usdcMintFor } from "@/lib/book/read-book";
@@ -177,7 +177,11 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return NextResponse.json({ error: `Could not reach Solana (${err instanceof Error ? err.message : String(err)}).` }, { status: 503 });
   }
-  const tx = new Transaction({ feePayer: ownerKey, blockhash, lastValidBlockHeight }).add(...ixs);
+  // Our own priority fee — 300,000 units at 100,000 microlamports, at most 30,000 lamports —
+  // inside the 100,000 the rule page counts as the fee. Without one, Phantom adds its own,
+  // which on 24 September was 1,250,000 lamports: enough to break a start sized to the lamport.
+  const budget = [ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100_000 })];
+  const tx = new Transaction({ feePayer: ownerKey, blockhash, lastValidBlockHeight }).add(...budget, ...ixs);
   return NextResponse.json({
     transactionBase64: Buffer.from(tx.serialize({ requireAllSignatures: false, verifySignatures: false })).toString("base64"),
     blockhash,

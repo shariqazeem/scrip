@@ -15,6 +15,10 @@ import { connection } from "@/lib/solana/connection";
 import { newReleaseId, toHex } from "@/lib/solana/program";
 import { escrowAddress, fundPayoutIx, intakeFrame, memoIx } from "./instructions";
 import { validateReason } from "./memo";
+import { simulateFirst, solNeeded } from "./preflight";
+import { sol, usdc as usdcText } from "@/lib/format";
+import { tokenProgramFor } from "@/lib/rule/instructions";
+import { rentFor } from "@/lib/solana/rent";
 
 /**
  * THE INTAKE — a payer's USDC becomes the recipient's asset, in the recipient's own account,
@@ -30,6 +34,14 @@ export const INTAKE_SLIPPAGE_BPS = 50;
 export const MAX_PRICE_IMPACT_PCT = 1.0;
 export const MIN_INTAKE_USDC = 1_000_000n;
 export const INTAKE_COMPUTE_UNITS = 500_000;
+/**
+ * Our own priority fee: 500,000 units at 100,000 microlamports is at most 50,000 lamports. A
+ * transaction that reaches Phantom without one gets Phantom's, which on 24 September was
+ * 1,250,000 lamports on a $4 payment.
+ */
+export const INTAKE_MICRO_LAMPORTS = 100_000;
+/** The Payout account: 8 bytes of discriminator and 218 of fields (state.rs). */
+const PAYOUT_BYTES = 226;
 
 export type IntakeQuote = {
   readonly amountUsdc: string;
@@ -105,6 +117,20 @@ export async function buildIntake(input: {
   const mode = input.mode ?? "pay";
   if (mode === "pay" && !input.recipient) return held("A payment needs a recipient with a register.");
 
+  // The payer's USDC, before anything is quoted or simulated: a shortfall is a sentence with
+  // both numbers in it, not a route's error code.
+  {
+    const needUsdc = input.amountUsdc + (input.cashUsdc ?? 0n);
+    const payerUsdc = getAssociatedTokenAddressSync(new PublicKey(USDC_MINT), input.payer, false, TOKEN_PROGRAM_ID);
+    const bal = await connection()
+      .getTokenAccountBalance(payerUsdc, "confirmed")
+      .then((r) => BigInt(r.value.amount))
+      .catch(() => 0n);
+    if (bal < needUsdc) {
+      return held(`This wallet holds ${usdcText(bal)} of USDC and this payment needs ${usdcText(needUsdc)}. Add USDC and try again; nothing was signed.`);
+    }
+  }
+
   const releaseId = input.releaseId ?? newReleaseId();
   let frame: Outcome<{ before: TransactionInstruction[]; after: TransactionInstruction[]; escrow: PublicKey }>;
   if (mode === "pay") {
@@ -171,6 +197,7 @@ export async function buildIntake(input: {
   }
   const ixs: TransactionInstruction[] = [
     ComputeBudgetProgram.setComputeUnitLimit({ units: INTAKE_COMPUTE_UNITS }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: INTAKE_MICRO_LAMPORTS }),
     ...cash,
     ...frame.value.before,
     ...swap.value.setup,
@@ -189,6 +216,40 @@ export async function buildIntake(input: {
   const bytes = tx.serialize();
   if (bytes.length > 1232) {
     return held(`This route needs ${bytes.length} bytes and a transaction holds 1232. The route is unavailable right now; try again shortly.`);
+  }
+  // Ask the chain before asking the wallet: a payment that would fail is refused here, in a
+  // sentence, instead of reaching Phantom's red warning and landing failed with its fee paid.
+  // A simulation the RPC cannot run does not block the payment; the wallet still checks.
+  const simConn = connection();
+  const refusal = await simulateFirst(simConn as never, tx);
+  if (refusal) {
+    if (refusal.kind === "sol") {
+      const recipientAccount =
+        mode === "pay" && input.recipient ? getAssociatedTokenAddressSync(new PublicKey(input.asset.mint), input.recipient, false, tokenProgramFor(input.asset)) : null;
+      const [balance, payoutRent, escrowRent, receiptRent, recipientInfo] = await Promise.all([
+        simConn.getBalance(input.payer, "confirmed").catch(() => 0),
+        rentFor(simConn, PAYOUT_BYTES),
+        rentFor(simConn, input.asset.program === "token-2022" ? 179 : 165),
+        rentFor(simConn, 368),
+        recipientAccount ? simConn.getAccountInfo(recipientAccount, "confirmed").catch(() => null) : Promise.resolve(null),
+      ]);
+      const need = solNeeded({
+        mode,
+        payoutRent,
+        escrowRent,
+        receiptRent,
+        recipientAccountRent: recipientAccount && !recipientInfo ? escrowRent : 0n,
+        feeLamports: 100_000n,
+      });
+      return held(
+        `This wallet needs a little more SOL to pay in stock: about ${sol(need)} while the payment settles${
+          mode === "pay" ? ", most of it back in the same transaction, the rest the receipt's rent" : ", all of it back when the payment is claimed"
+        }. It has ${sol(BigInt(balance))}. Add some SOL and try again; nothing was signed.`,
+      );
+    }
+    if (refusal.kind === "usdc") return held("This wallet holds less USDC than this payment. Nothing was signed.");
+    if (refusal.kind === "price") return held("The price moved while the route was being quoted. Try again; nothing was signed.");
+    return held(`This payment would fail right now (${refusal.detail}). Nothing was signed; try again in a moment.`);
   }
   return ok({
     transactionBase64: Buffer.from(bytes).toString("base64"),
