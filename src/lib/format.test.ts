@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { age, bps, dateUTC, fromBase, pythToUsd, short, since, sol, stampUTC, units, unitsFromRaw, usd, usdAligned, usdc } from "./format";
+import { age, bps, dateUTC, fromBase, measuresOn, pythToUsd, short, since, sol, stampUTC, units, unitsFromRaw, usd, usdAligned, usdc } from "./format";
 
 describe("usd", () => {
   it("reads clean when whole and always shows full cents when not", () => {
@@ -72,6 +72,12 @@ describe("dates", () => {
     expect(since(1_789_000_000 - 3 * 86_400, now)).toBe("3 days ago");
     expect(since(1_789_000_000 - 30 * 86_400, now)).toBe("11 Aug 2026");
     expect(since(1_789_000_000 + 100, now)).toBe("just now");
+  });
+  it("never words a measurement that has not happened as done", () => {
+    const due = 1_790_875_140; // 1 Oct 2026, 17:19 UTC: the flagship receipt's seven days
+    expect(measuresOn(due, (due - 86_400) * 1000)).toBe("to be measured 1 Oct 2026");
+    expect(measuresOn(due, due * 1000)).toBe("due 1 Oct 2026, not measured yet");
+    expect(measuresOn(due, (due + 3_600) * 1000)).toBe("due 1 Oct 2026, not measured yet");
   });
   it("describes an age for a caption", () => {
     expect(age(48)).toBe("48 s");

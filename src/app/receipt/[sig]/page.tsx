@@ -8,7 +8,7 @@ import { readBookOf } from "@/lib/book/read-book";
 import { readReceiptBySignature, NOT_YET_SETTLED } from "@/lib/book/read-receipt";
 import { db } from "@/lib/db";
 import { receipts as receiptsTable } from "@/lib/db/schema";
-import { age, bps, dateUTC, pythToUsd, short, sol, stampUTC, unitsFromRaw, usd, usdc } from "@/lib/format";
+import { age, bps, dateUTC, measuresOn, pythToUsd, short, sol, stampUTC, unitsFromRaw, usd, usdc } from "@/lib/format";
 import { solUsd } from "@/lib/market";
 import { describeDeviation, describeSeconds, fillVsPyth, landedToStock, splitCost } from "@/lib/receipt/figures";
 import { multiplierAt } from "@/lib/receipt/multiplier";
@@ -172,12 +172,12 @@ export default async function ReceiptPage({ params }: Params) {
     rows: [
       {
         k: "7 days",
-        v: r.measured7d ? `${unitsFromRaw(r.measured7d.balanceRaw, decimals)} on ${dateUTC(r.measured7d.at)}` : `measured ${dateUTC(r.settledUnix + 7 * 86_400)}`,
+        v: r.measured7d ? `${unitsFromRaw(r.measured7d.balanceRaw, decimals)} on ${dateUTC(r.measured7d.at)}` : measuresOn(r.settledUnix + 7 * 86_400),
         tone: r.measured7d ? "ok" : "muted",
       },
       {
         k: "30 days",
-        v: r.measured30d ? `${unitsFromRaw(r.measured30d.balanceRaw, decimals)} on ${dateUTC(r.measured30d.at)}` : `measured ${dateUTC(r.settledUnix + 30 * 86_400)}`,
+        v: r.measured30d ? `${unitsFromRaw(r.measured30d.balanceRaw, decimals)} on ${dateUTC(r.measured30d.at)}` : measuresOn(r.settledUnix + 30 * 86_400),
         tone: r.measured30d ? "ok" : "muted",
       },
     ],

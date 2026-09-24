@@ -70,6 +70,14 @@ export const stampUTC = (unixSeconds: number): string => {
   return `${dateUTC(unixSeconds)}, ${hh}:${mm} UTC`;
 };
 
+/**
+ * A keep-rate measurement not yet on chain: "to be measured 1 Oct 2026" while the day is ahead,
+ * "due 1 Oct 2026, not measured yet" once it has passed. Never a bare "measured <date>", which
+ * reads as done.
+ */
+export const measuresOn = (dueUnix: number, now: number = Date.now()): string =>
+  dueUnix * 1000 > now ? `to be measured ${dateUTC(dueUnix)}` : `due ${dateUTC(dueUnix)}, not measured yet`;
+
 /** "3 min ago", "2 h ago", "4 days ago", else a date. `now` is injectable for tests. */
 export const since = (unixSeconds: number, now: number = Date.now()): string => {
   const secs = Math.max(0, Math.floor(now / 1000) - unixSeconds);
