@@ -16,6 +16,8 @@ export const TEAM: ReadonlyMap<string, string> = new Map([
   // Counted as the team's until shown otherwise: a count of outsiders should err low.
   ["5hqYeJRgY8oSoYGTBaxqggpJroEhKHvSNgbrYCjuqDaj", "a claim made while testing"],
   ["8VLpA2ABxTC1dSnfFHoguASWCwDbX2PD7nsm9nYJPazW", "a claim made while testing"],
+  // The founder's demo wallet: the rule turned on and the first $5 swept on camera, 24 September.
+  ["6mCBiCNNpaN8roM3HDJazNtceKEkTbWQzep71ae9fKDE", "the demo wallet"],
 ]);
 
 export function isTeam(address: string | null | undefined): boolean {

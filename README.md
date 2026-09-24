@@ -15,7 +15,7 @@
 > | Everything settled | [scrip.work/ledger](https://scrip.work/ledger) · [the keepers](https://scrip.work/keepers) |
 >
 > A real receipt, openable by a stranger with no wallet and no account:
-> **[$25.05 landed · 10% became 0.0032 SPYx](https://scrip.work/receipt/3ZEDeZLWUqTLgMe77QmEfy3DfZBVHT5rWE8mDNhbfqo2FqP9EFAgxzjdCRYs2a3JLd4wcoJW2sNfVuPJAC7WqmVn)**
+> **[$5 landed · 20% became 0.0013 SPYx, 10 seconds later, filled 0.02% from Pyth](https://scrip.work/receipt/5NcgNf2SXzEQiwXEf6bzcLtirk4JmHE3vx2Qan2uh41LHJFvFXs8SLiRNkwUCAKEKV7bqhBfUDJ92rRj7i6koicG)**
 
 Since the first stock exchange, being paid in ownership was for employees of public
 companies with brokerage accounts. A stock was a certificate a company issued to insiders,
@@ -82,9 +82,10 @@ npm install && npm run dev
 
 ## Try it in a minute
 
-1. **Open a receipt — no wallet, no account.** [$25.05 landed · 10% became 0.0032 SPYx](https://scrip.work/receipt/3ZEDeZLWUqTLgMe77QmEfy3DfZBVHT5rWE8mDNhbfqo2FqP9EFAgxzjdCRYs2a3JLd4wcoJW2sNfVuPJAC7WqmVn).
-   The Pyth price it settled against, that price's age and band, and the 7- and 30-day checks
-   are all read from the chain.
+1. **Open a receipt — no wallet, no account.** [$5 landed · 20% became 0.0013 SPYx](https://scrip.work/receipt/5NcgNf2SXzEQiwXEf6bzcLtirk4JmHE3vx2Qan2uh41LHJFvFXs8SLiRNkwUCAKEKV7bqhBfUDJ92rRj7i6koicG):
+   the stock arrived 10 seconds after the money, filled 0.02% from the Pyth price it was
+   checked against. The price's age and band, the cost, and the 7- and 30-day checks are all
+   read from the chain.
 2. **Watch money become stock.** The front door of [scrip.work](https://scrip.work) is `@scrip`'s
    own register, live. Scan its Solana Pay code with any wallet and send $5 of USDC: when a
    price can be verified, the stub prints within seconds; when none can, it says so and
