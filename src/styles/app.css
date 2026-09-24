@@ -567,10 +567,10 @@
   margin-top: 4px;
   accent-color: var(--accent);
 }
+/* A block with the icon inline: as a flex row, every text node and span in a long message
+   became its own column. */
 .sp-why {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--s-2);
+  display: block;
   margin: 0;
   font-size: var(--fs-small);
   line-height: 1.5;
@@ -583,8 +583,9 @@
   color: var(--ok);
 }
 .sp-why svg {
-  flex: none;
-  margin-top: 2px;
+  display: inline-block;
+  margin: 0 var(--s-2) 0 0;
+  vertical-align: -2px;
 }
 
 /* ── the rule card ────────────────────────────────────────────────────────── */

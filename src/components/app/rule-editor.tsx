@@ -14,6 +14,7 @@ import {
   DEFAULT_TOLERANCE_BPS,
   MAX_RATE_BPS,
   RATE_PRESETS_BPS,
+  FIRST_SWEEP_LAMPORTS,
   SUGGESTED_FLOAT_LAMPORTS,
   SWEEP_COST_LAMPORTS,
   preview,
@@ -22,6 +23,8 @@ import {
 } from "@/lib/rule/slice";
 import { signRuleAction } from "./sign-rule";
 import { ExampleStub } from "@/components/stub/stub";
+import { CopyText } from "@/components/app/copy-text";
+import { QrClient } from "@/components/pay/qr-client";
 import "./rule.css";
 import { useTxToast } from "@/components/toast/use-tx-toast";
 
@@ -149,6 +152,27 @@ export function RuleEditor({
   const usdcRent = BigInt(view.usdcAccountRentLamports || "0");
   const needed = (view.hasBook ? 0n : BigInt(view.openCostLamports || "0")) + usdcRent + floatLamports + FEE_HEADROOM;
   const short = owner !== null && ownerLamports < needed ? needed - ownerLamports : 0n;
+  // What starting costs, in the three parts a person can weigh: a deposit that comes back, the
+  // receipts they prepay, and the one fee. None of it is Scrip's.
+  const deposit = (view.hasBook ? 0n : BigInt(view.openCostLamports || "0")) + usdcRent;
+  // One prepaid receipt, rounded up to what the field can hold (four decimals of SOL).
+  const liteFloat = ((FIRST_SWEEP_LAMPORTS + 99_999n) / 100_000n) * 100_000n;
+  const liteNeeded = deposit + liteFloat + FEE_HEADROOM;
+  const receipts = (lamports: bigint) => {
+    const n = sweepsCovered(lamports);
+    return n === 1 ? "your first receipt" : `your first ${n} receipts`;
+  };
+  // Waiting for SOL is a step, not an error: while this wallet is short, ask the server again
+  // every few seconds, so the page notices the deposit the moment it lands.
+  useEffect(() => {
+    if (short === 0n || !owner) return;
+    const timer = setInterval(() => router.refresh(), 5_000);
+    return () => clearInterval(timer);
+  }, [short, owner, router]);
+  const [wasShort, setWasShort] = useState(false);
+  useEffect(() => {
+    if (short > 0n) setWasShort(true);
+  }, [short]);
 
   async function run(label: string, body: Record<string, unknown>, message: string, then?: () => void) {
     if (!owner) return;
@@ -449,7 +473,7 @@ export function RuleEditor({
                   onChange={(e) => setFloatSol(e.target.value.replace(/[^0-9.]/g, ""))}
                 />
               </span>{" "}
-              prepaid for your first <span className="mono">{sweepsCovered(floatLamports)}</span> receipts. Every arrival
+              prepaid for {receipts(floatLamports)}. Every arrival
               writes one that lives on chain forever, and whoever submits it is paid a tip.
             </p>
             <p className="sp-q-cost-foot">
@@ -459,13 +483,65 @@ export function RuleEditor({
           </div>
         ) : null}
         {short > 0n ? (
-          <p className="sp-why is-err">
-            <TriangleAlert size={14} strokeWidth={2} aria-hidden /> Not enough SOL. This needs{" "}
-            <span className="mono">{sol(needed)}</span> — {view.hasBook ? "" : `${sol(BigInt(view.openCostLamports))} of rent for your register and handle, `}
-            {sol(floatLamports)} of float, and a little for the signature. This wallet has{" "}
-            <span className="mono">{sol(ownerLamports)}</span>, so it is short{" "}
-            <span className="mono">{sol(short)}</span>. Add SOL, or lower the float under “what the rule may do” — the rent comes back if you ever close the register.
-          </p>
+          <section className="sp-q-fund" aria-live="polite">
+            <p className="sp-q-fund-h">
+              <span>{ownerLamports === 0n ? "This wallet has no SOL yet" : "This wallet needs a little more SOL"}</span>
+              <span className="mono">
+                add {sol(short)}
+                {solPrice ? <span className="sp-q-fund-usd"> about {usd((Number(short) / 1e9) * solPrice)}</span> : null}
+              </span>
+            </p>
+            <p className="sp-q-fund-p">
+              Solana asks for a small deposit before anything is created in your name, and your first receipts are prepaid. None of it is
+              paid to Scrip.
+            </p>
+            <div className="sp-q-fund-rows">
+              {deposit > 0n ? (
+                <p>
+                  <span className="mono">{sol(deposit)}</span>
+                  <span>
+                    deposit for your register{usdcRent > 0n ? ", its handle and your USDC account" : " and its handle"}. It comes back if you
+                    ever close them.
+                  </span>
+                </p>
+              ) : null}
+              <p>
+                <span className="mono">{sol(floatLamports)}</span>
+                <span>prepaid for {receipts(floatLamports)}. What is unused, you can withdraw at any time.</span>
+              </p>
+              <p>
+                <span className="mono">{sol(FEE_HEADROOM)}</span>
+                <span>the network fee for the one signature.</span>
+              </p>
+            </div>
+            <div className="sp-q-fund-send">
+              <div className="sp-q-fund-where">
+                <p className="sp-q-fund-k">Send SOL to this wallet, from an exchange or another wallet</p>
+                <p className="mono sp-q-fund-addr">{owner}</p>
+                <CopyText text={owner ?? ""} label="Copy address" />
+                <p className="sp-q-fund-watch">
+                  <span className="dot" aria-hidden />
+                  Waiting for SOL. This page checks every few seconds.
+                </p>
+              </div>
+              <QrClient
+                text={`solana:${owner}?amount=${(Math.ceil(Number(short) / 1e5) / 1e4).toFixed(4)}&label=${encodeURIComponent("Scrip")}&message=${encodeURIComponent("Deposit to turn on your rule")}`}
+                size={132}
+                label={`Send ${sol(short)} to this wallet with a phone wallet`}
+              />
+            </div>
+            {floatLamports > liteFloat ? (
+              <p className="sp-q-fund-lite">
+                Short on SOL?{" "}
+                <button type="button" className="sp-q-fund-link" onClick={() => setFloatSol((Number(liteFloat) / 1e9).toFixed(4))}>
+                  Prepay one receipt instead
+                </button>
+                , and starting needs {sol(liteNeeded)}. You can add more later.
+              </p>
+            ) : null}
+          </section>
+        ) : owner && wasShort && !enabled ? (
+          <p className="sp-q-fund-ready">SOL arrived. You are ready to turn the rule on.</p>
         ) : null}
         {why ? (
           <p className="sp-why is-err">
@@ -481,7 +557,7 @@ export function RuleEditor({
           {!owner
             ? `Connecting is a signature, not a transaction; nothing moves. Then one signature opens your register at @${slug || "yourname"}, approves your own register as delegate for ${usd(Number(allowance || 0))}, deposits ${sol(floatLamports)} of float, and turns the rule on. Whatever USDC is there becomes the watermark; only what lands from then on is income.`
             : !view.hasBook
-            ? `Starting costs ${sol(needed)}: ${sol(BigInt(view.openCostLamports))} of rent that comes back if you ever close the register, and ${sol(floatLamports)} that pays for your first ${sweepsCovered(floatLamports)} receipts. One signature opens your register at @${slug || "yourname"}, approves your own register as delegate for ${usd(Number(allowance || 0))}, and turns the rule on. Your current ${usdc(BigInt(view.usdcBalance))} is the watermark; only what lands from now is income.`
+            ? `Starting costs ${sol(needed)}: a ${sol(deposit)} deposit that comes back if you ever close the register, and ${sol(floatLamports)} that prepays ${receipts(floatLamports)}. One signature opens your register at @${slug || "yourname"}, approves your own register as delegate for ${usd(Number(allowance || 0))}, and turns the rule on. Your current ${usdc(BigInt(view.usdcBalance))} is the watermark; only what lands from now is income.`
             : enabled
               ? `A new rate resets the watermark to today’s ${usdc(BigInt(view.usdcBalance))}; what already landed is not taxed. Allowance left ${usdc(BigInt(view.delegatedAmount))}; float ${sol(BigInt(view.floatLamports))}, about ${view.sweepsCovered} sweeps.`
               : `One signature: approve, float, on. Your current ${usdc(BigInt(view.usdcBalance))} becomes the watermark.`}{" "}
