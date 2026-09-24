@@ -6,6 +6,8 @@
 
 > **Live on Solana mainnet since 21 September 2026 — [scrip.work](https://scrip.work)**
 >
+> **Watch it work: [the film, 1:36](https://youtu.be/snAm1xOh_Pk) and [how a sweep works, 1:52](https://youtu.be/YbZeUL4TZj4)**
+>
 > | | |
 > | --- | --- |
 > | Program | [`Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj`](https://solscan.io/account/Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj) |
