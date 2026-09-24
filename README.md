@@ -17,6 +17,8 @@
 > A real receipt, openable by a stranger with no wallet and no account:
 > **[$5 landed · 20% became 0.0013 SPYx, 10 seconds later, filled 0.02% from Pyth](https://scrip.work/receipt/5NcgNf2SXzEQiwXEf6bzcLtirk4JmHE3vx2Qan2uh41LHJFvFXs8SLiRNkwUCAKEKV7bqhBfUDJ92rRj7i6koicG)**
 
+<p align="center"><img src="docs/media/landed-and-receipt.png" alt="A register on scrip.work: $5 landed, 20% becoming SPYx — and the receipt it printed ten seconds later, filled 0.02% from Pyth" width="100%"></p>
+
 Since the first stock exchange, being paid in ownership was for employees of public
 companies with brokerage accounts. A stock was a certificate a company issued to insiders,
 then a line in a broker's database, and in both cases something you had to go somewhere to
