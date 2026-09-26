@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { DocFrame } from "@/components/docs/doc-frame";
+import { stampUTC } from "@/lib/format";
 import { describeAge } from "@/lib/pyth/price";
 import { pythFigures } from "@/lib/pyth/figures";
 
 export const metadata: Metadata = { title: "How Scrip uses Pyth", description: "No verified Pyth price, no conversion: the program reads Pyth's account in the same transaction as the swap." };
-export const revalidate = 60;
+// "Right now" must mean now: a cached page served the first visitor after a quiet night the
+// midnight reading, "4 minutes old, a sweep would settle", on a Saturday morning.
+export const dynamic = "force-dynamic";
 
 const pct = (bps: number | null, dp = 3) => (bps === null ? "—" : `${(bps / 100).toFixed(dp)}%`);
 
@@ -73,6 +76,7 @@ export default async function Page() {
       <p>Every figure is read from receipts, each of which anyone can open; each receipt shows its own price, band, age and fill.</p>
 
       <h2>Right now</h2>
+      <p>Read from the price accounts on Solana mainnet at {stampUTC(f.at)}.</p>
       <table>
         <tbody>
           {f.now.map((n) => (
