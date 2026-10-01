@@ -3,6 +3,7 @@ import type { LiveArrival } from "@/lib/book/live-types";
 import type { receipts } from "@/lib/db/schema";
 import { bps, dateUTC, measuresOn, short, stampUTC, unitsFromRaw, usdc } from "@/lib/format";
 import { isTeam } from "@/lib/team";
+import { measuredReading } from "@/lib/keep-rate";
 import { type StubSection, Stub } from "./stub";
 
 type Row = typeof receipts.$inferSelect;
@@ -64,11 +65,12 @@ export function StubFromArrival({
   const sections: StubSection[] = [];
   if (showHeld) {
     const d = a.decimals ?? 0;
+    const shareOf = (raw: string) => { const m = measuredReading(BigInt(raw), BigInt(a.amountRaw)); return m.share ? ` · ${m.share}` : ""; };
     sections.push({
       title: "Still held",
       rows: [
-        { k: "7 days", v: a.measured7dAt ? `${unitsFromRaw(BigInt(a.measured7dRaw), d)} on ${dateUTC(a.measured7dAt)}` : measuresOn(a.settledUnix + 7 * 86_400), tone: a.measured7dAt ? "ok" : "muted" },
-        { k: "30 days", v: a.measured30dAt ? `${unitsFromRaw(BigInt(a.measured30dRaw), d)} on ${dateUTC(a.measured30dAt)}` : measuresOn(a.settledUnix + 30 * 86_400), tone: a.measured30dAt ? "ok" : "muted" },
+        { k: "7 days", v: a.measured7dAt ? `${unitsFromRaw(BigInt(a.measured7dRaw), d)} on ${dateUTC(a.measured7dAt)}${shareOf(a.measured7dRaw)}` : measuresOn(a.settledUnix + 7 * 86_400), tone: a.measured7dAt ? measuredReading(BigInt(a.measured7dRaw), BigInt(a.amountRaw)).tone : "muted" },
+        { k: "30 days", v: a.measured30dAt ? `${unitsFromRaw(BigInt(a.measured30dRaw), d)} on ${dateUTC(a.measured30dAt)}${shareOf(a.measured30dRaw)}` : measuresOn(a.settledUnix + 30 * 86_400), tone: a.measured30dAt ? measuredReading(BigInt(a.measured30dRaw), BigInt(a.amountRaw)).tone : "muted" },
       ],
     });
   }

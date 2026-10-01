@@ -9,7 +9,7 @@ import "./stub.css";
  * wrote it; it never invents a figure. The ghost variant is the one exception, and it is
  * drawn dashed and says so: money that landed and has not been swept yet.
  */
-export type StubRow = { readonly k: string; readonly v: ReactNode; readonly tone?: "ok" | "muted" };
+export type StubRow = { readonly k: string; readonly v: ReactNode; readonly tone?: "ok" | "warn" | "muted" };
 export type StubSection = { readonly title?: string; readonly rows: readonly StubRow[] };
 
 export function Stub({

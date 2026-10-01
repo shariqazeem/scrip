@@ -192,6 +192,9 @@ a.stub:hover,
 .stub-row .v.is-ok {
   color: var(--ok);
 }
+.stub-row .v.is-warn {
+  color: var(--warn);
+}
 .stub-row .v.is-muted {
   color: var(--ink-faint);
 }

@@ -122,3 +122,14 @@ export function firstMaturity(rows: readonly ReceiptRow[], windowDays: Window, n
   const at = earliest + windowDays * DAY;
   return at > now ? at : null;
 }
+
+/**
+ * How one receipt's measurement reads beside it: the balance the program measured against what
+ * the receipt delivered. Green only when all of it was still there; otherwise the share, in
+ * words, in the waiting colour. A sold position must never read as kept.
+ */
+export function measuredReading(balanceRaw: bigint, amountRaw: bigint): { tone: "ok" | "warn"; share: string | null } {
+  if (amountRaw <= 0n || balanceRaw >= amountRaw) return { tone: "ok", share: null };
+  const bps = Number((balanceRaw * 10_000n) / amountRaw);
+  return { tone: "warn", share: `${(bps / 100).toFixed(bps < 100 ? 1 : 0)}% of it` };
+}

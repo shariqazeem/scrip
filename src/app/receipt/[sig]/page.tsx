@@ -12,6 +12,7 @@ import { age, bps, dateUTC, measuresOn, pythToUsd, short, sol, stampUTC, unitsFr
 import { solUsd } from "@/lib/market";
 import { describeDeviation, describeSeconds, fillVsPyth, landedToStock, splitCost } from "@/lib/receipt/figures";
 import { multiplierAt } from "@/lib/receipt/multiplier";
+import { measuredReading } from "@/lib/keep-rate";
 import { assetByFeedId } from "@/lib/assets/registry";
 import { explorerUrl } from "@/lib/solana/cluster";
 import { connection } from "@/lib/solana/connection";
@@ -101,6 +102,7 @@ export default async function ReceiptPage({ params }: Params) {
   const decimals = asset?.decimals ?? 0;
   const symbol = asset?.symbol ?? `${r.asset.slice(0, 4)}…`;
   const units = decimals ? unitsFromRaw(r.amountRaw, decimals) : `${r.amountRaw}`;
+  const shareOf = (balanceRaw: bigint) => { const m = measuredReading(balanceRaw, r.amountRaw); return m.share ? ` · ${m.share}` : ""; };
   const isSweep = r.kind === "sweep";
 
   // The recipient's handle, from their Book: one read, and only for the "in @x's wallet" line.
@@ -172,13 +174,13 @@ export default async function ReceiptPage({ params }: Params) {
     rows: [
       {
         k: "7 days",
-        v: r.measured7d ? `${unitsFromRaw(r.measured7d.balanceRaw, decimals)} on ${dateUTC(r.measured7d.at)}` : measuresOn(r.settledUnix + 7 * 86_400),
-        tone: r.measured7d ? "ok" : "muted",
+        v: r.measured7d ? `${unitsFromRaw(r.measured7d.balanceRaw, decimals)} on ${dateUTC(r.measured7d.at)}${shareOf(r.measured7d.balanceRaw)}` : measuresOn(r.settledUnix + 7 * 86_400),
+        tone: r.measured7d ? measuredReading(r.measured7d.balanceRaw, r.amountRaw).tone : "muted",
       },
       {
         k: "30 days",
-        v: r.measured30d ? `${unitsFromRaw(r.measured30d.balanceRaw, decimals)} on ${dateUTC(r.measured30d.at)}` : measuresOn(r.settledUnix + 30 * 86_400),
-        tone: r.measured30d ? "ok" : "muted",
+        v: r.measured30d ? `${unitsFromRaw(r.measured30d.balanceRaw, decimals)} on ${dateUTC(r.measured30d.at)}${shareOf(r.measured30d.balanceRaw)}` : measuresOn(r.settledUnix + 30 * 86_400),
+        tone: r.measured30d ? measuredReading(r.measured30d.balanceRaw, r.amountRaw).tone : "muted",
       },
     ],
   });

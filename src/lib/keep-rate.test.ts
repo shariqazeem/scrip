@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type ReceiptRow, dueForMeasurement, firstMaturity, keepRate } from "./keep-rate";
+import { type ReceiptRow, dueForMeasurement, firstMaturity, keepRate, measuredReading } from "./keep-rate";
 
 const DAY = 86_400;
 const T0 = 1_789_000_000;
@@ -89,5 +89,18 @@ describe("dueForMeasurement", () => {
     ];
     expect(dueForMeasurement(rows, 7, T0 + 8 * DAY).map((r) => r.recipient)).toEqual(["alice"]);
     expect(dueForMeasurement(rows, 30, T0 + 8 * DAY)).toEqual([]);
+  });
+});
+
+describe("measuredReading", () => {
+  it("reads green only when everything delivered was still there", () => {
+    expect(measuredReading(130_000n, 130_000n)).toEqual({ tone: "ok", share: null });
+    expect(measuredReading(140_000n, 130_000n)).toEqual({ tone: "ok", share: null });
+  });
+  it("says the share, in the waiting colour, when some of it was sold", () => {
+    // the demo wallet: 0.0013 SPYx delivered, 0.00009564 left at seven days
+    expect(measuredReading(9_564n, 130_000n)).toEqual({ tone: "warn", share: "7% of it" });
+    expect(measuredReading(650n, 130_000n)).toEqual({ tone: "warn", share: "0.5% of it" });
+    expect(measuredReading(0n, 130_000n)).toEqual({ tone: "warn", share: "0.0% of it" });
   });
 });
