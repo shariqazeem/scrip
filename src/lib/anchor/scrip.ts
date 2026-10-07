@@ -30,6 +30,175 @@ export type Scrip = {
   ],
   "instructions": [
     {
+      "name": "acceptMember",
+      "docs": [
+        "The member joins, by their own signature: only receipts written from now on can match."
+      ],
+      "discriminator": [
+        130,
+        40,
+        27,
+        207,
+        94,
+        55,
+        201,
+        91
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "member"
+          ]
+        },
+        {
+          "name": "plan",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "plan.sponsor",
+                "account": "plan"
+              },
+              {
+                "kind": "account",
+                "path": "plan.plan_id",
+                "account": "plan"
+              }
+            ]
+          },
+          "relations": [
+            "member"
+          ]
+        },
+        {
+          "name": "member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "plan"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "addMember",
+      "docs": [
+        "The sponsor invites one wallet. Several in one transaction for a team."
+      ],
+      "discriminator": [
+        13,
+        116,
+        123,
+        130,
+        126,
+        198,
+        57,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "plan"
+          ]
+        },
+        {
+          "name": "plan",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "sponsor"
+              },
+              {
+                "kind": "account",
+                "path": "plan.plan_id",
+                "account": "plan"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "plan"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "beginSweep",
       "docs": [
         "The first half of a sweep. Computes the slice from on-chain state and moves exactly",
@@ -937,6 +1106,188 @@ export type Scrip = {
       "args": []
     },
     {
+      "name": "closePlan",
+      "docs": [
+        "Close a Plan with no members left: what is in the escrow returns to the sponsor, and the",
+        "rent with it. Matches already paid sit in members' wallets and are not touched."
+      ],
+      "discriminator": [
+        45,
+        137,
+        184,
+        220,
+        162,
+        253,
+        161,
+        8
+      ],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "plan"
+          ]
+        },
+        {
+          "name": "plan",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "sponsor"
+              },
+              {
+                "kind": "account",
+                "path": "plan.plan_id",
+                "account": "plan"
+              }
+            ]
+          }
+        },
+        {
+          "name": "assetMint"
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "plan"
+              },
+              {
+                "kind": "account",
+                "path": "assetTokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "assetMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "sponsorAsset",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "sponsor"
+              },
+              {
+                "kind": "account",
+                "path": "assetTokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "assetMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "assetTokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "disableRule",
       "docs": [
         "Turn the rule off. The client puts `revoke` BEFORE this instruction; the program",
@@ -1584,6 +1935,233 @@ export type Scrip = {
       ]
     },
     {
+      "name": "matchReceipt",
+      "docs": [
+        "THE MATCH. Anyone may call it for an active member's sweep receipt. It never touches the",
+        "save: the save settled in its own transaction, and this adds stock after it."
+      ],
+      "discriminator": [
+        82,
+        20,
+        179,
+        141,
+        25,
+        238,
+        49,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "caller",
+          "docs": [
+            "Whoever calls it: a keeper, the member, the sponsor. Pays the fee, and the member's",
+            "account for the Plan's stock if they have none yet."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "plan",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "plan.sponsor",
+                "account": "plan"
+              },
+              {
+                "kind": "account",
+                "path": "plan.plan_id",
+                "account": "plan"
+              }
+            ]
+          },
+          "relations": [
+            "member"
+          ]
+        },
+        {
+          "name": "member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "plan"
+              },
+              {
+                "kind": "account",
+                "path": "member.owner",
+                "account": "member"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "receipt",
+          "docs": [
+            "The sweep receipt being matched. `Account` checks it is this program's Receipt."
+          ]
+        },
+        {
+          "name": "priceUpdate"
+        },
+        {
+          "name": "assetMint"
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "plan"
+              },
+              {
+                "kind": "account",
+                "path": "assetTokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "assetMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "ownerAsset",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "assetTokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "assetMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "assetTokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "measureReceipt",
       "docs": [
         "Record the recipient's raw balance of the asset at 7 or 30 days. Anyone may call it;",
@@ -1966,6 +2544,164 @@ export type Scrip = {
       ]
     },
     {
+      "name": "openPlan",
+      "docs": [
+        "Open a Plan: the match's terms and an empty escrow of the Plan's stock, owned by the",
+        "Plan. Nothing in the program fills it: the escrow is an ordinary token account, so a",
+        "Jupiter route in the same transaction delivers into it directly, and a top-up later is",
+        "a plain transfer. The sponsor only ever adds their own money; there is nothing to check."
+      ],
+      "discriminator": [
+        61,
+        182,
+        105,
+        40,
+        217,
+        162,
+        28,
+        9
+      ],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "plan",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "sponsor"
+              },
+              {
+                "kind": "arg",
+                "path": "planId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "assetMint"
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "plan"
+              },
+              {
+                "kind": "account",
+                "path": "assetTokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "assetMint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "assetTokenProgram"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "planId",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        },
+        {
+          "name": "matchBps",
+          "type": "u16"
+        },
+        {
+          "name": "monthlyCapUsdc",
+          "type": "u64"
+        },
+        {
+          "name": "defaultRateBps",
+          "type": "u16"
+        },
+        {
+          "name": "escalateBps",
+          "type": "u16"
+        },
+        {
+          "name": "reasonHash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "releasePayout",
       "docs": [
         "Release a settle payout: escrow → the recipient's own account, receipt, close."
@@ -2200,6 +2936,91 @@ export type Scrip = {
         {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "removeMember",
+      "docs": [
+        "The sponsor removes a member: no further matches. What was matched stays in the",
+        "member's wallet; the account's rent returns to the sponsor."
+      ],
+      "discriminator": [
+        171,
+        57,
+        231,
+        150,
+        167,
+        128,
+        18,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "sponsor",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "plan"
+          ]
+        },
+        {
+          "name": "plan",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "sponsor"
+              },
+              {
+                "kind": "account",
+                "path": "plan.plan_id",
+                "account": "plan"
+              }
+            ]
+          },
+          "relations": [
+            "member"
+          ]
+        },
+        {
+          "name": "member",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "plan"
+              },
+              {
+                "kind": "account",
+                "path": "member.owner",
+                "account": "member"
+              }
+            ]
+          }
         }
       ],
       "args": []
@@ -3225,6 +4046,19 @@ export type Scrip = {
       ]
     },
     {
+      "name": "member",
+      "discriminator": [
+        54,
+        19,
+        162,
+        21,
+        29,
+        166,
+        17,
+        198
+      ]
+    },
+    {
       "name": "payout",
       "discriminator": [
         69,
@@ -3235,6 +4069,19 @@ export type Scrip = {
         101,
         158,
         228
+      ]
+    },
+    {
+      "name": "plan",
+      "discriminator": [
+        161,
+        231,
+        251,
+        119,
+        2,
+        12,
+        162,
+        2
       ]
     },
     {
@@ -3318,6 +4165,19 @@ export type Scrip = {
       ]
     },
     {
+      "name": "matched",
+      "discriminator": [
+        215,
+        215,
+        126,
+        179,
+        36,
+        175,
+        178,
+        4
+      ]
+    },
+    {
       "name": "measured",
       "discriminator": [
         214,
@@ -3328,6 +4188,71 @@ export type Scrip = {
         57,
         123,
         181
+      ]
+    },
+    {
+      "name": "memberAdded",
+      "discriminator": [
+        198,
+        220,
+        228,
+        196,
+        92,
+        235,
+        240,
+        79
+      ]
+    },
+    {
+      "name": "memberJoined",
+      "discriminator": [
+        156,
+        199,
+        149,
+        88,
+        193,
+        203,
+        191,
+        210
+      ]
+    },
+    {
+      "name": "memberRemoved",
+      "discriminator": [
+        250,
+        66,
+        3,
+        113,
+        161,
+        10,
+        59,
+        39
+      ]
+    },
+    {
+      "name": "planClosed",
+      "discriminator": [
+        244,
+        135,
+        44,
+        167,
+        104,
+        238,
+        207,
+        12
+      ]
+    },
+    {
+      "name": "planOpened",
+      "discriminator": [
+        180,
+        40,
+        139,
+        132,
+        248,
+        34,
+        213,
+        58
       ]
     },
     {
@@ -3678,6 +4603,56 @@ export type Scrip = {
       "code": 6058,
       "name": "grantFloatTooLow",
       "msg": "The grant's float cannot cover the tip and the receipt's rent. Top up."
+    },
+    {
+      "code": 6059,
+      "name": "planTermsInvalid",
+      "msg": "A Plan's match must be between 0.01% and 100% of the slice, with a monthly cap above zero."
+    },
+    {
+      "code": 6060,
+      "name": "planNotActive",
+      "msg": "This Plan is not active."
+    },
+    {
+      "code": 6061,
+      "name": "notASweep",
+      "msg": "Only a sweep receipt can be matched."
+    },
+    {
+      "code": 6062,
+      "name": "notTheMember",
+      "msg": "This receipt is not the member's."
+    },
+    {
+      "code": 6063,
+      "name": "memberNotActive",
+      "msg": "The member has not joined the Plan."
+    },
+    {
+      "code": 6064,
+      "name": "memberNotInvited",
+      "msg": "This member was already invited and has joined, or was never invited."
+    },
+    {
+      "code": 6065,
+      "name": "alreadyMatched",
+      "msg": "This receipt was matched already, or was written before the member joined."
+    },
+    {
+      "code": 6066,
+      "name": "nothingToMatch",
+      "msg": "Nothing to match: the month's cap is reached, or the share rounds to zero."
+    },
+    {
+      "code": 6067,
+      "name": "planEmpty",
+      "msg": "The Plan's escrow is empty."
+    },
+    {
+      "code": 6068,
+      "name": "planHasMembers",
+      "msg": "Remove every member before closing the Plan."
     }
   ],
   "types": [
@@ -4106,6 +5081,71 @@ export type Scrip = {
       }
     },
     {
+      "name": "matched",
+      "docs": [
+        "A match, in full: whose save, which receipt, how many dollars, how many raw units, and the",
+        "Pyth price it was valued at. The receipt shows \"Added by <sponsor>\" from this."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "plan",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "receipt",
+            "type": "pubkey"
+          },
+          {
+            "name": "sponsor",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc",
+            "type": "u64"
+          },
+          {
+            "name": "amountRaw",
+            "type": "u64"
+          },
+          {
+            "name": "feed",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "price",
+            "type": "i64"
+          },
+          {
+            "name": "expo",
+            "type": "i32"
+          },
+          {
+            "name": "conf",
+            "type": "u64"
+          },
+          {
+            "name": "publishTime",
+            "type": "i64"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
       "name": "measured",
       "type": {
         "kind": "struct",
@@ -4152,6 +5192,145 @@ export type Scrip = {
               "never reads as a sale."
             ],
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "member",
+      "docs": [
+        "A MEMBER of a Plan — `[\"member\", plan, owner]`. Added by the sponsor, joined by the owner's",
+        "own signature (in the same transaction that turns their saving on), matched at most once per",
+        "sweep receipt and never for a receipt written before they joined."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "plan",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "memberStatus"
+              }
+            }
+          },
+          {
+            "name": "joinedUnix",
+            "type": "i64"
+          },
+          {
+            "name": "joinedSlot",
+            "type": "u64"
+          },
+          {
+            "name": "periodStart",
+            "type": "i64"
+          },
+          {
+            "name": "matchedThisPeriodUsdc",
+            "type": "u64"
+          },
+          {
+            "name": "totalMatchedUsdc",
+            "type": "u64"
+          },
+          {
+            "name": "totalMatchedRaw",
+            "type": "u64"
+          },
+          {
+            "name": "lastMatchedSlot",
+            "docs": [
+              "The settled slot of the last receipt matched; only a newer one can match. Set to the",
+              "joining slot at join, so a receipt from before joining never can."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "memberAdded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "plan",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "memberJoined",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "plan",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "memberRemoved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "plan",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "memberStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "invited"
+          },
+          {
+            "name": "active"
           }
         ]
       }
@@ -4329,6 +5508,200 @@ export type Scrip = {
           {
             "name": "slot",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "plan",
+      "docs": [
+        "A PLAN — a sponsor's match for the people they pay. `[\"plan\", sponsor, plan_id]`.",
+        "",
+        "The sponsor funds an escrow of the Plan's stock, owned by this account (a route delivers into",
+        "it, or a plain transfer tops it up); for every automatic",
+        "save a member makes, anyone may call `match_receipt` and the program adds the Plan's share",
+        "of the saved slice, in the Plan's stock, priced by Pyth, capped per member per month and by",
+        "the escrow. A match paid is in the member's own wallet: nothing here can take it back."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sponsor",
+            "type": "pubkey"
+          },
+          {
+            "name": "planId",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "asset",
+            "docs": [
+              "The stock the match is paid in: a registry asset, priced by one of its two feeds."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "feedRaw",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "feedAdjusted",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "matchBps",
+            "docs": [
+              "The share of a saved slice the Plan adds, in basis points (5,000 = 50 cents a dollar)."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "monthlyCapUsdc",
+            "docs": [
+              "The most one member is matched in a 30-day period, in USDC base units."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "defaultRateBps",
+            "docs": [
+              "What the sponsor suggests members save, for the invite page. Informational."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "escalateBps",
+            "type": "u16"
+          },
+          {
+            "name": "reasonHash",
+            "docs": [
+              "The memo the Plan was opened with, hashed."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "planStatus"
+              }
+            }
+          },
+          {
+            "name": "matchedRaw",
+            "type": "u64"
+          },
+          {
+            "name": "matchedUsdc",
+            "type": "u64"
+          },
+          {
+            "name": "matches",
+            "type": "u32"
+          },
+          {
+            "name": "members",
+            "docs": [
+              "Member accounts open under this Plan, invited or active. The Plan closes at zero."
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "createdUnix",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "planClosed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "plan",
+            "type": "pubkey"
+          },
+          {
+            "name": "sponsor",
+            "type": "pubkey"
+          },
+          {
+            "name": "returnedRaw",
+            "type": "u64"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "planOpened",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "plan",
+            "type": "pubkey"
+          },
+          {
+            "name": "sponsor",
+            "type": "pubkey"
+          },
+          {
+            "name": "asset",
+            "type": "pubkey"
+          },
+          {
+            "name": "matchBps",
+            "type": "u16"
+          },
+          {
+            "name": "monthlyCapUsdc",
+            "type": "u64"
+          },
+          {
+            "name": "at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "planStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "active"
           }
         ]
       }

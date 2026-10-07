@@ -16,20 +16,30 @@ Read in this order, then say what you are building:
 1. this file
 2. `docs/scrip.md` — the complete product: the rule, the intake, the program, the keeper,
    keep-rate, the words, the definition of done
-3. `docs/SCRIP-COMPANY-PLAN.md` — the second transformation (2026-09-16): Scrip as a
-   company that pays in ownership. It supersedes `docs/scrip.md`'s design section,
-   presentation section and roadmap: the product map, the organisation side, grants, the
-   floor, "There is no opening bell", the operating plan, the order by leverage
-4. `docs/decisions.md` — settled questions. Reopening one needs a new fact, not a new opinion
-5. `docs/build-order.md` — dependency order and where it stands
-6. `docs/research.md` — every market and behavioural claim with a source
-7. `docs/current-state.md` — what exists and what it does when you run it, observed
+3. `docs/SCRIP-SAVE-PLAN.md` — the third transformation (2026-10-07): save now, then every
+   payment, then the match. It supersedes the company plan on the front door, the words a
+   person reads and the order they meet things in; the machine moved to `/proof`
+4. `docs/SCRIP-COMPANY-PLAN.md` — the second transformation (2026-09-16): Scrip as a
+   company that pays in ownership: the organisation side, grants, the floor (now on
+   `/proof`), the operating plan
+5. `docs/decisions.md` — settled questions. Reopening one needs a new fact, not a new opinion
+6. `docs/build-order.md` — dependency order and where it stands
+7. `docs/research.md` — every market and behavioural claim with a source
+8. `docs/current-state.md` — what exists and what it does when you run it, observed
 
 Before touching any user-facing surface, invoke the **`scrip-ui`** skill.
 
 ---
 
 ## 1. The product, in ten seconds
+
+**Since 2026-10-07: save part of every dollar into stocks you own; whoever pays you can match
+it.** A person meets three things in order: **save now** (a Jupiter swap from their USDC
+into any stock in the catalogue, in their own wallet, with a receipt read from the
+transaction), **save every payment** (the rule below, asked for under the first receipt), and
+**get matched** (a sponsor's Plan, after the program upgrade; a labelled Welcome bonus until
+then). `docs/SCRIP-SAVE-PLAN.md` is the build spec. What follows is the rule, which is still
+the engine of "every payment".
 
 **Scrip is a rule on your wallet: a slice of every dollar that lands becomes stock, in the
 same wallet, with a receipt.**
@@ -117,12 +127,17 @@ introspection.
 | `Payout` | `["payout", payer, release_id]` | the escrow's owner: payer, recipient, claimant, kind (Settle = pay, Sponsor = gift), reason_hash, declared_usdc, asset, min_out_raw, `run_id`. Exists exactly while open |
 | `Grant` | `["grant", payer, grant_id]` | payer, recipient, asset, reason_hash, declared_usdc, total_raw, released_raw, release_cap_raw, start/cliff/duration, state (Open, Active, Revoked), vests, float. The escrow's owner while it vests |
 | `Receipt` | `["receipt", book_or_payout_or_grant, release_id]` | kind (Sweep, Pay, Gift, Grant, Vest), recipient, payer, submitter, book, release_id, `run_id`, reason_hash, basis_usdc, rate_bps, paid_usdc, asset, amount_raw, price stamp, slot, unix, measured_7d, measured_30d |
+| `Plan` (**built, not yet on mainnet**) | `["plan", sponsor, plan_id]` | sponsor, asset and its two feeds, match_bps, monthly cap per member (USDC), default rate and escalation, reason_hash, status, matched raw and USDC, matches, members, created. The escrow's owner |
+| `Member` (**built, not yet on mainnet**) | `["member", plan, owner]` | plan, owner, status (Invited, Active), joined unix and slot, period start, matched this period, total matched (USDC and raw), last matched slot |
 
 Instructions: `open_book(slug, terms_version, kind)`, `set_asset`, `close_book`,
 `enable_rule`, `set_rule`, `disable_rule`, `sync_watermark`, `withdraw_float`,
 `begin_sweep`, `finish_sweep`, `fund_payout(…, run_id)`, `release_payout`, `claim_payout`,
 `cancel_payout`, `open_grant`, `seal_grant`, `vest`, `revoke_grant`, `close_grant`,
 `measure_receipt`. Depositing float is a plain system transfer to the Book or the Grant.
+**Built and battery-tested, not yet deployed to mainnet** (`docs/upgrade-plans.md`):
+`open_plan`, `add_member`, `accept_member`, `remove_member`, `match_receipt`, `close_plan`.
+A Plan's escrow is filled by a route or a plain transfer; there is no funding instruction.
 
 **The grant** — `[memo, open_grant, jupiter…, seal_grant]` in one transaction the payer
 signs: the escrow is bought at once, then sealed with the float that pays for its vests.
@@ -309,4 +324,15 @@ npm run preflight      # what a deploy would cost and what is missing, read from
 | the hero has two buttons, the rule and pay-in-stock | one: "Turn on the rule". Pay-in-stock is a quiet line under it ("Paying a team?") | Stocklana's brief: "Pick one wedge and make it excellent." The wedge is the person paid in USDC and the rule on their wallet; paying in stock is how a first share reaches them |
 | turning the rule on needs the wallet's USDC account to exist ("receive any USDC first") | `start` and `enable` open it in the same signature when it is missing (`openUsdcIfMissing`, CreateIdempotent, the owner paying its 1,488,440 lamports of rent), and the rule page counts that rent before the signature. Simulated on mainnet from a funded wallet with no USDC account: create, open_book, approve, float, enable_rule, no error; 544 bytes of 1,232 | A wallet that had never held USDC — exactly the new person the rule is for, and every register opened by a claim — hit a dead end on step one. Found on 2026-09-24 while writing the demo |
 | nothing says how long a bring-up takes | `npm run rehearse` runs the mainnet sequence against a local validator, timed: 88 seconds from nothing to a site printing receipts, every step green (`docs/deploy.md` §6.1) | A deploy day should be a repeat of something already done, not a first attempt |
+| the front door is the floor as a film, ink, with "Turn on the rule" | **`/` is Save now, on paper** (`src/app/page.tsx`, `components/save/`): the wallet's latest payment ("You received $250 on 6 Oct. Save 10%: $25", offered only when the wallet can spend it) or $5 / $10 / $25, six companies and a search, one button. The old front door is **`/proof`**, on ink, with the floor, the tape, the keepers, the mechanism, keep-rate, the seven firsts and the counters | The final plan (2026-10-07): a judge's first minute has to be the one thing anyone can do on a phone, now, with a receipt. The machine is the proof, not the pitch, and "0 outside the team" was the first number a stranger read |
+| a receipt is a program account | a **save** has none: it is a Jupiter swap the saver signs, with the memo `scrip:save:v1` and the **save mark** (Scrip's program address for the seed `save`, `5xh4j7jt3ytCksSbiZXbuFowmqaPZGfMPcrM2mx4Ebkd`) carried read-only on the associated-token instruction. `/receipt/<sig>` reads it from the transaction (`lib/save/parse.ts`); `getSignaturesForAddress(mark)` lists every save; the `saves` table caches them with the Pyth stamp read within two minutes of landing. Simulated on mainnet before it shipped: 581 bytes, about 129k compute units | No program change, so it works today and at weekends. The mark is the Solana Pay reference convention, so a stranger can enumerate every save without Scrip's database, and the seed is reserved: no program account may use it |
+| the registry is every asset Scrip offers | two lists: the **registry** (the eleven a rule can price and save automatically) and the **catalogue** (`scripts/stock-catalogue.ts` → `assets/catalogue.json`, read 2026-10-07): every xStocks, Ondo and Backpack stock Jupiter routes at $5 and $100 within 1% and 2% impact, none with an active transfer hook, frozen-by-default accounts, a non-transferable mint or a transfer fee. 98 offered; a test holds the eleven inside it | "Every stock Jupiter can route" is not a list a person can trust; three issuers whose documents were read, with a real route, is. Disclosure is per issuer (from its own documents) and per mint (powers read off it) |
+| readers decode transactions with web3.js | readers of other people's transactions (a wallet's payments, a save) use **`lib/solana/tx-view.ts`**: the RPC's `jsonParsed` at `maxSupportedTransactionVersion: 1`, through the connection's own gate | Found on 2026-10-07: mainnet carries **v1 transactions**, web3.js 1.98 throws on them, and `getTransactions` fails the whole batch for one. A payment that arrived in one would have broken the first line |
+| the consumer words are register, rule, sweep, allowance, float, handle, keeper | Your savings, every payment, saved, limit, prepaid saves, name (optional), and the machine words only on `/proof`; names, not tickers (`lib/save/names.ts`); the rail is "Your savings" and "Public: Save now, Proof, Ledger, Docs"; every marketing page wears the paper nav (`components/site/home-nav.tsx`) | The final plan's word table. A person reads what happens to their money, not what the program calls its accounts |
+| the delegate allowance defaults to $1,000 | **$200**, "Scrip can move at most $200", with a trust line above every signature saying it cannot be raised without a new one | The plan: small enough that a careful person says yes |
+| the plan says "rising 1% every three months to 15%" and "no automatic save under $2" | escalation stays **opt-in, with its true ceiling, 50%** (`effective_rate` caps at `MAX_RATE_BPS`; the Book has no field for a lower one). `min_inbound` is fixed at $1 by the program, so the $2 is **a policy of Scrip's keepers** (`KEEPER_MIN_SLICE_USDC`, default 2,000,000): they wait until the unswept slice reaches it, which batches small payments, and `/app` says so. Another keeper may sweep sooner | Never promise on a screen what the program does not enforce. A 15% ceiling needs a Book layout change, which the upgrade rules out |
+| amounts are dollars | dollars and the viewer's own money: the currency from their time zone (`lib/fx/zones.ts`), the rate from ExchangeRate-API's open daily rate (`/api/fx`), named in the title of every converted amount. No country is named anywhere | People think in the money they spend. The zone, not the language, because a phone's language is often en-US in Lahore or Lagos |
+| nothing in the docs funds a match from outside Scrip | **Scrip Curve** (`/curve`, off the main nav; `src/lib/curve/`, `scripts/curve.ts`, `docs/curve/README.md`): a Meteora DBC preset whose fee claimer is a Dynamic Fee Sharing PDA vault (Savings Pool 90, Scrip 10), built with Meteora's own SDKs (`@meteora-ag/dynamic-bonding-curve-sdk` 1.5.13, `dynamic-fee-sharing-sdk` 1.1.0, `cp-amm-sdk` 1.5.1). Quote USDC, fees in USDC, 25% → 1% over an hour, creator 50%, 2% migration fee, all liquidity locked, immutable token, 750 USDC public threshold (30 for a demonstration). The vault and both configs were simulated on mainnet; addresses land in `src/lib/curve/deployed.json` when the founder runs the CLI | The Meteora sidetrack's gap: every stock launchpad pays its creator or its holders; this pays savers outside the token. Checked first, from Meteora's code: the vault can be the claimer, and DBC hands the partner's migrated position to the claimer (`docs/decisions.md`) |
+| nothing pays a bonus | **the Welcome bonus** (`/app/bonus`, operators only, `SCRIP_OPERATORS`): invite a wallet; once it has saved, pay $5 of S&P 500 through pay in stock, prefilled with the reason "Welcome bonus from Scrip", signed in the operator's own wallet. Paid-or-not and the budget (`WELCOME_BONUS_BUDGET_USD`, default 50) are read from the receipts' reasons, never a flag | The plan: until Plans exist, a labelled bonus carries new savers, invite-only and one per wallet so nobody farms it, and it is never called a match |
+| the plan's Brief B lists `seal_plan`, `top_up_plan`, `top_up_plan_direct`, `close_receipt`, receipt events on every writer and a separate payer | **`open_plan`, `add_member`, `accept_member`, `remove_member`, `match_receipt`, `close_plan`** (`anchor/programs/scrip/src/plan.rs`, `src/lib/plan/`, battery: six Plan tests on localnet, 26 of 26 green). No funding instruction: the escrow is a token account the Plan owns, so a route in the opening transaction delivers into it and a top-up is a transfer. `close_receipt` and the separate payer were cut (Kora is cut; closable receipts were first on the plan's cut list). The existing writers already emit their events. The binary grows 585,384 → 681,264 bytes: 0.487 SOL to extend (stays with the program) and a 3.46 SOL buffer (returned). The keeper calls `match_receipt` after each member's sweep, a no-op until Members exist | Fewer instructions, a smaller binary and less to audit; the sponsor only ever adds their own money, so the program has nothing to check about funding. Deploying waits for the founder: a Squads 2-of-3, a verified build, about 4 SOL at peak |
 

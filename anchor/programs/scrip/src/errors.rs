@@ -120,4 +120,24 @@ pub enum ScripError {
     GrantStillOpen,
     #[msg("The grant's float cannot cover the tip and the receipt's rent. Top up.")]
     GrantFloatTooLow,
+    #[msg("A Plan's match must be between 0.01% and 100% of the slice, with a monthly cap above zero.")]
+    PlanTermsInvalid,
+    #[msg("This Plan is not active.")]
+    PlanNotActive,
+    #[msg("Only a sweep receipt can be matched.")]
+    NotASweep,
+    #[msg("This receipt is not the member's.")]
+    NotTheMember,
+    #[msg("The member has not joined the Plan.")]
+    MemberNotActive,
+    #[msg("This member was already invited and has joined, or was never invited.")]
+    MemberNotInvited,
+    #[msg("This receipt was matched already, or was written before the member joined.")]
+    AlreadyMatched,
+    #[msg("Nothing to match: the month's cap is reached, or the share rounds to zero.")]
+    NothingToMatch,
+    #[msg("The Plan's escrow is empty.")]
+    PlanEmpty,
+    #[msg("Remove every member before closing the Plan.")]
+    PlanHasMembers,
 }

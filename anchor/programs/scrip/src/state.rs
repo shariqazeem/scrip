@@ -259,3 +259,72 @@ pub struct Receipt {
     pub measured_30d: Measurement,
     pub bump: u8,
 }
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default)]
+pub enum PlanStatus {
+    #[default]
+    Active,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug, InitSpace, Default)]
+pub enum MemberStatus {
+    #[default]
+    Invited,
+    Active,
+}
+
+/// A PLAN — a sponsor's match for the people they pay. `["plan", sponsor, plan_id]`.
+///
+/// The sponsor funds an escrow of the Plan's stock, owned by this account (a route delivers into
+/// it, or a plain transfer tops it up); for every automatic
+/// save a member makes, anyone may call `match_receipt` and the program adds the Plan's share
+/// of the saved slice, in the Plan's stock, priced by Pyth, capped per member per month and by
+/// the escrow. A match paid is in the member's own wallet: nothing here can take it back.
+#[account]
+#[derive(InitSpace)]
+pub struct Plan {
+    pub sponsor: Pubkey,
+    pub plan_id: [u8; 16],
+    /// The stock the match is paid in: a registry asset, priced by one of its two feeds.
+    pub asset: Pubkey,
+    pub feed_raw: [u8; 32],
+    pub feed_adjusted: [u8; 32],
+    /// The share of a saved slice the Plan adds, in basis points (5,000 = 50 cents a dollar).
+    pub match_bps: u16,
+    /// The most one member is matched in a 30-day period, in USDC base units.
+    pub monthly_cap_usdc: u64,
+    /// What the sponsor suggests members save, for the invite page. Informational.
+    pub default_rate_bps: u16,
+    pub escalate_bps: u16,
+    /// The memo the Plan was opened with, hashed.
+    pub reason_hash: [u8; 32],
+    pub status: PlanStatus,
+    pub matched_raw: u64,
+    pub matched_usdc: u64,
+    pub matches: u32,
+    /// Member accounts open under this Plan, invited or active. The Plan closes at zero.
+    pub members: u32,
+    pub created_unix: i64,
+    pub bump: u8,
+}
+
+/// A MEMBER of a Plan — `["member", plan, owner]`. Added by the sponsor, joined by the owner's
+/// own signature (in the same transaction that turns their saving on), matched at most once per
+/// sweep receipt and never for a receipt written before they joined.
+#[account]
+#[derive(InitSpace)]
+pub struct Member {
+    pub plan: Pubkey,
+    pub owner: Pubkey,
+    pub status: MemberStatus,
+    pub joined_unix: i64,
+    pub joined_slot: u64,
+    pub period_start: i64,
+    pub matched_this_period_usdc: u64,
+    pub total_matched_usdc: u64,
+    pub total_matched_raw: u64,
+    /// The settled slot of the last receipt matched; only a newer one can match. Set to the
+    /// joining slot at join, so a receipt from before joining never can.
+    pub last_matched_slot: u64,
+    pub bump: u8,
+}

@@ -374,9 +374,102 @@ export function decodeGrant(data: Uint8Array): Outcome<Grant> {
   });
 }
 
+/** A sponsor's Plan, as the program wrote it. */
+export type Plan = {
+  readonly sponsor: string;
+  readonly planId: string;
+  readonly asset: string;
+  readonly matchBps: number;
+  readonly monthlyCapUsdc: bigint;
+  readonly defaultRateBps: number;
+  readonly escalateBps: number;
+  readonly reasonHash: Uint8Array;
+  readonly matchedRaw: bigint;
+  readonly matchedUsdc: bigint;
+  readonly matches: number;
+  readonly members: number;
+  readonly createdUnix: number;
+};
+
+type RawPlan = {
+  sponsor: PublicKey;
+  plan_id: number[];
+  asset: PublicKey;
+  match_bps: number;
+  monthly_cap_usdc: BN;
+  default_rate_bps: number;
+  escalate_bps: number;
+  reason_hash: number[];
+  matched_raw: BN;
+  matched_usdc: BN;
+  matches: number;
+  members: number;
+  created_unix: BN;
+};
+
+export function decodePlan(data: Uint8Array): Outcome<Plan> {
+  return map(decodeAccount<RawPlan>("Plan", data), (r) => ({
+    sponsor: r.sponsor.toBase58(),
+    planId: toHex(bytes(r.plan_id)),
+    asset: r.asset.toBase58(),
+    matchBps: r.match_bps,
+    monthlyCapUsdc: big(r.monthly_cap_usdc),
+    defaultRateBps: r.default_rate_bps,
+    escalateBps: r.escalate_bps,
+    reasonHash: bytes(r.reason_hash),
+    matchedRaw: big(r.matched_raw),
+    matchedUsdc: big(r.matched_usdc),
+    matches: r.matches,
+    members: r.members,
+    createdUnix: Number(r.created_unix.toString()),
+  }));
+}
+
+/** One member of a Plan: invited or joined, and what the Plan has added for them. */
+export type Member = {
+  readonly plan: string;
+  readonly owner: string;
+  readonly status: "invited" | "active";
+  readonly joinedUnix: number;
+  readonly joinedSlot: bigint;
+  readonly periodStart: number;
+  readonly matchedThisPeriodUsdc: bigint;
+  readonly totalMatchedUsdc: bigint;
+  readonly totalMatchedRaw: bigint;
+  readonly lastMatchedSlot: bigint;
+};
+
+type RawMember = {
+  plan: PublicKey;
+  owner: PublicKey;
+  status: Record<string, object>;
+  joined_unix: BN;
+  joined_slot: BN;
+  period_start: BN;
+  matched_this_period_usdc: BN;
+  total_matched_usdc: BN;
+  total_matched_raw: BN;
+  last_matched_slot: BN;
+};
+
+export function decodeMember(data: Uint8Array): Outcome<Member> {
+  return map(decodeAccount<RawMember>("Member", data), (r) => ({
+    plan: r.plan.toBase58(),
+    owner: r.owner.toBase58(),
+    status: (enumName(r.status) === "active" ? "active" : "invited") as Member["status"],
+    joinedUnix: Number(r.joined_unix.toString()),
+    joinedSlot: big(r.joined_slot),
+    periodStart: Number(r.period_start.toString()),
+    matchedThisPeriodUsdc: big(r.matched_this_period_usdc),
+    totalMatchedUsdc: big(r.total_matched_usdc),
+    totalMatchedRaw: big(r.total_matched_raw),
+    lastMatchedSlot: big(r.last_matched_slot),
+  }));
+}
+
 /** For a caller that has an account but no idea what it is. */
-export function whatIsThis(data: Uint8Array): "Book" | "Handle" | "Payout" | "Receipt" | "Grant" | null {
-  for (const name of ["Book", "Handle", "Payout", "Receipt", "Grant"] as const) {
+export function whatIsThis(data: Uint8Array): "Book" | "Handle" | "Payout" | "Receipt" | "Grant" | "Plan" | "Member" | null {
+  for (const name of ["Book", "Handle", "Payout", "Receipt", "Grant", "Plan", "Member"] as const) {
     if (decodeAccount(name, data).ok) return name;
   }
   return null;

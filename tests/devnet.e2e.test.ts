@@ -42,7 +42,8 @@ import {
 import { beforeAll, describe, expect, it } from "vitest";
 import { CLAIM_MIN_BALANCE_LAMPORTS } from "@/lib/claim/build";
 import { DEVNET_FEEDS } from "@/lib/assets/registry";
-import { decodeBook, decodeGrant, decodeHandle, decodeReceipt } from "@/lib/book/decode";
+import { decodeBook, decodeGrant, decodeHandle, decodeMember, decodePlan, decodeReceipt } from "@/lib/book/decode";
+import { acceptMemberIx, addMemberIx, closePlanIx, matchReceiptIx, memberPda, openPlanIx, planEscrow, planPda, removeMemberIx } from "@/lib/plan/instructions";
 import { closeGrantIx, grantEscrow, openGrantIx, revokeGrantIx, sealGrantIx, vestIx } from "@/lib/grant/instructions";
 import { cancelPayoutIx, claimPayoutIx, fundPayoutIx, measureReceiptIx, memoIx, releasePayoutIx } from "@/lib/intake/instructions";
 import { reasonHash } from "@/lib/intake/memo";
@@ -727,6 +728,173 @@ describe.skipIf(!LIVE)("the Scrip program on devnet", () => {
     const r = await readReceipt(firstSweepReceipt);
     expect(r.measured7d).toBeNull();
   }, 120_000);
+
+  // ── Plans: a sponsor's match, enforced by the program ───────────────────────────────
+  // The sponsor is the deployer; the member is the owner whose sweeps the battery runs.
+  const planId = new Uint8Array(16).fill(9);
+  const smallPlanId = new Uint8Array(16).fill(10);
+
+  async function readPlan(id: Uint8Array) {
+    const info = await conn.getAccountInfo(planPda(payer.publicKey, id), "confirmed");
+    if (!info) throw new Error("no plan");
+    const p = decodePlan(info.data);
+    if (!p.ok) throw new Error(p.why);
+    return p.value;
+  }
+
+  async function readMember(id: Uint8Array) {
+    const info = await conn.getAccountInfo(memberPda(planPda(payer.publicKey, id), owner.publicKey), "confirmed");
+    if (!info) throw new Error("no member");
+    const m = decodeMember(info.data);
+    if (!m.ok) throw new Error(m.why);
+    return m.value;
+  }
+
+  /** One arrival and one sweep for the owner, with the mock route: the receipt a match needs. */
+  async function arriveAndSweep(usd: bigint): Promise<{ receipt: PublicKey; slice: bigint }> {
+    await send(new Transaction().add(createMintToInstruction(usdcMint.publicKey, usdcAta(owner.publicKey, usdcMint.publicKey), payer.publicKey, usd, [], TOKEN_PROGRAM_ID)), [payer]);
+    const book = await readBook(owner.publicKey);
+    const bal = await balance(usdcAta(owner.publicKey, usdcMint.publicKey), TOKEN_PROGRAM_ID);
+    const slice = computeSlice({ balance: bal, watermark: book.rule.watermark, minInbound: book.rule.minInbound, cap: book.rule.capUsdc, floor: book.rule.floorUsdc, rateBps: book.rule.rateBps });
+    if (!slice.ok) throw new Error(slice.why);
+    const price = await readPyth(SOL_USD);
+    const min = minOutRaw({ sliceUsdc: slice.value.slice, toleranceBps: book.rule.toleranceBps, price: price.price, conf: price.conf, expo: price.expo, assetDecimals: 8, multiplierE12: null });
+    if (!min.ok) throw new Error(min.why);
+    const releaseId = newReleaseId();
+    const build = async () => {
+      const { blockhash } = await conn.getLatestBlockhash("confirmed");
+      const t = buildSweepTransaction({
+        keeper: payer.publicKey,
+        owner: owner.publicKey,
+        usdcMint: usdcMint.publicKey,
+        asset,
+        releaseId,
+        priceUpdate: SOL_USD,
+        route: [mockRoute(payer, assetAta(owner.publicKey, asset), min.value + 1n)],
+        lookupTables: [],
+        recentBlockhash: blockhash,
+      });
+      if (!t.ok) throw new Error(t.why);
+      return t.value;
+    };
+    await sendV0(await build(), [payer], build);
+    return { receipt: receiptPda(bookPda(owner.publicKey), releaseId), slice: slice.value.slice };
+  }
+
+  function matchTx(id: Uint8Array, receipt: PublicKey): Transaction {
+    const ix = matchReceiptIx({ caller: payer.publicKey, plan: planPda(payer.publicKey, id), owner: owner.publicKey, receipt, priceUpdate: SOL_USD, asset });
+    if (!ix.ok) throw new Error(ix.why);
+    return new Transaction().add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }), ix.value);
+  }
+
+  it("opens a Plan with an escrow it owns, and only its sponsor can invite", async () => {
+    const terms = { matchBps: 5_000, monthlyCapUsdc: 5_000_000n, defaultRateBps: 1_000, escalateBps: 0 };
+    const open = openPlanIx({ sponsor: payer.publicKey, planId, asset, terms, reason: "Founding Plan" });
+    expect(open.ok).toBe(true);
+    if (!open.ok) return;
+    // Funded the way a route would fund it: tokens straight into the Plan's own account.
+    await send(new Transaction().add(open.value, createMintToInstruction(assetMint.publicKey, planEscrow(payer.publicKey, planId, asset), payer.publicKey, 10_000_000_000n, [], TOKEN_2022_PROGRAM_ID)), [payer]);
+    const plan = await readPlan(planId);
+    expect(plan.sponsor).toBe(payer.publicKey.toBase58());
+    expect(plan.matchBps).toBe(5_000);
+    expect(plan.monthlyCapUsdc).toBe(5_000_000n);
+    expect(await balance(planEscrow(payer.publicKey, planId, asset), TOKEN_2022_PROGRAM_ID)).toBe(10_000_000_000n);
+
+    // The owner tries to invite themself into the sponsor's Plan: the seeds name the sponsor.
+    const forged = addMemberIx({ sponsor: owner.publicKey, plan: planPda(payer.publicKey, planId), owner: owner.publicKey });
+    expect(forged.ok).toBe(true);
+    if (!forged.ok) return;
+    await expectFailure(new Transaction().add(forged.value), [owner], /ConstraintSeeds|seeds constraint|NotTheOwner|2006/);
+
+    const add = addMemberIx({ sponsor: payer.publicKey, plan: planPda(payer.publicKey, planId), owner: owner.publicKey });
+    expect(add.ok).toBe(true);
+    if (!add.ok) return;
+    await send(new Transaction().add(add.value), [payer]);
+    expect((await readPlan(planId)).members).toBe(1);
+    expect((await readMember(planId)).status).toBe("invited");
+  }, 180_000);
+
+  it("never matches a receipt from before the member joined, nor an invited member's", async () => {
+    await expectFailure(matchTx(planId, firstSweepReceipt), [payer], /MemberNotActive|has not joined/);
+    const join = acceptMemberIx({ owner: owner.publicKey, plan: planPda(payer.publicKey, planId) });
+    expect(join.ok).toBe(true);
+    if (!join.ok) return;
+    await send(new Transaction().add(join.value), [owner]);
+    const m = await readMember(planId);
+    expect(m.status).toBe("active");
+    expect(m.lastMatchedSlot).toBe(m.joinedSlot);
+    await expectFailure(matchTx(planId, firstSweepReceipt), [payer], /AlreadyMatched|before the member joined/);
+  }, 180_000);
+
+  it("matches a member's sweep: half the slice, at Pyth's price plus its band, once", async () => {
+    const { receipt, slice } = await arriveAndSweep(40_000_000n);
+    expect(slice).toBe(4_000_000n);
+    const before = await balance(assetAta(owner.publicKey, asset), TOKEN_2022_PROGRAM_ID);
+    const price = await readPyth(SOL_USD);
+    // The sponsor never overpays: no tolerance, valued at price + band.
+    const expected = minOutRaw({ sliceUsdc: 2_000_000n, toleranceBps: 0, price: price.price, conf: price.conf, expo: price.expo, assetDecimals: 8, multiplierE12: null });
+    expect(expected.ok).toBe(true);
+    if (!expected.ok) return;
+    await send(matchTx(planId, receipt), [payer]);
+    const after = await balance(assetAta(owner.publicKey, asset), TOKEN_2022_PROGRAM_ID);
+    expect(after - before).toBe(expected.value);
+    const m = await readMember(planId);
+    expect(m.totalMatchedUsdc).toBe(2_000_000n);
+    expect(m.matchedThisPeriodUsdc).toBe(2_000_000n);
+    expect(m.totalMatchedRaw).toBe(expected.value);
+    const plan = await readPlan(planId);
+    expect(plan.matches).toBe(1);
+    expect(plan.matchedUsdc).toBe(2_000_000n);
+    await expectFailure(matchTx(planId, receipt), [payer], /AlreadyMatched|matched already/);
+  }, 240_000);
+
+  it("stops at the member's monthly cap", async () => {
+    // $80 lands: a $8 slice would earn $4, but only $3 of the $5 month is left.
+    const first = await arriveAndSweep(80_000_000n);
+    await send(matchTx(planId, first.receipt), [payer]);
+    expect((await readMember(planId)).matchedThisPeriodUsdc).toBe(5_000_000n);
+    // The month is spent: the next save earns nothing until the period rolls.
+    const second = await arriveAndSweep(20_000_000n);
+    await expectFailure(matchTx(planId, second.receipt), [payer], /NothingToMatch|cap is reached/);
+  }, 300_000);
+
+  it("pays what a short escrow holds, counts the dollars pro rata, then says it is empty", async () => {
+    const terms = { matchBps: 10_000, monthlyCapUsdc: 1_000_000_000n, defaultRateBps: 1_000, escalateBps: 0 };
+    const open = openPlanIx({ sponsor: payer.publicKey, planId: smallPlanId, asset, terms, reason: "A small Plan" });
+    const add = addMemberIx({ sponsor: payer.publicKey, plan: planPda(payer.publicKey, smallPlanId), owner: owner.publicKey });
+    expect(open.ok && add.ok).toBe(true);
+    if (!open.ok || !add.ok) return;
+    await send(new Transaction().add(open.value, createMintToInstruction(assetMint.publicKey, planEscrow(payer.publicKey, smallPlanId, asset), payer.publicKey, 1_000n, [], TOKEN_2022_PROGRAM_ID), add.value), [payer]);
+    const join = acceptMemberIx({ owner: owner.publicKey, plan: planPda(payer.publicKey, smallPlanId) });
+    if (!join.ok) throw new Error(join.why);
+    await send(new Transaction().add(join.value), [owner]);
+    const { receipt } = await arriveAndSweep(30_000_000n);
+    const before = await balance(assetAta(owner.publicKey, asset), TOKEN_2022_PROGRAM_ID);
+    await send(matchTx(smallPlanId, receipt), [payer]);
+    expect((await balance(assetAta(owner.publicKey, asset), TOKEN_2022_PROGRAM_ID)) - before).toBe(1_000n);
+    const m = await readMember(smallPlanId);
+    expect(m.totalMatchedRaw).toBe(1_000n);
+    expect(m.totalMatchedUsdc > 0n && m.totalMatchedUsdc < 3_000_000n).toBe(true);
+    const next = await arriveAndSweep(30_000_000n);
+    await expectFailure(matchTx(smallPlanId, next.receipt), [payer], /PlanEmpty|escrow is empty/);
+  }, 300_000);
+
+  it("ends a Plan only with no members, returns the escrow, and never touches a match paid", async () => {
+    const held = await balance(assetAta(owner.publicKey, asset), TOKEN_2022_PROGRAM_ID);
+    const closeEarly = closePlanIx({ sponsor: payer.publicKey, planId, asset });
+    if (!closeEarly.ok) throw new Error(closeEarly.why);
+    await expectFailure(new Transaction().add(closeEarly.value), [payer], /PlanHasMembers|Remove every member/);
+    const escrowLeft = await balance(planEscrow(payer.publicKey, planId, asset), TOKEN_2022_PROGRAM_ID);
+    const sponsorBefore = await balance(assetAta(payer.publicKey, asset), TOKEN_2022_PROGRAM_ID);
+    const remove = removeMemberIx({ sponsor: payer.publicKey, plan: planPda(payer.publicKey, planId), owner: owner.publicKey });
+    const close = closePlanIx({ sponsor: payer.publicKey, planId, asset });
+    if (!remove.ok || !close.ok) throw new Error("could not build");
+    await send(new Transaction().add(remove.value, close.value), [payer]);
+    expect(await conn.getAccountInfo(planPda(payer.publicKey, planId), "confirmed")).toBeNull();
+    expect((await balance(assetAta(payer.publicKey, asset), TOKEN_2022_PROGRAM_ID)) - sponsorBefore).toBe(escrowLeft);
+    // The member's stock, matches included, is exactly where it was.
+    expect(await balance(assetAta(owner.publicKey, asset), TOKEN_2022_PROGRAM_ID)).toBe(held);
+  }, 180_000);
 
   it("pauses with a revoke the program never sees, and the sweep then refuses", async () => {
     const { createRevokeInstruction } = await import("@solana/spl-token");

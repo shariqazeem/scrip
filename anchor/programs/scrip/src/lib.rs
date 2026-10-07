@@ -15,6 +15,7 @@ use anchor_spl::token::{self as spl, Token};
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
 pub mod errors;
+pub mod plan;
 pub mod pyth;
 pub mod registry;
 pub mod rule;
@@ -879,6 +880,231 @@ pub mod scrip {
         )
     }
 
+    // ── Plans: a sponsor's match ───────────────────────────────────────────────────────
+
+    /// Open a Plan: the match's terms and an empty escrow of the Plan's stock, owned by the
+    /// Plan. Nothing in the program fills it: the escrow is an ordinary token account, so a
+    /// Jupiter route in the same transaction delivers into it directly, and a top-up later is
+    /// a plain transfer. The sponsor only ever adds their own money; there is nothing to check.
+    pub fn open_plan(
+        ctx: Context<OpenPlan>,
+        plan_id: [u8; 16],
+        match_bps: u16,
+        monthly_cap_usdc: u64,
+        default_rate_bps: u16,
+        escalate_bps: u16,
+        reason_hash: [u8; 32],
+    ) -> Result<()> {
+        require!(match_bps > 0 && match_bps <= plan::MAX_MATCH_BPS, ScripError::PlanTermsInvalid);
+        require!(monthly_cap_usdc > 0, ScripError::PlanTermsInvalid);
+        require!(default_rate_bps <= MAX_RATE_BPS && escalate_bps <= MAX_RATE_BPS, ScripError::PlanTermsInvalid);
+        let entry = registry::lookup(&ctx.accounts.asset_mint.key()).ok_or(ScripError::AssetNotRegistered)?;
+        let now = Clock::get()?.unix_timestamp;
+        let p = &mut ctx.accounts.plan;
+        p.sponsor = ctx.accounts.sponsor.key();
+        p.plan_id = plan_id;
+        p.asset = entry.mint;
+        p.feed_raw = entry.feed_raw;
+        p.feed_adjusted = entry.feed_adjusted;
+        p.match_bps = match_bps;
+        p.monthly_cap_usdc = monthly_cap_usdc;
+        p.default_rate_bps = default_rate_bps;
+        p.escalate_bps = escalate_bps;
+        p.reason_hash = reason_hash;
+        p.status = PlanStatus::Active;
+        p.matched_raw = 0;
+        p.matched_usdc = 0;
+        p.matches = 0;
+        p.members = 0;
+        p.created_unix = now;
+        p.bump = ctx.bumps.plan;
+        emit!(PlanOpened { plan: p.key(), sponsor: p.sponsor, asset: p.asset, match_bps, monthly_cap_usdc, at: now });
+        Ok(())
+    }
+
+    /// The sponsor invites one wallet. Several in one transaction for a team.
+    pub fn add_member(ctx: Context<AddMember>) -> Result<()> {
+        require!(ctx.accounts.plan.status == PlanStatus::Active, ScripError::PlanNotActive);
+        let now = Clock::get()?.unix_timestamp;
+        let m = &mut ctx.accounts.member;
+        m.plan = ctx.accounts.plan.key();
+        m.owner = ctx.accounts.owner.key();
+        m.status = MemberStatus::Invited;
+        m.joined_unix = 0;
+        m.joined_slot = 0;
+        m.period_start = 0;
+        m.matched_this_period_usdc = 0;
+        m.total_matched_usdc = 0;
+        m.total_matched_raw = 0;
+        m.last_matched_slot = 0;
+        m.bump = ctx.bumps.member;
+        let p = &mut ctx.accounts.plan;
+        p.members = p.members.checked_add(1).ok_or(ScripError::Overflow)?;
+        emit!(MemberAdded { plan: p.key(), owner: m.owner, at: now });
+        Ok(())
+    }
+
+    /// The member joins, by their own signature: only receipts written from now on can match.
+    pub fn accept_member(ctx: Context<AcceptMember>) -> Result<()> {
+        require!(ctx.accounts.plan.status == PlanStatus::Active, ScripError::PlanNotActive);
+        let clock = Clock::get()?;
+        let m = &mut ctx.accounts.member;
+        require!(m.status == MemberStatus::Invited, ScripError::MemberNotInvited);
+        m.status = MemberStatus::Active;
+        m.joined_unix = clock.unix_timestamp;
+        m.joined_slot = clock.slot;
+        m.period_start = clock.unix_timestamp;
+        m.last_matched_slot = clock.slot;
+        emit!(MemberJoined { plan: m.plan, owner: m.owner, at: clock.unix_timestamp });
+        Ok(())
+    }
+
+    /// The sponsor removes a member: no further matches. What was matched stays in the
+    /// member's wallet; the account's rent returns to the sponsor.
+    pub fn remove_member(ctx: Context<RemoveMember>) -> Result<()> {
+        let p = &mut ctx.accounts.plan;
+        p.members = p.members.saturating_sub(1);
+        emit!(MemberRemoved { plan: p.key(), owner: ctx.accounts.member.owner, at: Clock::get()?.unix_timestamp });
+        Ok(())
+    }
+
+    /// THE MATCH. Anyone may call it for an active member's sweep receipt. It never touches the
+    /// save: the save settled in its own transaction, and this adds stock after it.
+    pub fn match_receipt(ctx: Context<MatchReceipt>) -> Result<()> {
+        let clock = Clock::get()?;
+        let (plan_key, match_bps, monthly_cap, feed_raw, feed_adjusted, sponsor, plan_id, bump) = {
+            let p = &ctx.accounts.plan;
+            require!(p.status == PlanStatus::Active, ScripError::PlanNotActive);
+            (p.key(), p.match_bps, p.monthly_cap_usdc, p.feed_raw, p.feed_adjusted, p.sponsor, p.plan_id, p.bump)
+        };
+        let r = &ctx.accounts.receipt;
+        require!(r.kind == ReceiptKind::Sweep, ScripError::NotASweep);
+        require_keys_eq!(r.recipient, ctx.accounts.member.owner, ScripError::NotTheMember);
+        let (receipt_slot, slice_usdc, receipt_key) = (r.settled_slot, r.paid_usdc, r.key());
+        {
+            let m = &ctx.accounts.member;
+            require!(m.status == MemberStatus::Active, ScripError::MemberNotActive);
+            require!(receipt_slot > m.last_matched_slot, ScripError::AlreadyMatched);
+        }
+
+        // ── the price: the same rules as finish_sweep ────────────────────────────────
+        let price = {
+            let data = ctx.accounts.price_update.try_borrow_data()?;
+            parse_price_update(&data)?
+        };
+        let basis_raw = price.feed_id == feed_raw && feed_raw != registry::ZERO_FEED;
+        let basis_adjusted = price.feed_id == feed_adjusted && feed_adjusted != registry::ZERO_FEED;
+        require!(basis_raw || basis_adjusted, ScripError::PriceFeedWrong);
+        require!(clock.unix_timestamp - price.publish_time <= FEED_MAX_AGE, ScripError::PriceStale);
+        require!((price.conf as u128) * TOTAL_BPS <= (price.price as u128) * MAX_CONF_BPS, ScripError::PriceUncertain);
+        let multiplier_e12 = if basis_adjusted {
+            let mint_info = ctx.accounts.asset_mint.to_account_info();
+            let data = mint_info.try_borrow_data()?;
+            match scaled_ui::read_scaled_ui(&data) {
+                Some(cfg) => Some(scaled_ui::live_multiplier_e12(&cfg, clock.unix_timestamp)?),
+                None => None,
+            }
+        } else {
+            None
+        };
+
+        // ── the amount: the share, the month, the escrow ────────────────────────────
+        let (period_start, matched_before) = {
+            let m = &ctx.accounts.member;
+            plan::roll_period(m.period_start, m.matched_this_period_usdc, clock.unix_timestamp)
+        };
+        let usdc_wanted = plan::match_usdc(slice_usdc, match_bps, monthly_cap, matched_before);
+        require!(usdc_wanted > 0, ScripError::NothingToMatch);
+        // At price PLUS band: the sponsor never pays more stock than the dollars are worth.
+        let units_wanted = min_out_raw(usdc_wanted, 0, price.price, price.conf, price.expo, ctx.accounts.asset_mint.decimals, multiplier_e12)?;
+        require!(units_wanted > 0, ScripError::NothingToMatch);
+        let (units, usdc) = plan::limit_by_escrow(units_wanted, usdc_wanted, ctx.accounts.escrow.amount);
+        require!(units > 0, ScripError::PlanEmpty);
+
+        let seeds: &[&[u8]] = &[b"plan", sponsor.as_ref(), plan_id.as_ref(), &[bump]];
+        token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                ctx.accounts.asset_token_program.to_account_info(),
+                token_interface::TransferChecked {
+                    from: ctx.accounts.escrow.to_account_info(),
+                    mint: ctx.accounts.asset_mint.to_account_info(),
+                    to: ctx.accounts.owner_asset.to_account_info(),
+                    authority: ctx.accounts.plan.to_account_info(),
+                },
+                &[seeds],
+            ),
+            units,
+            ctx.accounts.asset_mint.decimals,
+        )?;
+
+        let owner = {
+            let m = &mut ctx.accounts.member;
+            m.period_start = period_start;
+            m.matched_this_period_usdc = matched_before.checked_add(usdc).ok_or(ScripError::Overflow)?;
+            m.total_matched_usdc = m.total_matched_usdc.checked_add(usdc).ok_or(ScripError::Overflow)?;
+            m.total_matched_raw = m.total_matched_raw.checked_add(units).ok_or(ScripError::Overflow)?;
+            m.last_matched_slot = receipt_slot;
+            m.owner
+        };
+        {
+            let p = &mut ctx.accounts.plan;
+            p.matched_raw = p.matched_raw.checked_add(units).ok_or(ScripError::Overflow)?;
+            p.matched_usdc = p.matched_usdc.checked_add(usdc).ok_or(ScripError::Overflow)?;
+            p.matches = p.matches.saturating_add(1);
+        }
+        emit!(Matched {
+            plan: plan_key,
+            owner,
+            receipt: receipt_key,
+            sponsor,
+            usdc,
+            amount_raw: units,
+            feed: price.feed_id,
+            price: price.price,
+            expo: price.expo,
+            conf: price.conf,
+            publish_time: price.publish_time,
+            at: clock.unix_timestamp,
+        });
+        Ok(())
+    }
+
+    /// Close a Plan with no members left: what is in the escrow returns to the sponsor, and the
+    /// rent with it. Matches already paid sit in members' wallets and are not touched.
+    pub fn close_plan(ctx: Context<ClosePlan>) -> Result<()> {
+        require!(ctx.accounts.plan.members == 0, ScripError::PlanHasMembers);
+        let amount = ctx.accounts.escrow.amount;
+        let (sponsor, plan_id, bump) = (ctx.accounts.plan.sponsor, ctx.accounts.plan.plan_id, ctx.accounts.plan.bump);
+        let seeds: &[&[u8]] = &[b"plan", sponsor.as_ref(), plan_id.as_ref(), &[bump]];
+        if amount > 0 {
+            token_interface::transfer_checked(
+                CpiContext::new_with_signer(
+                    ctx.accounts.asset_token_program.to_account_info(),
+                    token_interface::TransferChecked {
+                        from: ctx.accounts.escrow.to_account_info(),
+                        mint: ctx.accounts.asset_mint.to_account_info(),
+                        to: ctx.accounts.sponsor_asset.to_account_info(),
+                        authority: ctx.accounts.plan.to_account_info(),
+                    },
+                    &[seeds],
+                ),
+                amount,
+                ctx.accounts.asset_mint.decimals,
+            )?;
+        }
+        token_interface::close_account(CpiContext::new_with_signer(
+            ctx.accounts.asset_token_program.to_account_info(),
+            token_interface::CloseAccount {
+                account: ctx.accounts.escrow.to_account_info(),
+                destination: ctx.accounts.sponsor.to_account_info(),
+                authority: ctx.accounts.plan.to_account_info(),
+            },
+            &[seeds],
+        ))?;
+        emit!(PlanClosed { plan: ctx.accounts.plan.key(), sponsor, returned_raw: amount, at: Clock::get()?.unix_timestamp });
+        Ok(())
+    }
+
     // ── Measure ────────────────────────────────────────────────────────────────────────
 
     /// Record the recipient's raw balance of the asset at 7 or 30 days. Anyone may call it;
@@ -1664,6 +1890,175 @@ pub struct CloseGrant<'info> {
     pub system_program: Program<'info, System>,
 }
 
+
+// ── Plans ──────────────────────────────────────────────────────────────────────────────
+
+#[derive(Accounts)]
+#[instruction(plan_id: [u8; 16])]
+pub struct OpenPlan<'info> {
+    #[account(mut)]
+    pub sponsor: Signer<'info>,
+    #[account(
+        init,
+        payer = sponsor,
+        space = 8 + Plan::INIT_SPACE,
+        seeds = [b"plan", sponsor.key().as_ref(), plan_id.as_ref()],
+        bump,
+    )]
+    pub plan: Box<Account<'info, Plan>>,
+    pub asset_mint: Box<InterfaceAccount<'info, Mint>>,
+    #[account(
+        init,
+        payer = sponsor,
+        associated_token::mint = asset_mint,
+        associated_token::authority = plan,
+        associated_token::token_program = asset_token_program,
+    )]
+    pub escrow: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub asset_token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AddMember<'info> {
+    #[account(mut)]
+    pub sponsor: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"plan", sponsor.key().as_ref(), plan.plan_id.as_ref()],
+        bump = plan.bump,
+        has_one = sponsor @ ScripError::NotTheOwner,
+    )]
+    pub plan: Box<Account<'info, Plan>>,
+    /// CHECK: the wallet invited. It joins by its own signature in `accept_member`.
+    pub owner: UncheckedAccount<'info>,
+    #[account(
+        init,
+        payer = sponsor,
+        space = 8 + Member::INIT_SPACE,
+        seeds = [b"member", plan.key().as_ref(), owner.key().as_ref()],
+        bump,
+    )]
+    pub member: Box<Account<'info, Member>>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AcceptMember<'info> {
+    pub owner: Signer<'info>,
+    #[account(seeds = [b"plan", plan.sponsor.as_ref(), plan.plan_id.as_ref()], bump = plan.bump)]
+    pub plan: Box<Account<'info, Plan>>,
+    #[account(
+        mut,
+        seeds = [b"member", plan.key().as_ref(), owner.key().as_ref()],
+        bump = member.bump,
+        has_one = plan,
+        has_one = owner @ ScripError::NotTheOwner,
+    )]
+    pub member: Box<Account<'info, Member>>,
+}
+
+#[derive(Accounts)]
+pub struct RemoveMember<'info> {
+    #[account(mut)]
+    pub sponsor: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"plan", sponsor.key().as_ref(), plan.plan_id.as_ref()],
+        bump = plan.bump,
+        has_one = sponsor @ ScripError::NotTheOwner,
+    )]
+    pub plan: Box<Account<'info, Plan>>,
+    #[account(
+        mut,
+        seeds = [b"member", plan.key().as_ref(), member.owner.as_ref()],
+        bump = member.bump,
+        has_one = plan,
+        close = sponsor,
+    )]
+    pub member: Box<Account<'info, Member>>,
+}
+
+#[derive(Accounts)]
+pub struct MatchReceipt<'info> {
+    /// Whoever calls it: a keeper, the member, the sponsor. Pays the fee, and the member's
+    /// account for the Plan's stock if they have none yet.
+    #[account(mut)]
+    pub caller: Signer<'info>,
+    #[account(mut, seeds = [b"plan", plan.sponsor.as_ref(), plan.plan_id.as_ref()], bump = plan.bump)]
+    pub plan: Box<Account<'info, Plan>>,
+    #[account(
+        mut,
+        seeds = [b"member", plan.key().as_ref(), member.owner.as_ref()],
+        bump = member.bump,
+        has_one = plan,
+    )]
+    pub member: Box<Account<'info, Member>>,
+    /// CHECK: the member's wallet, where the match lands.
+    #[account(address = member.owner)]
+    pub owner: UncheckedAccount<'info>,
+    /// The sweep receipt being matched. `Account` checks it is this program's Receipt.
+    pub receipt: Box<Account<'info, Receipt>>,
+    /// CHECK: a Pyth PriceUpdateV2 owned by the receiver program; parsed in the handler.
+    #[account(owner = PYTH_RECEIVER)]
+    pub price_update: UncheckedAccount<'info>,
+    #[account(address = plan.asset)]
+    pub asset_mint: Box<InterfaceAccount<'info, Mint>>,
+    #[account(
+        mut,
+        associated_token::mint = asset_mint,
+        associated_token::authority = plan,
+        associated_token::token_program = asset_token_program,
+    )]
+    pub escrow: Box<InterfaceAccount<'info, TokenAccount>>,
+    #[account(
+        init_if_needed,
+        payer = caller,
+        associated_token::mint = asset_mint,
+        associated_token::authority = owner,
+        associated_token::token_program = asset_token_program,
+    )]
+    pub owner_asset: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub asset_token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ClosePlan<'info> {
+    #[account(mut)]
+    pub sponsor: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"plan", sponsor.key().as_ref(), plan.plan_id.as_ref()],
+        bump = plan.bump,
+        has_one = sponsor @ ScripError::NotTheOwner,
+        close = sponsor,
+    )]
+    pub plan: Box<Account<'info, Plan>>,
+    #[account(address = plan.asset)]
+    pub asset_mint: Box<InterfaceAccount<'info, Mint>>,
+    #[account(
+        mut,
+        associated_token::mint = asset_mint,
+        associated_token::authority = plan,
+        associated_token::token_program = asset_token_program,
+    )]
+    pub escrow: Box<InterfaceAccount<'info, TokenAccount>>,
+    #[account(
+        init_if_needed,
+        payer = sponsor,
+        associated_token::mint = asset_mint,
+        associated_token::authority = sponsor,
+        associated_token::token_program = asset_token_program,
+    )]
+    pub sponsor_asset: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub asset_token_program: Interface<'info, TokenInterface>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
 #[derive(Accounts)]
 pub struct MeasureReceipt<'info> {
     #[account(mut)]
@@ -1881,4 +2276,61 @@ mod tests {
         assert_eq!(&data[..8], crate::instruction::FinishSweep::DISCRIMINATOR);
         assert_eq!(data.len(), 24);
     }
+}
+
+#[event]
+pub struct PlanOpened {
+    pub plan: Pubkey,
+    pub sponsor: Pubkey,
+    pub asset: Pubkey,
+    pub match_bps: u16,
+    pub monthly_cap_usdc: u64,
+    pub at: i64,
+}
+
+#[event]
+pub struct MemberAdded {
+    pub plan: Pubkey,
+    pub owner: Pubkey,
+    pub at: i64,
+}
+
+#[event]
+pub struct MemberJoined {
+    pub plan: Pubkey,
+    pub owner: Pubkey,
+    pub at: i64,
+}
+
+#[event]
+pub struct MemberRemoved {
+    pub plan: Pubkey,
+    pub owner: Pubkey,
+    pub at: i64,
+}
+
+/// A match, in full: whose save, which receipt, how many dollars, how many raw units, and the
+/// Pyth price it was valued at. The receipt shows "Added by <sponsor>" from this.
+#[event]
+pub struct Matched {
+    pub plan: Pubkey,
+    pub owner: Pubkey,
+    pub receipt: Pubkey,
+    pub sponsor: Pubkey,
+    pub usdc: u64,
+    pub amount_raw: u64,
+    pub feed: [u8; 32],
+    pub price: i64,
+    pub expo: i32,
+    pub conf: u64,
+    pub publish_time: i64,
+    pub at: i64,
+}
+
+#[event]
+pub struct PlanClosed {
+    pub plan: Pubkey,
+    pub sponsor: Pubkey,
+    pub returned_raw: u64,
+    pub at: i64,
 }

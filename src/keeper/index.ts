@@ -32,9 +32,10 @@ import {
   getAssociatedTokenAddressSync,
   unpackAccount,
 } from "@solana/spl-token";
-import { type AccountInfo, Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import { type AccountInfo, ComputeBudgetProgram, Keypair, PublicKey, Transaction } from "@solana/web3.js";
 import { type Asset, type PriceFeed, USDC_MINT, assetByMint } from "@/lib/assets/registry";
-import { type Book, type Grant, decodeBook, decodeGrant, releasableRaw } from "@/lib/book/decode";
+import { type Book, type Grant, decodeBook, decodeGrant, decodeMember, decodePlan, releasableRaw } from "@/lib/book/decode";
+import { matchReceiptIx } from "@/lib/plan/instructions";
 import { vestIx } from "@/lib/grant/instructions";
 import { multiplierInForce } from "@/lib/corporate-actions/multiplier";
 import { readMintMultiplier } from "@/lib/corporate-actions/read-mint";
@@ -47,7 +48,7 @@ import { settleable } from "@/lib/pyth/price";
 import { decimalToE12, minOutRaw } from "@/lib/rule/min-out";
 import { assetAta, syncWatermarkIx, tokenProgramFor, usdcAta } from "@/lib/rule/instructions";
 import { FEED_MAX_AGE_SECONDS, MAX_CONF_BPS, MIN_SLICE, computeSlice, effectiveRate } from "@/lib/rule/slice";
-import { SCRIP_PROGRAM_ID, bookPda, discriminatorFilter, newReleaseId } from "@/lib/solana/program";
+import { SCRIP_PROGRAM_ID, bookPda, discriminatorFilter, newReleaseId, receiptPda } from "@/lib/solana/program";
 import { buildSweepTransaction } from "@/lib/sweep/build";
 import { confirmSignature, sendAndConfirm } from "@/lib/solana/confirm";
 import { makeConnection } from "@/lib/solana/make-connection";
@@ -72,6 +73,8 @@ const HEALTH_PORT = Number(process.env.KEEPER_HEALTH_PORT ?? "8787");
 const PRIORITY_MICRO_LAMPORTS = Number(process.env.KEEPER_PRIORITY_MICRO_LAMPORTS ?? "100000");
 /** The tip + receipt rent the program will take from the float. Mirrors the program. */
 const KEEPER_TIP = 500_000n;
+/** The smallest save Scrip's keepers submit; below it the receipt's cost is too large a share. */
+const KEEPER_MIN_SLICE = BigInt(process.env.KEEPER_MIN_SLICE_USDC ?? "2000000");
 /** How often a linear schedule is vested. Every vest costs the payer's float a receipt's rent. */
 const VEST_EVERY_SECONDS = Number(process.env.KEEPER_VEST_HOURS ?? "24") * 3600;
 
@@ -116,6 +119,59 @@ async function listBooks(): Promise<Array<{ pda: PublicKey; book: Book; lamports
 // ── the price ─────────────────────────────────────────────────────────────────────────────
 
 type PriceSource = { account: PublicKey; posted: boolean; feed: PriceFeed; adjusted: boolean; close: () => Promise<void> };
+
+/**
+ * THE MATCH, AFTER A SWEEP. Every Plan that counts this owner as an active member adds its
+ * share of the slice, priced by Pyth, capped by the member's month and the Plan's escrow; the
+ * program checks all of it, this only asks. Nothing here can fail a sweep: errors are logged and
+ * reported, and a match that cannot be paid now (an empty escrow, a spent month, a stale price)
+ * is simply not paid. Before the Plans upgrade is deployed there are no Member accounts and
+ * this finds nothing.
+ */
+async function matchAfterSweep(owner: PublicKey, receipt: PublicKey, sweptAsset: Asset, sweptPrice: PriceSource): Promise<void> {
+  try {
+    const members = await conn.getProgramAccounts(SCRIP_PROGRAM_ID, {
+      commitment: "confirmed",
+      filters: [discriminatorFilter("Member"), { memcmp: { offset: 8 + 32, bytes: owner.toBase58() } }],
+    });
+    for (const { account } of members) {
+      const m = decodeMember(account.data);
+      if (!m.ok || m.value.status !== "active") continue;
+      const planKey = new PublicKey(m.value.plan);
+      const planInfo = await conn.getAccountInfo(planKey, "confirmed");
+      const plan = planInfo ? decodePlan(planInfo.data) : null;
+      if (!plan || !plan.ok) continue;
+      const planAsset = assetByMint(plan.value.asset);
+      if (!planAsset) continue;
+      // The sweep's own fresh price when the Plan pays in the same stock; otherwise the Plan's.
+      let source: PriceSource | null = planAsset.mint === sweptAsset.mint ? sweptPrice : null;
+      let opened: PriceSource | null = null;
+      if (!source) {
+        const p = await priceFor({ feedRaw: planAsset.feedRaw?.feedId ?? "", feedAdjusted: planAsset.feedAdjusted?.feedId ?? "" } as Book, planAsset);
+        if (!p.ok) {
+          log(`match for ${owner.toBase58().slice(0, 8)}… in plan ${planKey.toBase58().slice(0, 8)}… waits: ${p.why}`);
+          continue;
+        }
+        source = opened = p.value;
+      }
+      try {
+        const ix = matchReceiptIx({ caller: keeper.publicKey, plan: planKey, owner, receipt, priceUpdate: source.account, asset: planAsset });
+        if (!ix.ok) throw new Error(ix.why);
+        const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: PRIORITY_MICRO_LAMPORTS }), ix.value);
+        const sig = await sendAndConfirm(conn, tx, [keeper]);
+        log(`matched ${owner.toBase58().slice(0, 8)}…'s save from plan ${planKey.toBase58().slice(0, 8)}… (${sig})`);
+      } catch (err) {
+        const why = err instanceof Error ? err.message : String(err);
+        log(`match for ${owner.toBase58().slice(0, 8)}… in plan ${planKey.toBase58().slice(0, 8)}… not paid: ${why.slice(0, 200)}`);
+      } finally {
+        if (opened) await opened.close();
+      }
+    }
+  } catch (err) {
+    log(`looking for plans of ${owner.toBase58().slice(0, 8)}…: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 
 /**
  * A fresh, fully verified price account for EITHER of the book's two feeds.
@@ -257,6 +313,14 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     report(key, book.owner, { lastReason: slice.why });
     return;
   }
+  // SCRIP'S KEEPERS WAIT FOR $2. Every save writes a receipt that costs about 0.003 SOL, so a
+  // 50-cent save would spend most of itself. The program allows a slice down to MIN_SLICE; this
+  // keeper waits until the unswept slice reaches the policy minimum, which batches small
+  // payments into one save. Another keeper may sweep sooner: keepers are permissionless.
+  if (slice.value.slice < KEEPER_MIN_SLICE) {
+    report(key, book.owner, { lastReason: `waiting for $${Number(KEEPER_MIN_SLICE) / 1e6} to save: the slice is ${slice.value.slice} USDC base units` });
+    return;
+  }
   if (usdc.delegatedAmount < slice.value.slice) {
     report(key, book.owner, { lastReason: `allowance exhausted: ${usdc.delegatedAmount} left, slice needs ${slice.value.slice}` });
     return;
@@ -380,6 +444,9 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     sweeps += 1;
     report(key, book.owner, { lastSweepAt: Math.floor(Date.now() / 1000), lastSweepSig: sig, lastReason: null });
     log(`swept ${slice.value.slice} USDC → ${asset.symbol} for ${book.owner.slice(0, 8)}… (${sig})`);
+    // The match, if a sponsor's Plan counts this owner as a member: its own transaction, after
+    // the save, so nothing about it can hold up or undo the sweep that just landed.
+    await matchAfterSweep(owner, receiptPda(bookPda(owner), releaseId), asset, price.value);
   } catch (err) {
     const why = err instanceof Error ? err.message : String(err);
     const prev = reports.get(key);
