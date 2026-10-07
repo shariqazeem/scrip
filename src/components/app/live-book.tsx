@@ -5,8 +5,10 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { LiveArrival, LiveView } from "@/lib/book/live-types";
 import { milestonesFor, nextWholeShare } from "@/lib/book/milestones";
 import { InstallPrompt, OfflineNotice } from "./offline";
-import { bps, dateUTC, short, since, sol, unitsFromRaw, usd, usdc } from "@/lib/format";
+import { bps, dateUTC, short, since, unitsFromRaw, usd, usdc } from "@/lib/format";
 import { priceWait } from "@/lib/book/waiting";
+import { nameOf } from "@/lib/save/names";
+import { sweepsCovered } from "@/lib/rule/slice";
 import { EmptyStub, GhostStub } from "@/components/stub/stub";
 import { StubFromArrival } from "@/components/stub/from-row";
 import { CopyText } from "./copy-text";
@@ -25,13 +27,13 @@ import "./live.css";
  * under the printer, nothing else).
  */
 const STATE_LINE: Record<LiveView["state"], string> = {
-  on: "rule on",
-  paused: "paused: delegate revoked",
-  "delegate-replaced": "paused: another app took the delegate",
-  "allowance-exhausted": "allowance used up",
-  "float-empty": "float empty",
+  on: "saving every payment",
+  paused: "stopped: Scrip cannot move your USDC",
+  "delegate-replaced": "paused: another app took the permission",
+  "allowance-exhausted": "limit used up",
+  "float-empty": "prepaid saves used up",
   "no-usdc-account": "no USDC account yet",
-  off: "rule off",
+  off: "not saving automatically",
 };
 
 export function LiveBook({ initial, mode, site, limit, children }: { initial: LiveView; mode: "owner" | "public" | "front"; site: string; limit?: number; children?: ReactNode }) {
@@ -99,7 +101,7 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
               ? `no ${asset?.symbol ?? "asset"} price can be verified right now; it stays in the wallet and converts when one returns`
               : view.state === "on"
                 ? "a keeper is racing for this now; the units print with the receipt"
-                : `nothing converts while the rule is ${STATE_LINE[view.state]}`
+                : `nothing is saved while ${STATE_LINE[view.state]}`
           }
           symbol={asset?.symbol ?? "stock"}
           rateBps={view.rateNowBps}
@@ -127,7 +129,7 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
             <span className="dot" aria-hidden />
             {view.handle ? `@${view.handle}` : short(view.owner)}, live
           </span>
-          <span>{waiting ? waiting.chip : view.ruleOn && asset ? `${bps(view.rateNowBps)} becomes ${asset.symbol}` : STATE_LINE[view.state]}</span>
+          <span>{waiting ? waiting.chip : view.ruleOn && asset ? `${bps(view.rateNowBps)} becomes ${nameOf(asset.symbol)}` : STATE_LINE[view.state]}</span>
         </div>
         {register}
         {children}
@@ -140,31 +142,31 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
       <header className="sp-live-head">
         {view.ruleOn && asset ? (
           <p className="sp-live-rule">
-            <span className="n">{bps(view.rateNowBps)}</span> of every arrival becomes <span className="n">{asset.symbol}</span>
+            You save <span className="n">{bps(view.rateNowBps)}</span> of every payment into <span className="n">{nameOf(asset.symbol)}</span>
             {view.escalateBps > 0 ? `, rising ${bps(view.escalateBps)} every three months` : ""}.
           </p>
         ) : (
-          <p className="sp-live-rule is-off">{mode === "owner" && !view.handle ? "No rule yet." : "The rule is off."}</p>
+          <p className="sp-live-rule is-off">{mode === "owner" && !view.handle ? "Not saving automatically yet." : "Not saving automatically."}</p>
         )}
         <p className={`sp-live-watch${warn ? " is-warn" : view.state === "off" ? " is-off" : ""}`}>
           <span className="dot" aria-hidden />
           <span>watching {short(view.owner)}</span>
           <span>{waiting ? waiting.chip : STATE_LINE[view.state]}</span>
-          {view.ruleOn ? <span>last sweep {view.keeper.lastSweepAt ? since(view.keeper.lastSweepAt) : view.sweeps > 0 ? `${view.sweeps} so far` : "none yet"}</span> : null}
-          {view.ruleOn ? <span>allowance {usdc(BigInt(view.usdc.delegatedAmount))} left</span> : null}
-          {view.ruleOn ? <span>float {sol(BigInt(view.floatLamports))}</span> : null}
+          {view.ruleOn ? <span>last save {view.keeper.lastSweepAt ? since(view.keeper.lastSweepAt) : view.sweeps > 0 ? `${view.sweeps} so far` : "none yet"}</span> : null}
+          {view.ruleOn ? <span>limit {usdc(BigInt(view.usdc.delegatedAmount))} left</span> : null}
+          {view.ruleOn ? <span>{sweepsCovered(BigInt(view.floatLamports))} saves prepaid</span> : null}
         </p>
-        {view.state === "delegate-replaced" ? <p className="sp-live-why">Another app set itself as the delegate on your USDC account, which paused the rule. Resume re-approves your Book and resets the watermark to today.</p> : null}
-        {view.state === "allowance-exhausted" ? <p className="sp-live-why">The allowance is used up. Re-approve to keep sweeping; nothing lands until then.</p> : null}
-        {view.state === "float-empty" ? <p className="sp-live-why">The float cannot cover the next receipt and tip. Top it up; nothing is lost while it waits.</p> : null}
+        {view.state === "delegate-replaced" ? <p className="sp-live-why">Another app took the permission on your USDC account, which paused saving. Start again to give it back; payments count from today.</p> : null}
+        {view.state === "allowance-exhausted" ? <p className="sp-live-why">The limit is used up, so saving has paused. Set a new limit to keep saving; your USDC stays where it is until then.</p> : null}
+        {view.state === "float-empty" ? <p className="sp-live-why">The prepaid saves are used up. Prepay more to keep saving; nothing is lost while it waits.</p> : null}
         {waiting ? <p className="sp-live-why">{waiting.detail}</p> : null}
-        {view.ruleOn && !view.keeper.alive && mode === "owner" ? <p className="sp-live-why">No keeper is reporting right now. Money that lands waits; nothing is lost.</p> : null}
+        {view.ruleOn && !view.keeper.alive && mode === "owner" ? <p className="sp-live-why">Nothing is submitting saves right now. Payments that land wait in your wallet; nothing is lost.</p> : null}
         <OfflineNotice at={view.at} />
         {mode === "owner" ? (
           <div className="sp-live-actions">
             {view.ruleOn ? <PauseResume state={view.state} /> : null}
             <Link href="/app/rule" className={`sp-action${view.ruleOn ? "" : " is-primary"}`}>
-              {view.ruleOn ? "Change the rule" : "Turn on the rule"}
+              {view.ruleOn ? "Change how much you save" : "Save every payment"}
             </Link>
             {view.handle ? (
               <button type="button" className="sp-action is-quiet" disabled={publishing} onClick={() => void togglePublish()}>
@@ -273,10 +275,10 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
           {mode === "public" && view.handle ? (
             <section className="sp-section">
               <p className="sp-section-label">
-                <span>Pay this book</span>
+                <span>Pay this wallet</span>
               </p>
               <p className="sp-fact-note">
-                Send USDC to <span className="mono">{view.owner}</span> and watch the rule sweep it, or{" "}
+                Send USDC to <span className="mono">{view.owner}</span> and watch part of it become stock, or{" "}
                 <Link href={`/pay/${view.handle}`}>pay @{view.handle} with a reason on the receipt</Link>.
               </p>
             </section>

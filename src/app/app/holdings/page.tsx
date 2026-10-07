@@ -44,7 +44,7 @@ export default async function HoldingsPage() {
             <span>share-equivalents through the live multiplier</span>
           </p>
           {view.holdings.length === 0 ? (
-            <p className="sp-register-empty">Nothing yet. The first sweep or payment puts stock here, in an account only you control.</p>
+            <p className="sp-register-empty">Nothing yet. Your first save puts stock here, in an account only you control.</p>
           ) : (
             <div>
               {view.holdings.map((h) => {

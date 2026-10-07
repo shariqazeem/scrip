@@ -27,7 +27,7 @@ function ModePill({ pathname }: { pathname: string }) {
         <House size={14} strokeWidth={2} /> Home
       </Link>
       <Link href="/app/rule" className={`mode-seg${onRule ? " on" : ""}`}>
-        <SlidersHorizontal size={14} strokeWidth={2} /> Rule
+        <SlidersHorizontal size={14} strokeWidth={2} /> Every payment
       </Link>
       <Link href="/app/org" className={`mode-seg${onOrg ? " on" : ""}`}>
         <Send size={14} strokeWidth={2} /> Pay

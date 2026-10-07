@@ -6,9 +6,11 @@ import { SignOut } from "@/components/auth/connect";
 import { offeredAssets, ruleAssets } from "@/lib/assets/registry";
 import { loadBook } from "@/lib/book/read-book";
 import { currentOwner } from "@/lib/session/server";
-import { market, solUsd } from "@/lib/market";
+import { prices as jupPrices } from "@/lib/jupiter/client";
+import { solUsd } from "@/lib/market";
+import { stockByMint } from "@/lib/save/catalogue";
 
-export const metadata: Metadata = { title: "The rule" };
+export const metadata: Metadata = { title: "Save every payment" };
 export const dynamic = "force-dynamic";
 
 /**
@@ -17,8 +19,11 @@ export const dynamic = "force-dynamic";
  * floor and cap; escalation as one checkbox; the allowance with a plain explanation of what
  * the delegate can and cannot do; the float with "about N sweeps". One signature.
  */
-export default async function RulePage() {
+export default async function RulePage({ searchParams }: { searchParams: Promise<{ asset?: string }> }) {
   const owner = await currentOwner();
+  // "Do this with every payment", from a save's receipt: the stock that save bought, when the
+  // chain can price it for an automatic save.
+  const initialAsset = (await searchParams).asset ?? null;
   // Only what a keeper can price on chain today: a rule on anything else could only wait.
   const assets = offeredAssets();
 
@@ -30,25 +35,25 @@ export default async function RulePage() {
   // Read BEFORE the signed-out branch, and passed to both. The signed-out page is the one a
   // stranger meets first, and it is the whole point of answering the question before asking
   // for a wallet — so it is the last page that should be missing the number.
-  const prices = new Map<string, number>();
-  const [m, solPrice] = await Promise.all([market().catch(() => null), solUsd().catch(() => null)]);
-  for (const row of m?.rows ?? []) if (row.priceUsd !== null) prices.set(row.mint, row.priceUsd);
-  const priceProps = Object.fromEntries(prices);
+  // Every offered stock, single companies too: "do this with every payment" often arrives
+  // from a save into Nvidia, and its worked example deserves real units.
+  const [p, solPrice] = await Promise.all([jupPrices(assets.map((a) => a.mint)).catch(() => null), solUsd().catch(() => null)]);
+  const priceProps = p && p.ok ? Object.fromEntries(p.value) : {};
 
   if (!owner) {
     // The question first, the wallet second: choose a rate before anything asks for a signature.
     return (
-      <PageFrame eyebrow="The rule" title="The share of your income you never want to think about again." sub="A habit, not a trading setting. Payers keep sending USDC to the address you already use; a slice of every inflow becomes stock in this wallet, with a receipt.">
-        <RuleEditor owner={null} view={null} assets={assets.map(opt)} prices={priceProps} solPrice={solPrice} />
+      <PageFrame eyebrow="Every payment" title="Save part of every payment, by itself." sub="Say yes once. Whoever pays you keeps sending USDC to the address you already use, and a slice of every payment becomes stock in this same wallet as it lands, with a receipt.">
+        <RuleEditor owner={null} view={null} assets={assets.map(opt)} prices={priceProps} solPrice={solPrice} initialAsset={initialAsset} />
       </PageFrame>
     );
   }
   const view = await loadBook(owner);
   return (
     <PageFrame
-      eyebrow="The rule"
-      title="The share of your income you never want to think about again."
-      sub="A habit, not a trading setting. Payers keep sending USDC to this address; a slice of every inflow becomes stock in this wallet, with a receipt."
+      eyebrow="Every payment"
+      title="Save part of every payment, by itself."
+      sub="Whoever pays you keeps sending USDC to this address, and a slice of every payment becomes stock in this same wallet as it lands, with a receipt."
       actions={<SignOut />}
     >
       {!view.ok ? (
@@ -85,6 +90,7 @@ export default async function RulePage() {
           }}
           prices={priceProps}
           solPrice={solPrice}
+          initialAsset={initialAsset}
           assets={[...assets, ...(view.value.asset && !assets.some((a) => a.mint === view.value.asset?.mint) ? [view.value.asset] : [])].map(opt)}
         />
       )}
@@ -93,5 +99,5 @@ export default async function RulePage() {
 }
 
 function opt(a: ReturnType<typeof ruleAssets>[number]) {
-  return { mint: a.mint, symbol: a.symbol, name: a.name, singleName: a.singleName, xstocks: a.issuer.name.includes("xStocks"), issuer: a.issuer.name, kind: a.kind };
+  return { mint: a.mint, symbol: a.symbol, name: a.name, label: stockByMint(a.mint)?.name ?? a.name, singleName: a.singleName, xstocks: a.issuer.name.includes("xStocks"), issuer: a.issuer.name, kind: a.kind };
 }

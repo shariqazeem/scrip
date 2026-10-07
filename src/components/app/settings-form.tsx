@@ -36,37 +36,37 @@ export function SettingsForm({ owner, delegatedAmount, floatLamports, sweepsCove
   return (
     <div className="sp-org-form">
       <div className="sp-q-row">
-        <span className="k">Allowance</span>
+        <span className="k">Limit</span>
         <span className="v">
           <span className="sp-input-wrap">
             <span className="sp-input-prefix">$</span>
             <input className="sp-input is-mono" inputMode="decimal" value={allowance} onChange={(e) => setAllowance(e.target.value.replace(/[^0-9.]/g, ""))} />
           </span>
-          <button type="button" className="sp-action" disabled={busy !== null || !ruleOn} onClick={() => void run("allowance", { action: "allowance", allowanceUsdc: String(Math.round(Number(allowance || 0) * 1e6)) }, `Re-approved ${usd(Number(allowance || 0))}.`)}>
-            {busy === "allowance" ? "Waiting…" : "Re-approve"}
+          <button type="button" className="sp-action" disabled={busy !== null || !ruleOn} onClick={() => void run("allowance", { action: "allowance", allowanceUsdc: String(Math.round(Number(allowance || 0) * 1e6)) }, `Limit set to ${usd(Number(allowance || 0))}.`)}>
+            {busy === "allowance" ? "Waiting…" : "Set the limit"}
           </button>
         </span>
         <span className="note">
-          {usdc(BigInt(delegatedAmount))} left. The most your own register may move in total before you approve again; only through a sweep the program verifies, only into your own account. Revoking it is a token-program instruction Scrip cannot stop.
+          {usdc(BigInt(delegatedAmount))} left. The most Scrip can move from this wallet in total before you sign again, only into your chosen stock, only into this same wallet. Stopping is one token-program instruction, and Scrip cannot block it.
         </span>
       </div>
       <div className="sp-q-row">
-        <span className="k">Float</span>
+        <span className="k">Prepaid saves</span>
         <span className="v">
           <span className="sp-input-wrap">
             <span className="sp-input-prefix">◎</span>
             <input className="sp-input is-mono" inputMode="decimal" value={floatSol} onChange={(e) => setFloatSol(e.target.value.replace(/[^0-9.]/g, ""))} />
           </span>
           <button type="button" className="sp-action" disabled={busy !== null} onClick={() => void run("float", { action: "float", lamports: String(Math.round(Number(floatSol || 0) * 1e9)) }, `Added ${sol(BigInt(Math.round(Number(floatSol || 0) * 1e9)))}.`)}>
-            {busy === "float" ? "Waiting…" : "Add"}
+            {busy === "float" ? "Waiting…" : "Prepay more"}
           </button>
         </span>
         <span className="note">
-          {sol(BigInt(floatLamports))} on your Book, about {sweepsCovered} sweeps. Pays each receipt&rsquo;s rent and the keeper&rsquo;s tip. Withdrawable any time.
+          {sol(BigInt(floatLamports))} prepaid, about {sweepsCovered} saves. Each automatic save pays its receipt&rsquo;s deposit and a small tip to whoever submits it. Withdraw what is unused any time.
         </span>
       </div>
       <div className="sp-q-row">
-        <span className="k">Withdraw float</span>
+        <span className="k">Withdraw prepaid SOL</span>
         <span className="v">
           <span className="sp-input-wrap">
             <span className="sp-input-prefix">◎</span>
@@ -76,7 +76,7 @@ export function SettingsForm({ owner, delegatedAmount, floatLamports, sweepsCove
             {busy === "withdraw" ? "Waiting…" : "Withdraw"}
           </button>
         </span>
-        <span className="note">Never below the Book&rsquo;s own rent.</span>
+        <span className="note">Never below the deposit your savings record needs to exist.</span>
       </div>
       {why ? (
         <p className="sp-why is-err">

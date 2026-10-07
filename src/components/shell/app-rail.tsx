@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Activity, BookOpen, FileText, House, Layers, Radio, Receipt, ScrollText, Send, Settings, SlidersHorizontal, Wallet } from "lucide-react";
+import { BookOpen, FileText, House, Layers, PiggyBank, Receipt, ScrollText, Send, Settings, ShieldCheck, SlidersHorizontal, Wallet } from "lucide-react";
 import { ScripMark } from "@/components/brand/scrip-mark";
 import { useSession } from "@/lib/session/use-session";
 import { short } from "@/lib/format";
@@ -12,19 +12,20 @@ import { short } from "@/lib/format";
  * The floating hover-expand rail. Collapsed it is a slim icon column; on hover it glides
  * open into a labelled card. Below 720px it reflows to a bottom icon bar, in CSS.
  *
- * TWO GROUPS. YOUR BOOK is the rule, what arrives under it, and paying someone in stock.
- * PUBLIC is what anyone can open without an account: everything that has settled, the
- * keepers, and the docs. Assets is reached from the rule and the docs, not from chrome.
+ * TWO GROUPS. YOUR SAVINGS is saving every payment, what it bought, and paying someone in
+ * stock. PUBLIC is what anyone can open without an account: saving now, the proof (the
+ * floor, the keepers and the rest of the machine live there since the final plan), the
+ * ledger and the docs. Assets is reached from the rule and the docs, not from chrome.
  *
  * `/pay`, `/receipt` and `/claim` are deliberately NOT here: each belongs to somebody who
  * is not the owner, so they are reached from a book, a link or a ledger row, never chrome.
  */
 const NAV = [
   {
-    group: "Your register",
+    group: "Your savings",
     items: [
       { href: "/app", label: "Home", Icon: House },
-      { href: "/app/rule", label: "Rule", Icon: SlidersHorizontal },
+      { href: "/app/rule", label: "Every payment", Icon: SlidersHorizontal },
       { href: "/app/holdings", label: "Holdings", Icon: Layers },
       { href: "/app/receipts", label: "Receipts", Icon: Receipt },
       { href: "/app/statements", label: "Statements", Icon: FileText },
@@ -35,9 +36,9 @@ const NAV = [
   {
     group: "Public",
     items: [
-      { href: "/floor", label: "The floor", Icon: Activity },
+      { href: "/", label: "Save now", Icon: PiggyBank },
+      { href: "/proof", label: "Proof", Icon: ShieldCheck },
       { href: "/ledger", label: "Ledger", Icon: ScrollText },
-      { href: "/keepers", label: "Keepers", Icon: Radio },
       { href: "/docs", label: "Docs", Icon: BookOpen },
     ],
   },
@@ -93,7 +94,7 @@ export function AppRail() {
           </span>
           <span className="app-rail-label">
             <span className="mono">{short(session.owner)}</span>
-            <span className="app-rail-sub">Your register</span>
+            <span className="app-rail-sub">Your savings</span>
           </span>
         </div>
       ) : (

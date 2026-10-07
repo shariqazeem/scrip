@@ -29,4 +29,12 @@ describe("priceWait", () => {
   it("falls back to a neutral noun when the asset is unknown", () => {
     expect(priceWait({ ...on, symbol: null })!.detail).toContain("the asset");
   });
+
+  it("says a small slice waits for the keeper's minimum, with the keeper's own number", () => {
+    const w = priceWait({ ...on, lastReason: "waiting for $2 to save: the slice is 1500000 USDC base units" })!;
+    expect(w.chip).toBe("saving at $2");
+    expect(w.detail).toContain("under $2");
+    expect(w.detail).toContain("still in your wallet");
+    expect(priceWait({ ...on, lastReason: "waiting for $ nothing" })).toBeNull();
+  });
 });

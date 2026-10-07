@@ -28,6 +28,8 @@ async function main() {
   };
   if (!process.argv.includes("--skip-watcher")) await step("multipliers", async () => (await runWatcher(chainReader(mainnetConnection()), now)).anyHeld);
   await step("receipts", () => indexReceipts(conn));
+  const { indexSaves } = await import("@/lib/save/index-saves");
+  await step("saves", () => indexSaves(conn));
   await step("books", () => indexBooks(conn, now));
   await step("reasons", () => healReasons(conn));
   await step("grants", () => indexGrants(conn, now));

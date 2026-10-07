@@ -1,0 +1,3887 @@
+{
+  "readAt": "2026-10-06",
+  "source": "Jupiter verified list, mint accounts on mainnet, Jupiter quotes at $5 and $100",
+  "stocks": [
+    {
+      "mint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+      "symbol": "NVDAx",
+      "ticker": "NVDA",
+      "name": "Nvidia",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/NVDAx.png",
+      "liquidityUsd": 4721760,
+      "holders": 174217,
+      "route5": {
+        "impactPct": 0.0026,
+        "via": [
+          "GoonFi V2"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0014,
+        "via": [
+          "GoonFi V2"
+        ]
+      }
+    },
+    {
+      "mint": "RACEyWiM2ztEZcJx2AHXU2eWjhxU57x3vXn92b39dLD",
+      "symbol": "RACE",
+      "ticker": "RACE",
+      "name": "Ferrari",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/RACE",
+      "liquidityUsd": 553804,
+      "holders": 10554,
+      "route5": {
+        "impactPct": 0.3155,
+        "via": [
+          "Flux",
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0909,
+        "via": [
+          "TesseraV",
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "Xs3oZwbHvqis4NYcf4YKWmEia2eC84wSiVrcYcTqpH8",
+      "symbol": "SPCXx",
+      "ticker": "SPCX",
+      "name": "SpaceX",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/SPCXx.png",
+      "liquidityUsd": 4117519,
+      "holders": 75285,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Kipseli",
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Kipseli",
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb",
+      "symbol": "SPCX",
+      "ticker": "SPCX",
+      "name": "SpaceX",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://s3-symbol-logo.tradingview.com/spacex.svg",
+      "liquidityUsd": 1342662,
+      "holders": 49970,
+      "route5": {
+        "impactPct": 0.0147,
+        "via": [
+          "GoonFi V2"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0176,
+        "via": [
+          "GoonFi V2"
+        ]
+      }
+    },
+    {
+      "mint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+      "symbol": "SPYx",
+      "ticker": "SPY",
+      "name": "S&P 500",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/SPYx.png",
+      "liquidityUsd": 5050390,
+      "holders": 77814,
+      "route5": {
+        "impactPct": 0.0149,
+        "via": [
+          "Byreal"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0162,
+        "via": [
+          "Byreal"
+        ]
+      }
+    },
+    {
+      "mint": "XsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1",
+      "symbol": "CRCLx",
+      "ticker": "CRCL",
+      "name": "Circle",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/CRCLx.png",
+      "liquidityUsd": 2219221,
+      "holders": 19147,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "ZeroFi",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "gEGtLTPNQ7jcg25zTetkbmF7teoDLcrfTnQfmn2ondo",
+      "symbol": "NVDAon",
+      "ticker": "NVDA",
+      "name": "Nvidia",
+      "issuer": "ondo",
+      "decimals": 9,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": false,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://cdn.ondo.finance/tokens/logos/nvdaon_160x160.png",
+      "liquidityUsd": 2672,
+      "holders": 1926,
+      "route5": {
+        "impactPct": 0.53,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 6.4846,
+        "via": [
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "MUxEsUKSMACyw5fZf68wxf5FLnZVhtU9CwH8uNNGay1",
+      "symbol": "MU",
+      "ticker": "MU",
+      "name": "Micron Technology",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/MU?cacheburst=1",
+      "liquidityUsd": 4479751,
+      "holders": 5778,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "GoonFi V2"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "ZeroFi"
+        ]
+      }
+    },
+    {
+      "mint": "SKHYhSjuRWHgikq8eRKbtBbpABgJSkd7ytQV14i9EQ3",
+      "symbol": "SKHY",
+      "ticker": "SKHY",
+      "name": "SK Hynix",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/SKHY",
+      "liquidityUsd": 2148479,
+      "holders": 10940,
+      "route5": {
+        "impactPct": 0.0576,
+        "via": [
+          "GoonFi V2",
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0793,
+        "via": [
+          "ZeroFi"
+        ]
+      }
+    },
+    {
+      "mint": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
+      "symbol": "GOOGLx",
+      "ticker": "GOOGL",
+      "name": "Alphabet",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/GOOGLx.png",
+      "liquidityUsd": 908889,
+      "holders": 46825,
+      "route5": {
+        "impactPct": 0.0401,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0702,
+        "via": [
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "DJTu7vi8norVzdVAffgvb39VP7wjKeTsgaMBJrzfxvoF",
+      "symbol": "DJT",
+      "ticker": "DJT",
+      "name": "Trump Media & Technology Group",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/DJT",
+      "liquidityUsd": 541491,
+      "holders": 37553,
+      "route5": {
+        "impactPct": 0.0481,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0565,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ",
+      "symbol": "QQQx",
+      "ticker": "QQQ",
+      "name": "Nasdaq 100",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/QQQx.png",
+      "liquidityUsd": 2179849,
+      "holders": 38110,
+      "route5": {
+        "impactPct": 0.1129,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.1485,
+        "via": [
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",
+      "symbol": "GLDx",
+      "ticker": "GLD",
+      "name": "Gold ETF",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/GLDx.png",
+      "liquidityUsd": 848779,
+      "holders": 41234,
+      "route5": {
+        "impactPct": 0.0006,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Whirlpool",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+      "symbol": "TSLAx",
+      "ticker": "TSLA",
+      "name": "Tesla",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/TSLAx.png",
+      "liquidityUsd": 1608957,
+      "holders": 43611,
+      "route5": {
+        "impactPct": 0.0407,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0497,
+        "via": [
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
+      "symbol": "MSTRx",
+      "ticker": "MSTR",
+      "name": "Strategy",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/MSTRx.png",
+      "liquidityUsd": 1288809,
+      "holders": 13548,
+      "route5": {
+        "impactPct": 0.0915,
+        "via": [
+          "Riptide"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0915,
+        "via": [
+          "Riptide"
+        ]
+      }
+    },
+    {
+      "mint": "MRNAzXzhNcaEXJPibHEn8cd4vyekCDiivTyEwswLUCT",
+      "symbol": "MRNA",
+      "ticker": "MRNA",
+      "name": "Moderna",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/MRNA",
+      "liquidityUsd": 243575,
+      "holders": 3907,
+      "route5": {
+        "impactPct": 0.4071,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4974,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX",
+      "symbol": "MSFTx",
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/MSFTx.png",
+      "liquidityUsd": 862642,
+      "holders": 32589,
+      "route5": {
+        "impactPct": 0.0004,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0258,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "SNDKbwMUQvZhnLnxLduradgLHG5KrPuKwpnrkkGRhfH",
+      "symbol": "SNDK",
+      "ticker": "SNDK",
+      "name": "Sandisk",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/SNDK",
+      "liquidityUsd": 532988,
+      "holders": 7445,
+      "route5": {
+        "impactPct": 0.1299,
+        "via": [
+          "GoonFi V2"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.1066,
+        "via": [
+          "Obsidian",
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "PFER6ENqP8r8NF3CqVt4mFowxsin3V5MLidBNQFCC3x",
+      "symbol": "PFE",
+      "ticker": "PFE",
+      "name": "Pfizer",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/PFE",
+      "liquidityUsd": 113291,
+      "holders": 3447,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "BisonFi",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsoBhf2ufR8fTyNSjqfU71DYGaE6Z3SUGAidpzriAA4",
+      "symbol": "PLTRx",
+      "ticker": "PLTR",
+      "name": "Palantir",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/PLTRx.png",
+      "liquidityUsd": 297142,
+      "holders": 9049,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0116,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "HiMSSzzwkZkrXJ4PGVJRdtfLaANeAztjjcgk5Dxe7Lwx",
+      "symbol": "HIMS",
+      "ticker": "HIMS",
+      "name": "Hims & Hers Health",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/HIMS",
+      "liquidityUsd": 173757,
+      "holders": 16279,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
+      "symbol": "AAPLx",
+      "ticker": "AAPL",
+      "name": "Apple",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/AAPLx.png",
+      "liquidityUsd": 595504,
+      "holders": 36428,
+      "route5": {
+        "impactPct": 0.1353,
+        "via": [
+          "BisonFi",
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.2032,
+        "via": [
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "Xsf9mBktVB9BSU5kf4nHxPq5hCBJ2j2ui3ecFGxPRGc",
+      "symbol": "GMEx",
+      "ticker": "GME",
+      "name": "Gamestop",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/GMEx.png",
+      "liquidityUsd": 524307,
+      "holders": 20383,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0142,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "CBRSFBbQPpp77NpMcwbTN6fhBHmZM94oFLJvruytw4Fi",
+      "symbol": "CBRS",
+      "ticker": "CBRS",
+      "name": "Cerebras Systems",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/CBRS",
+      "liquidityUsd": 43600,
+      "holders": 783,
+      "route5": {
+        "impactPct": 0.4255,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5041,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu",
+      "symbol": "METAx",
+      "ticker": "META",
+      "name": "Meta",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/METAx.png",
+      "liquidityUsd": 803294,
+      "holders": 37431,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Byreal",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "GoonFi V2",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "BoTx8y9ynfdxf5ZjWtCoBVkff52qKA82ysaLU8ZM6d8T",
+      "symbol": "BOT",
+      "ticker": "BOT",
+      "name": "RoboStrategy",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/BOT",
+      "liquidityUsd": 215829,
+      "holders": 6965,
+      "route5": {
+        "impactPct": 0.3093,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.3141,
+        "via": [
+          "ZeroFi"
+        ]
+      }
+    },
+    {
+      "mint": "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu",
+      "symbol": "COINx",
+      "ticker": "COIN",
+      "name": "Coinbase",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/COINx.png",
+      "liquidityUsd": 926282,
+      "holders": 9314,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Aquifer",
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "BisonFi",
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "DELL2aRKQz7DMq5DrKLtkn47ZCnbxXPZXrSGbkmd13wy",
+      "symbol": "DELL",
+      "ticker": "DELL",
+      "name": "Dell Technologies",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/DELL",
+      "liquidityUsd": 41562,
+      "holders": 856,
+      "route5": {
+        "impactPct": 0.661,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.8324,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "DKNGQFNGQmoBdXSRGKJ8tTu7uPDasw5JDcfMmWniNfow",
+      "symbol": "DKNG",
+      "ticker": "DKNG",
+      "name": "DraftKings",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/DKNG",
+      "liquidityUsd": 280724,
+      "holders": 15437,
+      "route5": {
+        "impactPct": 0.1965,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.199,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "NKEda5nHhNGgjrE9nDdMvaEmkmJ96qqxzBVZEcKmjSg",
+      "symbol": "NKE",
+      "ticker": "NKE",
+      "name": "Nike",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/NKE",
+      "liquidityUsd": 201383,
+      "holders": 11268,
+      "route5": {
+        "impactPct": 0.1971,
+        "via": [
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "LLYuwZ33keFihgwoxXsBawy31AiRFLFSva32TYq5TvD",
+      "symbol": "LLY",
+      "ticker": "LLY",
+      "name": "Eli Lilly and Company",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/LLY",
+      "liquidityUsd": 74392,
+      "holders": 3498,
+      "route5": {
+        "impactPct": 0.3396,
+        "via": [
+          "Obsidian",
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.3246,
+        "via": [
+          "Obsidian",
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg",
+      "symbol": "HOODx",
+      "ticker": "HOOD",
+      "name": "Robinhood",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/HOODx.png",
+      "liquidityUsd": 745995,
+      "holders": 13379,
+      "route5": {
+        "impactPct": 0.4091,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4128,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "XsqE9cRRpzxcGKDXj1BJ7Xmg4GRhZoyY1KpmGSxAWT2",
+      "symbol": "MCDx",
+      "ticker": "MCD",
+      "name": "McDonald's",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/MCDx.png",
+      "liquidityUsd": 305866,
+      "holders": 22674,
+      "route5": {
+        "impactPct": 0.0914,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.096,
+        "via": [
+          "BisonFi",
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "AMD8XwJXgQ9WV45Wyj9yFLejxzf2J6VM1PJY8bJEjeES",
+      "symbol": "AMD",
+      "ticker": "AMD",
+      "name": "Advanced Micro Devices",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/AMD",
+      "liquidityUsd": 180965,
+      "holders": 4466,
+      "route5": {
+        "impactPct": 0.425,
+        "via": [
+          "Obsidian",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.475,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "TTWofwAge91oFhZs7kpQdyrVRkmevgM88xijGvQFbKo",
+      "symbol": "TTWO",
+      "ticker": "TTWO",
+      "name": "Take-Two Interactive Software",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/TTWO",
+      "liquidityUsd": 212076,
+      "holders": 22180,
+      "route5": {
+        "impactPct": 0.0915,
+        "via": [
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.1253,
+        "via": [
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "GRNDYDpqwpCm6jVxpbh4xT5AM4r3p391qYsKTHqgaET2",
+      "symbol": "GRND",
+      "ticker": "GRND",
+      "name": "Grindr",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/GRND",
+      "liquidityUsd": 105615,
+      "holders": 7922,
+      "route5": {
+        "impactPct": 0.022,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0803,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "BMKdM4yUxX12moFqVk195k7coMbaybd4RUKCUdm7D1Sk",
+      "symbol": "IBM",
+      "ticker": "IBM",
+      "name": "International Business Machines",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/IBM",
+      "liquidityUsd": 68973,
+      "holders": 2559,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "MSTRdWXMeZxdE8osAQy3fA4rvTY5rgummDSMEx6U7Nz",
+      "symbol": "MSTR",
+      "ticker": "MSTR",
+      "name": "Strategy",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/MSTR?test=test",
+      "liquidityUsd": 316733,
+      "holders": 227,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "ZeroFi"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "ZeroFi"
+        ]
+      }
+    },
+    {
+      "mint": "BABANGA4JE7Kkam4nTrALAwAVgsNJUuFJnnkF7S16BZp",
+      "symbol": "BABA",
+      "ticker": "BABA",
+      "name": "Alibaba Group Holding",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/BABA",
+      "liquidityUsd": 89187,
+      "holders": 4935,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "WENAZ2WyPbmgvUcKfQ8hyMDfBQP9bZ65hsZ5KTFrRGZ",
+      "symbol": "WEN",
+      "ticker": "WEN",
+      "name": "The Wendy's Company",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/WEN",
+      "liquidityUsd": 88987,
+      "holders": 3502,
+      "route5": {
+        "impactPct": 0.346,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 1.1636,
+        "via": [
+          "BisonFi",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "DRAMjSWR7HRfJKjRkvQWYL2bcaejaVhuxEcjf4pAY4Cw",
+      "symbol": "DRAM",
+      "ticker": "DRAM",
+      "name": "Roundhill Memory ETF",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/DRAM",
+      "liquidityUsd": 268921,
+      "holders": 2896,
+      "route5": {
+        "impactPct": 0.0255,
+        "via": [
+          "BinaryFi"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0249,
+        "via": [
+          "BinaryFi"
+        ]
+      }
+    },
+    {
+      "mint": "PUSAG1stksTcAoK9MjinEHUwAYRJsbovywYCk37m6hy",
+      "symbol": "PUSA",
+      "ticker": "PUSA",
+      "name": "Powerus",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/PUSA",
+      "liquidityUsd": 41913,
+      "holders": 2360,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "HumidiFi",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.2338,
+        "via": [
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg",
+      "symbol": "AMZNx",
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/AMZNx.png",
+      "liquidityUsd": 301309,
+      "holders": 17387,
+      "route5": {
+        "impactPct": 0.2904,
+        "via": [
+          "Byreal"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4517,
+        "via": [
+          "Byreal"
+        ]
+      }
+    },
+    {
+      "mint": "Xs78JED6PFZxWc2wCEPspZW9kL3Se5J7L5TChKgsidH",
+      "symbol": "STRCx",
+      "ticker": "STRC",
+      "name": "Strategy preferred (STRC)",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/STRCx.png",
+      "liquidityUsd": 358393,
+      "holders": 4626,
+      "route5": {
+        "impactPct": 0.029,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.2033,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "N7Q5fYX7YRnDQksfdBKnoUb3awm92n7QNAD35X3Rq1X",
+      "symbol": "NOK",
+      "ticker": "NOK",
+      "name": "Nokia Oyj",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/NOK",
+      "liquidityUsd": 101257,
+      "holders": 3934,
+      "route5": {
+        "impactPct": 0.377,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.9278,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "MRVLSjkR2ceUBukujaD3xCyHP1H3B2SzpsNTZF546jo",
+      "symbol": "MRVL",
+      "ticker": "MRVL",
+      "name": "Marvell Technology",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/MRVL",
+      "liquidityUsd": 31408,
+      "holders": 989,
+      "route5": {
+        "impactPct": 0.2579,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.3253,
+        "via": [
+          "ZeroFi"
+        ]
+      }
+    },
+    {
+      "mint": "EWZzCki1igp2y73UyUM4RCG4QUVMQAtnrQUVNaDHzDxJ",
+      "symbol": "EWZ",
+      "ticker": "EWZ",
+      "name": "iShares MSCI Brazil ETF",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/EWZ",
+      "liquidityUsd": 56598,
+      "holders": 1042,
+      "route5": {
+        "impactPct": 0.2965,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.2965,
+        "via": [
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "JNJg1znKdF712Phe7L7z52AATAvEjEytBdN2w8Lnh1Y",
+      "symbol": "JNJ",
+      "ticker": "JNJ",
+      "name": "Johnson & Johnson",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/JNJ",
+      "liquidityUsd": 27938,
+      "holders": 1906,
+      "route5": {
+        "impactPct": 0.2989,
+        "via": [
+          "Kipseli",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4064,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "HooDYv5RewLRiMLnEVq3VJqdqxhuE6c5eYvqejMC3e9A",
+      "symbol": "HOOD",
+      "ticker": "HOOD",
+      "name": "Robinhood Markets",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/HOOD",
+      "liquidityUsd": 143683,
+      "holders": 551,
+      "route5": {
+        "impactPct": 0.4876,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4978,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "iNTCy1qTsUEZQe3DSocLz1ZXXai34Gdw8THQh5rxFaF",
+      "symbol": "INTC",
+      "ticker": "INTC",
+      "name": "Intel",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/INTC",
+      "liquidityUsd": 81014,
+      "holders": 1436,
+      "route5": {
+        "impactPct": 0.0299,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0517,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "SQQQAa3gUxgnqcEsdjPA4RQNQBgB97TnG2hJhk2WaGE",
+      "symbol": "SQQQ",
+      "ticker": "SQQQ",
+      "name": "ProShares UltraPro Short QQQ",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/SQQQ",
+      "liquidityUsd": 38865,
+      "holders": 1687,
+      "route5": {
+        "impactPct": 0.4625,
+        "via": [
+          "TesseraV",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": null
+    },
+    {
+      "mint": "XsaBXg8dU5cPM6ehmVctMkVqoiRG2ZjMo1cyBJ3AykQ",
+      "symbol": "KOx",
+      "ticker": "KO",
+      "name": "Coca-Cola",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/KOx.png",
+      "liquidityUsd": 112130,
+      "holders": 5487,
+      "route5": {
+        "impactPct": 0.3052,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.3128,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "AMC1qwR9KhiyrQBRPrxnfo4JfMeMZqEBvt5tgTytNNoc",
+      "symbol": "AMC",
+      "ticker": "AMC",
+      "name": "AMC Entertainment",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://metadata.backpack.exchange/stock-images/backpack_securities.png",
+      "liquidityUsd": 111126,
+      "holders": 4787,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0011,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "NFLX7qV57zuVxCoHy3s1jiGZyALraLNwttbxdvmYJLJ",
+      "symbol": "NFLX",
+      "ticker": "NFLX",
+      "name": "Netflix",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/NFLX",
+      "liquidityUsd": 131996,
+      "holders": 4654,
+      "route5": {
+        "impactPct": 0.0512,
+        "via": [
+          "Obsidian",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0918,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "RDDTGbhHwVXfyCvQMXzzowKjf5qrYBZAnehoXW83ooh",
+      "symbol": "RDDT",
+      "ticker": "RDDT",
+      "name": "Reddit",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/RDDT",
+      "liquidityUsd": 69540,
+      "holders": 6992,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsfCC9VL4DamVGNgdJpfLXB3sBVa158Gbx8sh7NzmTk",
+      "symbol": "VIDAx",
+      "ticker": "VIDA",
+      "name": "Vida Global",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/VIDAx.png",
+      "liquidityUsd": 25238,
+      "holders": 4534,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "USNv3NkKA27Dh4nsHJDPhW4VoEcTQmjoZyJt2dqdwFu",
+      "symbol": "USO",
+      "ticker": "USO",
+      "name": "United States Oil Fund, LP",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/USO",
+      "liquidityUsd": 72762,
+      "holders": 3145,
+      "route5": {
+        "impactPct": 0.0075,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0371,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "CzLTZppPdZtTjyq3WGpHLstoc3GLhu7zH5Zg6xUa6Gv5",
+      "symbol": "COPX",
+      "ticker": "COPX",
+      "name": "Global X Copper Miners ETF",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/COPX",
+      "liquidityUsd": 134540,
+      "holders": 6547,
+      "route5": {
+        "impactPct": 0.0894,
+        "via": [
+          "GoonFi V2",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.2047,
+        "via": [
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "SH55hfaipFAbwT42nQYhRoM5o5t61QpkmJ6p62vXB3m",
+      "symbol": "SHOP",
+      "ticker": "SHOP",
+      "name": "Shopify",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/SHOP",
+      "liquidityUsd": 83707,
+      "holders": 1428,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "GPRR2u6NS5yBQHWGauoJ9HXgjrTH8dDsrBfTV5zAYvDH",
+      "symbol": "GPRO",
+      "ticker": "GPRO",
+      "name": "GoPro",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/GPRO",
+      "liquidityUsd": 33594,
+      "holders": 10392,
+      "route5": {
+        "impactPct": 0.302,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.566,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "Xs2yquAgsHByNzx68WJC55WHjHBvG9JsMB7CWjTLyPy",
+      "symbol": "DFDVx",
+      "ticker": "DFDV",
+      "name": "DFDV",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/DFDVx.png",
+      "liquidityUsd": 35634,
+      "holders": 3907,
+      "route5": {
+        "impactPct": 0.17,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4296,
+        "via": [
+          "Obsidian",
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "LULUmT9VMttkfAJE236LXJcYJ2tTP7nunrSWR5G1BdS",
+      "symbol": "LULU",
+      "ticker": "LULU",
+      "name": "lululemon athletica",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/LULU",
+      "liquidityUsd": 38331,
+      "holders": 3361,
+      "route5": {
+        "impactPct": 0.2079,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.2606,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XshPgPdXFRWB8tP1j82rebb2Q9rPgGX37RuqzohmArM",
+      "symbol": "INTCx",
+      "ticker": "INTC",
+      "name": "Intel",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/INTCx.png",
+      "liquidityUsd": 61697,
+      "holders": 3070,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "GoonFi V2",
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.1908,
+        "via": [
+          "ZeroFi",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "RBLXDGRD64AtRamHMFVcjqne3Ar7NLWtFtYNtsrf1cE",
+      "symbol": "RBLX",
+      "ticker": "RBLX",
+      "name": "Roblox",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/RBLX",
+      "liquidityUsd": 72680,
+      "holders": 3636,
+      "route5": {
+        "impactPct": 0.1804,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.566,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "URARfsinxCRw4JpvQhuT4CxavdZXZEMjv9ZwWmWpwag",
+      "symbol": "URA",
+      "ticker": "URA",
+      "name": "Global X Uranium ETF",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/URA",
+      "liquidityUsd": 116023,
+      "holders": 5524,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0309,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "NBiSF3UaVUFtRzHwAfxyHsBCAZWGEKnMpewAE4oh7BG",
+      "symbol": "NBIS",
+      "ticker": "NBIS",
+      "name": "Nebius Group N.V.",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/NBIS",
+      "liquidityUsd": 61035,
+      "holders": 1346,
+      "route5": {
+        "impactPct": 0.3721,
+        "via": [
+          "ZeroFi"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.3519,
+        "via": [
+          "ZeroFi"
+        ]
+      }
+    },
+    {
+      "mint": "XsEH7wWfJJu2ZT3UCFeVfALnVA6CP5ur7Ee11KmzVpL",
+      "symbol": "NFLXx",
+      "ticker": "NFLX",
+      "name": "Netflix",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/NFLXx.png",
+      "liquidityUsd": 11303,
+      "holders": 3451,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5598,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "SNAPcESrvnH8yUdgeMF6xm1hym9b6hW6s8YeqeHdZFz",
+      "symbol": "SNAP",
+      "ticker": "SNAP",
+      "name": "Snap",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/SNAP",
+      "liquidityUsd": 74200,
+      "holders": 3434,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0306,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "CRWVJeR2yEZuDUKYfGuKCHvLz8ywn4LGvovHfy5WiFmi",
+      "symbol": "CRWV",
+      "ticker": "CRWV",
+      "name": "CoreWeave",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/CRWV",
+      "liquidityUsd": 42322,
+      "holders": 1055,
+      "route5": {
+        "impactPct": 0.4751,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5475,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsgSaSvNSqLTtFuyWPBhK9196Xb9Bbdyjj4fH3cPJGo",
+      "symbol": "AVGOx",
+      "ticker": "AVGO",
+      "name": "Broadcom",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/AVGOx.png",
+      "liquidityUsd": 70089,
+      "holders": 1037,
+      "route5": {
+        "impactPct": 0.0018,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0186,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "EWY4owSJYMpwN33qGDu5gGxpkQkpMJu8ZUsQJaNZG5dv",
+      "symbol": "EWY",
+      "ticker": "EWY",
+      "name": "iShares MSCI South Korea ETF",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/EWY",
+      "liquidityUsd": 37300,
+      "holders": 878,
+      "route5": {
+        "impactPct": 0.4794,
+        "via": [
+          "BisonFi",
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.9098,
+        "via": [
+          "TesseraV",
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "NQ5hSuXQZrbnrwcDVk2qN73njjd3E3v3badYHnj5thF",
+      "symbol": "IONQ",
+      "ticker": "IONQ",
+      "name": "IonQ",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/IONQ",
+      "liquidityUsd": 59551,
+      "holders": 2542,
+      "route5": {
+        "impactPct": 0.2039,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4787,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "QUBTAD8C9bMU9LvmMNgKPhrmBGbHvxpu6vfWQtThxxw",
+      "symbol": "QUBT",
+      "ticker": "QUBT",
+      "name": "Quantum Computing",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/QUBT",
+      "liquidityUsd": 25884,
+      "holders": 2862,
+      "route5": {
+        "impactPct": 0.0346,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.1331,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "FWDtiB5fXHdVAewPqvHPL2dh4aBC1C6GacQbePoQXKjz",
+      "symbol": "FWDI",
+      "ticker": "FWDI",
+      "name": "Forward Industries,",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/FWDI",
+      "liquidityUsd": 75731,
+      "holders": 1918,
+      "route5": {
+        "impactPct": 0.3958,
+        "via": [
+          "HumidiFi",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.6566,
+        "via": [
+          "TesseraV",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "CZEB3WNZuF2Yz1z2H81RcCk8T7fsw82KB33zqamASVsg",
+      "symbol": "COST",
+      "ticker": "COST",
+      "name": "Costco Wholesale",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/COST",
+      "liquidityUsd": 61432,
+      "holders": 2947,
+      "route5": {
+        "impactPct": 0.3548,
+        "via": [
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.6117,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "UPSqUeMHcWbkdg784XuBUEF9DtySSnW9ur5LAVdcuB9",
+      "symbol": "UPS",
+      "ticker": "UPS",
+      "name": "United Parcel Service",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/UPS",
+      "liquidityUsd": 20402,
+      "holders": 1266,
+      "route5": {
+        "impactPct": 0.4989,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5419,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "BBosJLw8ZzoATiEyywiifx7AgmrD2Cm3XjFWbhbRhChy",
+      "symbol": "BB",
+      "ticker": "BB",
+      "name": "BlackBerry",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/BB",
+      "liquidityUsd": 84715,
+      "holders": 1073,
+      "route5": {
+        "impactPct": 0.8159,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 1.9902,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "LMT3i1BHgixFqPUgcyteJhnEz2dpy9i3cYy4pi9BoeV",
+      "symbol": "LMT",
+      "ticker": "LMT",
+      "name": "Lockheed Martin",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/LMT",
+      "liquidityUsd": 61067,
+      "holders": 2975,
+      "route5": {
+        "impactPct": 0.3057,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4205,
+        "via": [
+          "BinaryFi",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "RENzhrJQgmAnfcLhU1U5XwAMc6TC15UA6jCbPBaasnj",
+      "symbol": "IREN",
+      "ticker": "IREN",
+      "name": "IREN",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/IREN",
+      "liquidityUsd": 57551,
+      "holders": 734,
+      "route5": {
+        "impactPct": 0.0189,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.1098,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "Xs6B6zawENwAbWVi7w92rjazLuAr5Az59qgWKcNb45x",
+      "symbol": "BRK.Bx",
+      "ticker": "BRK.B",
+      "name": "Berkshire Hathaway",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/BRK.Bx.png",
+      "liquidityUsd": 75377,
+      "holders": 5993,
+      "route5": {
+        "impactPct": 0.3226,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4423,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "FLWSojG1gB5VStYR3Sb4nQFRt43UBYkqih1j2CpVLqgd",
+      "symbol": "FLWS",
+      "ticker": "FLWS",
+      "name": "1-800-FLOWERS.COM",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/FLWS",
+      "liquidityUsd": 43944,
+      "holders": 6314,
+      "route5": {
+        "impactPct": 0.4431,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5652,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "Xsnuv4omNoHozR6EEW5mXkw8Nrny5rB3jVfLqi6gKMH",
+      "symbol": "LLYx",
+      "ticker": "LLY",
+      "name": "Eli Lilly",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/LLYx.png",
+      "liquidityUsd": 4661,
+      "holders": 1556,
+      "route5": {
+        "impactPct": 0.041,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4659,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "PTNzAfFAB4LvoUQEUUGrFMyUoRLExMYjH6CcfyQfsVP",
+      "symbol": "PTN",
+      "ticker": "PTN",
+      "name": "Palatin Technologies,",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/PTN",
+      "liquidityUsd": 59961,
+      "holders": 5964,
+      "route5": {
+        "impactPct": 0.439,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5761,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "FLYRq3en8r2Z69gN3KyAnDrvnitEJNkwPYY7favinHeD",
+      "symbol": "FLY",
+      "ticker": "FLY",
+      "name": "Firefly Aerospace",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/FLY",
+      "liquidityUsd": 12231,
+      "holders": 1071,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Flux",
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "DNUTsCvKbKwu2RM72cUuW3TD9YpzArzACcqYQssjPLSk",
+      "symbol": "DNUT",
+      "ticker": "DNUT",
+      "name": "Krispy Kreme,",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/DNUT",
+      "liquidityUsd": 52356,
+      "holders": 3047,
+      "route5": {
+        "impactPct": 0.4044,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4458,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsafvsGtzFqqHgTnA3aPC83EAMkacU5mcGtcSayhpVV",
+      "symbol": "TSMx",
+      "ticker": "TSM",
+      "name": "TSMC",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/TSMx.png",
+      "liquidityUsd": 38120,
+      "holders": 328,
+      "route5": {
+        "impactPct": 0.0001,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 0,
+        "via": [
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "HTZsLG4zqaNvWMwXSLHH3GG5KyJpKwpBRsKVdMG6hvzP",
+      "symbol": "HTZ",
+      "ticker": "HTZ",
+      "name": "Hertz Global Holdings,",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/HTZ",
+      "liquidityUsd": 27070,
+      "holders": 1382,
+      "route5": {
+        "impactPct": 0.5671,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 3.0089,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "BArimz1PcKZr8PcPh3tcZ2dg4S7FJLk3cw6R5F8GsHKg",
+      "symbol": "BA",
+      "ticker": "BA",
+      "name": "The Boeing Company",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/BA",
+      "liquidityUsd": 50696,
+      "holders": 1945,
+      "route5": {
+        "impactPct": 0.2882,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5196,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "RUMsPfFZFnN1ZmGANwP7FNMJMjKH4m9RiMePrtVtLe7",
+      "symbol": "RUM",
+      "ticker": "RUM",
+      "name": "RUM Group",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/RUM",
+      "liquidityUsd": 27072,
+      "holders": 415,
+      "route5": {
+        "impactPct": 0.0156,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.0474,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "123mYEnRLM2LLYsJW3K6oyYh8uP1fngj732iG638ondo",
+      "symbol": "AAPLon",
+      "ticker": "AAPL",
+      "name": "Apple",
+      "issuer": "ondo",
+      "decimals": 9,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": false,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://cdn.ondo.finance/tokens/logos/aaplon_160x160.png",
+      "liquidityUsd": 938,
+      "holders": 2018,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 5.8946,
+        "via": [
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "LUV9GB51PNZNRyzzyYK3rtqFfvDvWtRiXZ34wVq2HrX",
+      "symbol": "LUV",
+      "ticker": "LUV",
+      "name": "Southwest Airlines Co.",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/LUV",
+      "liquidityUsd": 42496,
+      "holders": 2870,
+      "route5": {
+        "impactPct": 0.2355,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.9184,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "Xs151QeqTCiuKtinzfRATnUESM2xTU6V9Wy8Vy538ci",
+      "symbol": "WMTx",
+      "ticker": "WMT",
+      "name": "Walmart",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/WMTx.png",
+      "liquidityUsd": 6066,
+      "holders": 2064,
+      "route5": {
+        "impactPct": 0.6075,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": null
+    },
+    {
+      "mint": "ARMbSB1MBRQrY6PNMao1HdQ431VafC6JRJCsGZ2Yv3iJ",
+      "symbol": "ARM",
+      "ticker": "ARM",
+      "name": "Arm Holdings",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/ARM",
+      "liquidityUsd": 39814,
+      "holders": 1681,
+      "route5": {
+        "impactPct": 0.5788,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 1.5405,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "BRVaZKg6J9iF2BEsdpsxJ9NyvN9PPxPZuoQUX2v8qqkk",
+      "symbol": "BROS",
+      "ticker": "BROS",
+      "name": "Dutch Bros",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/BROS",
+      "liquidityUsd": 44013,
+      "holders": 1150,
+      "route5": {
+        "impactPct": 0.5757,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.807,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "k18WJUULWheRkSpSquYGdNNmtuE2Vbw1hpuUi92ondo",
+      "symbol": "SPYon",
+      "ticker": "SPY",
+      "name": "S&P 500 ETF (SPDR)",
+      "issuer": "ondo",
+      "decimals": 9,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": false,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://cdn.ondo.finance/tokens/logos/spyon_160x160.png",
+      "liquidityUsd": 9309,
+      "holders": 1900,
+      "route5": {
+        "impactPct": 0.2565,
+        "via": [
+          "AlphaQ",
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.2565,
+        "via": [
+          "AlphaQ",
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "SCHHJ3jRdSjeFEVAaLrnYdx3Brphn92Ys7z1qkiCtPX",
+      "symbol": "SCHH",
+      "ticker": "SCHH",
+      "name": "Schwab U.S. REIT ETF",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/SCHH",
+      "liquidityUsd": 31024,
+      "holders": 2024,
+      "route5": {
+        "impactPct": 0.3381,
+        "via": [
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5767,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsaHND8sHyfMfsWPj6kSdd5VwvCayZvjYgKmmcNL5qh",
+      "symbol": "XOMx",
+      "ticker": "XOM",
+      "name": "Exxon Mobil",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/XOMx.png",
+      "liquidityUsd": 12039,
+      "holders": 3460,
+      "route5": {
+        "impactPct": 0.1273,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.1588,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "rpydAzWdCy85HEmoQkH5PVxYtDYQWjmLxgHHadxondo",
+      "symbol": "USOon",
+      "ticker": "USO",
+      "name": "United States Oil Fund",
+      "issuer": "ondo",
+      "decimals": 9,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": false,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://cdn.ondo.finance/tokens/logos/usoon_160x160.png",
+      "liquidityUsd": 130,
+      "holders": 608,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 34.1415,
+        "via": [
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "BULL151gUXcFV5wXEUqu9Am2L7Qt4bTJRLRuAUjkcspC",
+      "symbol": "BULL",
+      "ticker": "BULL",
+      "name": "Webull",
+      "issuer": "backpack",
+      "decimals": 6,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://backpack.exchange/api/stock-logo/BULL",
+      "liquidityUsd": 39004,
+      "holders": 1826,
+      "route5": {
+        "impactPct": 0.2342,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5352,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "XszvaiXGPwvk2nwb3o9C1CX4K6zH8sez11E6uyup6fe",
+      "symbol": "UNHx",
+      "ticker": "UNH",
+      "name": "UnitedHealth",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/UNHx.png",
+      "liquidityUsd": 6825,
+      "holders": 1923,
+      "route5": {
+        "impactPct": 0.0216,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.2058,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsfAzPzYrYjd4Dpa9BU3cusBsvWfVB9gBcyGC87S57n",
+      "symbol": "NVOx",
+      "ticker": "NVO",
+      "name": "Novo Nordisk",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/NVOx.png",
+      "liquidityUsd": 1302,
+      "holders": 1347,
+      "route5": {
+        "impactPct": 0.4976,
+        "via": [
+          "Whirlpool"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.7644,
+        "via": [
+          "Whirlpool"
+        ]
+      }
+    },
+    {
+      "mint": "XsQLZycSZ7QnBBdBXQaTbQdiUcbRqjNJgyBGAMzhHav",
+      "symbol": "MUx",
+      "ticker": "MU",
+      "name": "Micron Technology",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/MUx.png",
+      "liquidityUsd": 999,
+      "holders": 240,
+      "route5": {
+        "impactPct": 0,
+        "via": [
+          "Manifest"
+        ]
+      },
+      "route100": {
+        "impactPct": 3.5948,
+        "via": [
+          "Manifest"
+        ]
+      }
+    },
+    {
+      "mint": "XsYdjDjNUygZ7yGKfQaB6TxLh2gC6RRjzLtLAGJrhzV",
+      "symbol": "PGx",
+      "ticker": "PG",
+      "name": "Procter & Gamble",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/PGx.png",
+      "liquidityUsd": 1374,
+      "holders": 209,
+      "route5": {
+        "impactPct": 0.0555,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.5594,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "14diAn5z8kjrKwSC8WLqvBqqe5YmihJhjxRxd8Z6ondo",
+      "symbol": "AMDon",
+      "ticker": "AMD",
+      "name": "AMD",
+      "issuer": "ondo",
+      "decimals": 9,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": false,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://cdn.ondo.finance/tokens/logos/amdon_160x160.png",
+      "liquidityUsd": 1156,
+      "holders": 206,
+      "route5": {
+        "impactPct": 0.502,
+        "via": [
+          "Meteora DLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 1.7918,
+        "via": [
+          "Meteora DLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsNNMt7WTNA2sV3jrb1NNfNgapxRF5i4i6GcnTRRHts",
+      "symbol": "CVXx",
+      "ticker": "CVX",
+      "name": "Chevron",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/CVXx.png",
+      "liquidityUsd": 2843,
+      "holders": 416,
+      "route5": {
+        "impactPct": 0.0347,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 0.4969,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    },
+    {
+      "mint": "XsHtf5RpxsQ7jeJ9ivNewouZKJHbPxhPoEy6yYvULr7",
+      "symbol": "ABTx",
+      "ticker": "ABT",
+      "name": "Abbott",
+      "issuer": "xstocks",
+      "decimals": 8,
+      "program": "token-2022",
+      "powers": {
+        "permanentDelegate": true,
+        "pausable": true,
+        "freezeAuthority": true,
+        "transferHook": "reserved-disabled",
+        "transferFee": false,
+        "hasMultiplier": true,
+        "frozenByDefault": false,
+        "nonTransferable": false
+      },
+      "icon": "https://xstocks-metadata.backed.fi/logos/tokens/ABTx.png",
+      "liquidityUsd": 379,
+      "holders": 205,
+      "route5": {
+        "impactPct": 0.5521,
+        "via": [
+          "Raydium CLMM"
+        ]
+      },
+      "route100": {
+        "impactPct": 2.479,
+        "via": [
+          "Raydium CLMM"
+        ]
+      }
+    }
+  ],
+  "left": [
+    {
+      "symbol": "METAon",
+      "mint": "fDxs5y12E7x7jBwCKBXGqt71uJmCWsAQ3Srkte6ondo",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "CYPH",
+      "mint": "CYPHuMmCL1GxJWa2tsPhLKykC7GrHJTCHwbXD4g5uawK",
+      "why": "moves the price 1.43% at $5"
+    },
+    {
+      "symbol": "BLK",
+      "mint": "BLKKYfF41c6xRPrtX1rdYbxLE1xxEdZUnxQsB5hcZ8Nf",
+      "why": "moves the price 1.25% at $5"
+    },
+    {
+      "symbol": "GOOGLon",
+      "mint": "bbahNA5vT9WJeYft8tALrH1LXWffjwqVoUbqYa1ondo",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "BE",
+      "mint": "BEBVfXZ8uCxRBuunEbW9wcq9r7W9ySNo14oJBJkDgpZx",
+      "why": "moves the price 1.54% at $5"
+    },
+    {
+      "symbol": "MSFTon",
+      "mint": "FRmH6iRkMr33DLG6zVLR7EM4LojBFAuq6NtFzG6ondo",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "RKLB",
+      "mint": "RKLBnAXGqv31iZomqsuAWkQm1aqC7JwwvbCfzGdqAhz",
+      "why": "moves the price 1.73% at $5"
+    },
+    {
+      "symbol": "MGM",
+      "mint": "MGMuubtUEirmkhfEQdmGUh4pr7HuUdMWcZXFtpPbVJD",
+      "why": "moves the price 1.87% at $5"
+    },
+    {
+      "symbol": "MRVLon",
+      "mint": "FovBwhoV5KQjZCdhoM6jgXYwXLX3F8vgAfvmLH7ondo",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "TQQQx",
+      "mint": "XsjQP3iMAaQ3kQScQKthQpx9ALRbjKAjQtHg6TFomoc",
+      "why": "moves the price 1.90% at $5"
+    },
+    {
+      "symbol": "SPCXon",
+      "mint": "wzAyQTorWyoVXuJKj2x8EqKEGJpS13z6EWE9z5Aondo",
+      "why": "moves the price 7.17% at $5"
+    },
+    {
+      "symbol": "Vx",
+      "mint": "XsqgsbXwWogGJsNcVZ3TyVouy2MbTkfCFhCGGGcQZ2p",
+      "why": "moves the price 9.68% at $5"
+    },
+    {
+      "symbol": "MAx",
+      "mint": "XsApJFV9MAktqnAc6jqzsHVujxkGm9xcSUffaBoYLKC",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "WULF",
+      "mint": "WULFeyfrj1VJKD9HhRTcW8R4g5HefUA11HDEdBv2WxD",
+      "why": "moves the price 1.99% at $5"
+    },
+    {
+      "symbol": "MRVLx",
+      "mint": "XsuxRGDzbLjnJ72v74b7p9VY6N66uYgTCyfwwRjVCJA",
+      "why": "moves the price 3.12% at $5"
+    },
+    {
+      "symbol": "MUon",
+      "mint": "Fz9edBpaURPPzpKVRR1A8PENYDEgHqwx5D5th28ondo",
+      "why": "moves the price 6.24% at $5"
+    },
+    {
+      "symbol": "SLVon",
+      "mint": "iy11ytbSGcUnrjE6Lfv78TFqxKyUESfku1FugS9ondo",
+      "why": "moves the price 16.41% at $5"
+    },
+    {
+      "symbol": "SNDKx",
+      "mint": "Xswbpc8UqU6e1j9QZEWCjBMjyvz4twqD7PCy6j2e7jj",
+      "why": "moves the price 7.17% at $5"
+    },
+    {
+      "symbol": "SPHR",
+      "mint": "SPHRp8cZaSQBTp1KMNP4V1X821SXhXWt4Q2yLdyHzju",
+      "why": "moves the price 1.99% at $5"
+    },
+    {
+      "symbol": "RIVN",
+      "mint": "RcZmt84VMJv9bDhKqmw1uWDahYrUT468VwAChTnfD8p",
+      "why": "moves the price 1.93% at $5"
+    },
+    {
+      "symbol": "AMDx",
+      "mint": "XsXcJ6GZ9kVnjqGsjBnktRcuwMBmvKWh8S93RefZ1rF",
+      "why": "moves the price 1.99% at $5"
+    },
+    {
+      "symbol": "ORCLx",
+      "mint": "XsjFwUPiLofddX5cWFHW35GCbXcSu1BCUGfxoQAQjeL",
+      "why": "moves the price 1.54% at $5"
+    },
+    {
+      "symbol": "AMZNon",
+      "mint": "14Tqdo8V1FhzKsE3W2pFsZCzYPQxxupXRcqw9jv6ondo",
+      "why": "moves the price 32.56% at $5"
+    },
+    {
+      "symbol": "QQQon",
+      "mint": "HrYNm6jTQ71LoFphjVKBTdAE4uja7WsmLG8VxB8ondo",
+      "why": "moves the price 2.22% at $5"
+    },
+    {
+      "symbol": "JPMx",
+      "mint": "XsMAqkcKsUewDrzVkait4e5u4y8REgtyS7jWgCpLV2C",
+      "why": "moves the price 1.36% at $5"
+    },
+    {
+      "symbol": "TSMon",
+      "mint": "keybg184d4vyXeQdFqs4o99YsMg7xBthxTJ6Ky3ondo",
+      "why": "moves the price 38.62% at $5"
+    },
+    {
+      "symbol": "PLTRon",
+      "mint": "HfsnTS5qtdStwec9DfBrunRqnAMYMMz1kjv9Hu9ondo",
+      "why": "moves the price 22.78% at $5"
+    },
+    {
+      "symbol": "MRNAon",
+      "mint": "14VP7DvCAdBCc5XGNZkPt6zhtPzJrWWS64Koxtxyondo",
+      "why": "moves the price 24.82% at $5"
+    },
+    {
+      "symbol": "TSLAon",
+      "mint": "KeGv7bsfR4MheC1CkmnAVceoApjrkvBhHYjWb67ondo",
+      "why": "moves the price 65.82% at $5"
+    },
+    {
+      "symbol": "NKEon",
+      "mint": "g646pcdG2Rt5DH9WZzL7VVnVDWCCMTTrnktwE74ondo",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "PEPx",
+      "mint": "Xsv99frTRUeornyvCfvhnDesQDWuvns1M852Pez91vF",
+      "why": "moves the price 1.71% at $5"
+    },
+    {
+      "symbol": "INTCon",
+      "mint": "cJpUMp5R7rZ6fGeLHbHhrRuJzK9mkyKDjZqNpT3ondo",
+      "why": "moves the price 17.77% at $5"
+    },
+    {
+      "symbol": "COPXon",
+      "mint": "X7j77hTmjZJbepkXXBcsEapM8qNgdfihkFj6CZ5ondo",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "LLYon",
+      "mint": "eGGxZwNSfuNKRqQLKaz2hc4QkA2mau7skyxPdj7ondo",
+      "why": "moves the price 2.25% at $5"
+    },
+    {
+      "symbol": "JPMon",
+      "mint": "E5Gczsavxcomqf6Cw1sGCKLabL1xYD2FzKxVoB4ondo",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "NFLXon",
+      "mint": "g4KnPrxPLeeKkwvDmZFMtYQPM64eHeShbD55vK6ondo",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "COINon",
+      "mint": "5u6KDiNJXxX4rGMfYT4BApZQC5CuDNrG6MHkwp1ondo",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "AMBRx",
+      "mint": "XsaQTCgebC2KPbf27KUhdv5JFvHhQ4GDAPURwrEhAzb",
+      "why": "moves the price 6.39% at $5"
+    },
+    {
+      "symbol": "GLDon",
+      "mint": "hWfiw4mcxT8rnNFkk6fsCQSxoxgZ9yVhB6tyeVcondo",
+      "why": "moves the price 3.67% at $5"
+    },
+    {
+      "symbol": "MCDon",
+      "mint": "EUbJjmDt8JA222M91bVLZs211siZ2jzbFArH9N3ondo",
+      "why": "moves the price 29.20% at $5"
+    },
+    {
+      "symbol": "AZNx",
+      "mint": "Xs3ZFkPYT2BN7qBMqf1j1bfTeTm1rFzEFSsQ1z3wAKU",
+      "why": "moves the price 2.01% at $5"
+    },
+    {
+      "symbol": "IBMx",
+      "mint": "XspwhyYPdWVM8XBHZnpS9hgyag9MKjLRyE3tVfmCbSr",
+      "why": "moves the price 19.00% at $5"
+    },
+    {
+      "symbol": "SLVx",
+      "mint": "XsxAd6okt8y1RRK6gNg7iJaqiWNiq5Md5EDf3ZrF2dm",
+      "why": "no route at $5"
+    },
+    {
+      "symbol": "GMEon",
+      "mint": "aznKt8v32CwYMEcTcB4bGTv8DXWStCpHrcCtyy7ondo",
+      "why": "no route at $5"
+    }
+  ]
+}

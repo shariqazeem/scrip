@@ -28,18 +28,18 @@ export default async function SettingsPage() {
   const view = v.ok ? v.value : null;
   const bot = process.env.TELEGRAM_BOT_USERNAME?.trim() || null;
   return (
-    <PageFrame eyebrow={view?.handle ? `@${view.handle}` : "Settings"} title="Settings." sub="What the rule may do, what pays for it, who can see it, and where a stub is announced." actions={<SignOut />}>
+    <PageFrame eyebrow={view?.handle ? `@${view.handle}` : "Settings"} title="Settings." sub="The limit on what Scrip can move, the saves you prepaid, who can see your savings, and where a save is announced." actions={<SignOut />}>
       <div className="sp-org">
         {!view?.handle ? (
           <p className="sp-register-empty">
-            This wallet has no register yet. <Link href="/app/rule">Turn on the rule</Link> to open one.
+            This wallet is not saving automatically yet. <Link href="/app/rule">Save every payment</Link> to start.
           </p>
         ) : (
           <>
             <section className="sp-org-section">
               <p className="sp-section-label">
-                <span>The rule&rsquo;s means</span>
-                <Link href="/app/rule">change the rate</Link>
+                <span>Limit and prepaid saves</span>
+                <Link href="/app/rule">change how much you save</Link>
               </p>
               <SettingsForm owner={owner} delegatedAmount={view.usdc.delegatedAmount} floatLamports={view.floatLamports} sweepsCovered={view.sweepsCovered} ruleOn={view.ruleOn} />
             </section>
@@ -51,13 +51,13 @@ export default async function SettingsPage() {
             </section>
             <section className="sp-org-section">
               <p className="sp-section-label">
-                <span>When a stub prints</span>
+                <span>When a save lands</span>
               </p>
               <TelegramLink owner={owner} bot={bot} />
             </section>
             <section className="sp-org-section">
               <p className="sp-section-label">
-                <span>The handle</span>
+                <span>Your name</span>
               </p>
               <p className="sp-fact">
                 <span className="k">Handle</span>

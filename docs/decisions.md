@@ -660,3 +660,70 @@ camera turns on. Its rule is the plan's: the film never explains, every scene sh
 printing for a real person, and no sentence goes in that could not be checked by opening a
 page in the film. If a route fills below the Pyth minimum and the whole transaction reverts
 during the shoot, that is the best shot in the film, not an outtake.
+
+## 2026-10-07 — The final plan: save now, then every payment, then the match
+
+**Decision.** The front door is one job: save part of the USDC a wallet was paid into a stock,
+now, with a receipt (`docs/SCRIP-SAVE-PLAN.md`). The rule becomes the second ask, under the
+first receipt; a sponsor's match the third. The machine (floor, tape, keepers, keep-rate, the
+seven firsts, the counters) moved to `/proof`. The same product is entered in three
+competitions: the Pakistan track, Meteora's DBC sidetrack (Scrip Curve) and the World's Fair.
+
+**Why.** An opt-in savings product sold to individuals reaches about 3 in 100 even with an
+adviser beside them; every saving mechanism that worked at scale arrived with a default and a
+payer's match. A first save that happens in seconds is the present-biased reason to start; the
+rule and the match are what only Scrip has.
+
+### A save is a swap with a memo and a mark, not a program account
+
+A save is a Jupiter swap the saver signs from their USDC into the stock, in their own wallet.
+It carries the memo `scrip:save:v1` and the save mark, Scrip's program address for the seed
+`save` (`5xh4j7jt3ytCksSbiZXbuFowmqaPZGfMPcrM2mx4Ebkd`), read-only on the associated-token
+instruction. **Not** a new program instruction: it would wait on an upgrade and on a price,
+and a save has nothing for a program to enforce that the route's own minimum does not. The
+mark makes every save enumerable from the chain (`getSignaturesForAddress`), so the ledger of
+saves does not depend on Scrip's database. The seed `save` is reserved.
+
+### The catalogue is curated by rules, not by hand
+
+Every stock from xStocks, Ondo and Backpack that Jupiter routes at $5 and $100 (impact ≤ 1% and
+≤ 2%), with no active transfer hook, no frozen-by-default accounts, not non-transferable, no
+transfer fee. Three issuers because their documents were read; a route because a stock that
+cannot be bought at $5 is not a choice. Re-read with `scripts/stock-catalogue.ts`.
+
+### The plan's "to 15%" and "nothing under $2" are not promised by the program
+
+Escalation is capped at `MAX_RATE_BPS` (50%) by `effective_rate`, and the Book has no field
+for a lower ceiling; `min_inbound` is fixed at $1. A ceiling needs a layout change, which the
+upgrade forbids. So escalation stays opt-in with its true ceiling stated, and the $2 minimum is
+a policy of Scrip's keepers (`KEEPER_MIN_SLICE_USDC`), said on `/app` when it applies.
+
+### Scrip Curve: the fee-sharing vault can be the claimer (checked 2026-10-07, read-only)
+
+Asked before any Curve code, per the plan:
+
+- **(a) Can a DBC config's fee claimer be a Dynamic Fee Sharing PDA vault? Yes, by design.**
+  `fund_by_claiming_fee` "invokes a whitelisted DAMM v2 or DBC instruction with the PDA fee
+  vault as signer", and the vault "must be the fee-claim recipient in the source program".
+  Whitelisted: DBC `claim_trading_fee` (token vault at index 4, the quote account),
+  `withdraw_migration_fee`, `partner_withdraw_surplus`, `claim_creator_trading_fee`,
+  `creator_withdraw_surplus`; DAMM v2 `claim_position_fee` (index 4, token B) and
+  `claim_reward`. The vault PDA is `["fee_vault", base, token_mint]` under
+  `dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh`; 2 to 5 recipients, shares fixed forever;
+  any configured shareholder may trigger a claim-by-integration.
+- **(b) Who owns the partner's migrated DAMM v2 position? `config.fee_claimer`.** In DBC's
+  `migrate_damm_v2_initialize_pool.rs` the partner's position NFT is handed to
+  `config.fee_claimer` (`set_authority_for_position`), and `withdraw_migration_fee` requires
+  `sender == config.fee_claimer`. So a vault that is the fee claimer also owns the partner
+  position, and `claim_position_fee` keeps funding it after graduation.
+- **(c) The keeper threshold for a USDC quote is 750 USDC** (Meteora's migration docs); a lower
+  threshold graduates through the manual migrator at migrator.meteora.ag.
+- **The quote must be USDC.** The vault accepts plain SPL and Token-2022 mints with only
+  TransferFeeConfig, MetadataPointer and TokenMetadata; xStocks carry a permanent delegate, a
+  pause and a scaled-UI multiplier, and are refused (`InvalidMint`).
+- **Fees must be collected in the quote.** DBC collect-fee mode QuoteToken, and DAMM v2 OnlyB
+  after migration, so every claim lands in the vault's one mint.
+
+Still to prove on mainnet with a demonstration launch: one trade, one claim into the vault, one
+saver's receipt that names the launch. Until then `/curve` says what is checked and what is
+not.

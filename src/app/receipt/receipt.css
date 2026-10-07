@@ -9,6 +9,7 @@
 
 .sp-receipt {
   --line: var(--border);
+  --line-strong: var(--border-strong);
   min-height: 100vh;
   background: var(--bg);
   color: var(--ink);
@@ -259,4 +260,106 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .sp-receipt-settling .dot { animation: none; }
+}
+
+/* ── a save: the moment, the two asks, the proof drawer ───────────────────── */
+.sp-receipt-when {
+  margin: 0 0 var(--s-2);
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-receipt .sp-btn-link {
+  min-height: 44px;
+}
+.sp-receipt-asks {
+  display: grid;
+  gap: var(--s-3);
+  margin: var(--s-6) 0;
+}
+.sp-receipt-asks.is-fresh {
+  animation: sp-receipt-asks-in var(--dur-3) var(--ease-out) both;
+  animation-delay: var(--dur-2);
+}
+@keyframes sp-receipt-asks-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sp-receipt-ask {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4) var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  color: var(--ink) !important;
+  text-decoration: none !important;
+}
+.sp-receipt-ask.is-primary {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.sp-receipt-ask .t,
+.sp-receipt-ask-btn {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+.sp-receipt-ask-btn {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.sp-receipt-ask .p {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.sp-receipt-proof {
+  margin: 0 0 var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.sp-receipt-proof summary {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--s-5);
+  font-weight: 600;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.sp-receipt-proof .sp-receipt-row .v {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: var(--tracking-mono);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  .sp-receipt-proof .sp-receipt-row {
+    flex-direction: column;
+    gap: var(--s-1);
+  }
+  .sp-receipt-proof .sp-receipt-row .v {
+    text-align: left;
+  }
+}
+@media print {
+  .sp-receipt-asks {
+    display: none;
+  }
 }

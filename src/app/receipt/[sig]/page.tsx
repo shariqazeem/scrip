@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ScripMark } from "@/components/brand/scrip-mark";
+import { SaveReceipt } from "@/components/receipt/save-receipt";
 import { SettlingReceipt } from "@/components/receipt/settling";
 import { CopyLink } from "@/components/receipt/copy-link";
 import { type StubSection, Stub } from "@/components/stub/stub";
 import { readBookOf } from "@/lib/book/read-book";
+import { poolLabels, readSaveTx, viewSave } from "@/lib/save/read";
 import { readReceiptBySignature, NOT_YET_SETTLED } from "@/lib/book/read-receipt";
 import { db } from "@/lib/db";
 import { receipts as receiptsTable } from "@/lib/db/schema";
@@ -22,7 +24,7 @@ import "../receipt.css";
 
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ sig: string }> };
+type Params = { params: Promise<{ sig: string }>; searchParams?: Promise<{ saved?: string }> };
 
 /**
  * When an arrival landed: from the attribution when the indexer recorded it, otherwise from
@@ -50,6 +52,17 @@ async function arrivalTime(a: { sig: string; at?: number | null }): Promise<numb
  */
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { sig } = await params;
+  const saved = await readSaveTx(sig);
+  if (saved.ok && saved.value?.save) {
+    const v = await viewSave(saved.value.save);
+    const name = v.stock?.name ?? "a stock";
+    const title = `${usdc(v.paidUsdc)} saved · became ${unitsFromRaw(v.amountRaw, v.decimals)} ${name}`;
+    return {
+      title,
+      description: `${unitsFromRaw(v.amountRaw, v.decimals)} ${name} in ${short(v.owner)}'s own wallet, ${stampUTC(v.blockTime)}. Saved with Scrip on Solana, read from the transaction.`,
+      openGraph: { title, description: "Saved on Solana, into the saver's own wallet." },
+    };
+  }
   const r = await readReceiptBySignature(sig);
   if (!r.ok) return { title: "Receipt" };
   const v = r.value;
@@ -62,8 +75,37 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-export default async function ReceiptPage({ params }: Params) {
+export default async function ReceiptPage({ params, searchParams }: Params) {
   const { sig } = await params;
+  const fresh = (await searchParams)?.saved === "1";
+
+  // A save is a Jupiter swap the saver signed, with Scrip's memo: no program account, so it is
+  // read from the transaction alone. Anything else falls through to the program's receipts.
+  const saved = await readSaveTx(sig);
+  if (saved.ok && saved.value === null) {
+    return (
+      <main className="sp-receipt">
+        <div className="sp-receipt-col">
+          <Header />
+          <SettlingReceipt short={short(sig)} />
+          <Foot />
+        </div>
+      </main>
+    );
+  }
+  if (saved.ok && saved.value?.save) {
+    const [view, names] = await Promise.all([viewSave(saved.value.save), poolLabels()]);
+    return (
+      <main className="sp-receipt">
+        <div className="sp-receipt-col">
+          <Header />
+          <SaveReceipt view={view} names={names} fresh={fresh} />
+          <SaveFoot />
+        </div>
+      </main>
+    );
+  }
+
   const receipt = await readReceiptBySignature(sig);
 
   if (!receipt.ok && receipt.why === NOT_YET_SETTLED) {
@@ -323,6 +365,16 @@ function Header() {
       </Link>
       <span className="sp-receipt-kicker">Receipt</span>
     </div>
+  );
+}
+
+function SaveFoot() {
+  return (
+    <p className="sp-receipt-foot">
+      <strong>This page is built from the transaction, not from our database.</strong> What was paid and what arrived are the
+      transaction&rsquo;s own token balances; the route is Jupiter&rsquo;s own swap events inside it. No Scrip program touched this save:
+      the saver signed a swap from their wallet to their wallet, and Scrip&rsquo;s memo says what it was for.
+    </p>
   );
 }
 

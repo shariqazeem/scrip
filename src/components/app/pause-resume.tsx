@@ -28,14 +28,14 @@ export function PauseResume({ state }: { state: string }) {
       if (r.why) setWhy(r.why);
       return;
     }
-    setDone(paused ? "Resumed. The watermark is today’s balance." : "Paused with a revoke. Nothing can be swept until you resume.");
+    setDone(paused ? "Saving again. Payments count from today." : "Stopped. Your stock stays in your wallet, and Scrip can no longer move your USDC.");
     router.refresh();
   }
 
   return (
     <>
       <button type="button" className="sp-action" disabled={busy || session.loading} onClick={() => void go()}>
-        {busy ? "Waiting for your wallet…" : paused ? "Resume" : "Pause"}
+        {busy ? "Waiting for your wallet…" : paused ? "Start again" : "Stop saving"}
       </button>
       {why ? (
         <p className="sp-why is-err">

@@ -188,6 +188,49 @@ export const telegramLinks = sqliteTable("telegram_links", {
   createdAt: createdAt(),
 });
 
+/**
+ * A SAVE: a Jupiter swap from a saver's USDC into a stock, signed by the saver, carrying the
+ * memo `scrip:save:v1` and the save mark (`src/lib/save/mark.ts`). No program account is
+ * written, so the transaction IS the record; this row mirrors what it says, plus the one
+ * thing the transaction cannot carry: the Pyth price read the moment the save was first seen,
+ * kept so the fill can still be shown after the price account has moved on.
+ */
+export const saves = sqliteTable(
+  "saves",
+  {
+    sig: text("sig").primaryKey(),
+    owner: text("owner").notNull(),
+    mint: text("mint").notNull(),
+    paidUsdc: integer("paid_usdc").notNull(),
+    amountRaw: integer("amount_raw").notNull(),
+    settledSlot: integer("settled_slot").notNull(),
+    settledUnix: integer("settled_unix").notNull(),
+    /** `[{ amm, label, inMint, inAmount, outMint, outAmount }]`, from Jupiter's swap events. */
+    routeJson: text("route_json").notNull().default("[]"),
+    feeLamports: integer("fee_lamports").notNull().default(0),
+    priceFeed: text("price_feed").notNull().default(""),
+    price: integer("price").notNull().default(0),
+    priceExpo: integer("price_expo").notNull().default(0),
+    priceConf: integer("price_conf").notNull().default(0),
+    pricePublishTime: integer("price_publish_time").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index("saves_owner_idx").on(t.owner), index("saves_settled_idx").on(t.settledUnix)],
+);
+
+/**
+ * AN INVITE FOR THE WELCOME BONUS: a wallet the operator approved, by hand, for $5 of S&P 500
+ * on its first save. One per wallet by construction (the address is the key); whether it was
+ * paid is never stored here, it is read from the receipts, whose reason carries "Welcome bonus
+ * from Scrip". Invite-only, so nobody can farm it.
+ */
+export const invites = sqliteTable("invites", {
+  address: text("address").primaryKey(),
+  label: text("label").notNull().default(""),
+  addedBy: text("added_by").notNull(),
+  createdAt: createdAt(),
+});
+
 /** The indexer's cursor: the newest signature it has fully processed, per program. */
 export const cursors = sqliteTable("cursors", {
   key: text("key").primaryKey(),

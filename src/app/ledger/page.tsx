@@ -12,6 +12,7 @@ import { books } from "@/lib/db/schema";
 import { bps, dateUTC, unitsFromRaw, usdc } from "@/lib/format";
 import { type ReceiptRow, WINDOWS, firstMaturity, keepRate } from "@/lib/keep-rate";
 import { allReceiptRows, indexBooks, indexGrants, indexReceipts, ledgerTotals, recentReceipts, refreshMeasurements, unitsByAsset } from "@/lib/ledger/indexer";
+import { indexSaves, saveTotals } from "@/lib/save/index-saves";
 import "@/components/app/live.css";
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ export const dynamic = "force-dynamic";
  * with somebody's name on it; a handle appears only where its owner published the book.
  */
 export default async function LedgerPage() {
-  const [totals, events, rows, units] = await Promise.all([ledgerTotals(), recentReceipts(48), allReceiptRows(), unitsByAsset()]);
+  const [totals, events, rows, units, saved] = await Promise.all([ledgerTotals(), recentReceipts(48), allReceiptRows(), unitsByAsset(), saveTotals()]);
   const labels = await resolveAssets([...events.map((e) => e.asset), ...units.map((u) => u.asset)]);
   const assetByMint = (mint: string) => labels.get(mint) ?? null;
   const owners = [...new Set(events.map((e) => e.recipient))];
@@ -38,6 +39,7 @@ export default async function LedgerPage() {
   // Refresh the cache AFTER the response, so a slow RPC never makes this page slow.
   after(async () => {
     await indexReceipts();
+    await indexSaves();
     await indexBooks();
     await indexGrants();
     await refreshMeasurements();
@@ -65,7 +67,12 @@ export default async function LedgerPage() {
               v={outside.receipts.toLocaleString("en-US")}
               note={`${outside.wallets} wallet${outside.wallets === 1 ? "" : "s"}. The team's own are named on /security and marked "team" on their stubs`}
             />
-            <Fact k="Value converted" v={usdc(totals.paidUsdc)} note="the slices and the payments, at the dollars that went in" />
+            <Fact
+              k="Saved now"
+              v={saved.saves.toLocaleString("en-US")}
+              note={`${usdc(saved.paidUsdc)} by ${saved.savers} wallet${saved.savers === 1 ? "" : "s"}, ${saved.outsideSaves} of the saves outside the team. Listed by the chain under the save mark`}
+            />
+            <Fact k="Value converted" v={usdc(totals.paidUsdc)} note="the slices and the payments, at the dollars that went in; saves now are counted above" />
             <Fact
               k="Units delivered"
               v={registered.length > 0 ? registered.map((u) => `${unitsFromRaw(u.amountRaw, assetByMint(u.asset)!.decimals)} ${assetByMint(u.asset)!.symbol}`).join(" · ") : units.length === 0 ? "0" : null}

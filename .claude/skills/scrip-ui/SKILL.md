@@ -1,32 +1,44 @@
 ---
 name: scrip-ui
-description: The Scrip design system, "There is no opening bell". Invoke before building or editing ANY user-facing surface — the floor, the marketing map, the register, pay in stock, receipts, runs, grants, the public pages, docs, the shell. Carries the token contract, the two materials, the stub at five sizes, the words, the page patterns, and the rules that keep every page one tone.
+description: The Scrip design system after the final plan (save now, then every payment, then the match). Invoke before building or editing ANY user-facing surface — the front door and the save sheet, receipts, your savings, every payment, pay in stock, runs, grants, the public pages, /proof, docs, the shell. Carries the token contract, paper everywhere and ink only on /proof, the words (consumer and proof), the page patterns, and the rules that keep every page one tone.
 ---
 
 # Scrip UI
 
-**There is no opening bell.** The world of the old exchange floor, reborn without hours:
-the tape is the live feed, the register is the personal record, the stub is the receipt,
-the floor is the network, the keepers are the runners. Two materials, assigned by surface:
-**ink** (the dark ground) for the floor — the front door's opening and close, the tape, the
-printer, the market band, the marketing nav; **paper** for every document — the register,
-the receipt, the statement, the pay page, the organisation's pages. Spend the boldness in
-one place — the stub — and keep everything else quiet. A document, not a terminal.
+**Since 2026-10-07 (the final plan, `docs/SCRIP-SAVE-PLAN.md`): one job first.** A person
+meets **save now** on paper, a receipt in seconds, and only then the two asks: "do this with
+every payment" and "ask whoever pays you to match it". **Paper `#f7f5ef` on every consumer
+screen** — the front door, the save sheet, the receipt, the register (now "your savings"),
+every marketing page with the paper nav (`components/site/home-nav.tsx`). **Ink only on
+`/proof`**, which is where the old front door now lives: the floor, the tape, the printer,
+the keepers, the market band, the mechanism replay, keep-rate, the seven firsts.
+
+The old metaphor still names things in code and on `/proof`: the tape is the live feed, the
+stub is the receipt's shape, the floor is the network, the keepers are the runners. Spend
+the boldness in one place — the receipt — and keep everything else quiet.
 
 ## The words
 
-| In code | On every surface |
-| --- | --- |
-| `Book` (a person's) | **register** — "your register", "make it public" |
-| `Book` (`kind = Org`) | the organisation's **page** |
-| `Receipt` when drawn | a **stub**; "prints" |
-| `Payout` kind Settle / Sponsor | **pay** / **gift** |
-| `Grant`, `vest` | a **grant that vests**; "vested", "next vest" |
-| send | **pay in stock** |
-| the network | **the floor**; the live line is **the tape** |
+| In code | On a consumer surface | On `/proof` and in Proof drawers |
+| --- | --- | --- |
+| `Book` (a person's) | **your savings**; "your savings record" when the account must be named | register |
+| `Book` (`kind = Org`) | the organisation's **page** | page |
+| the rule, `enable_rule` | **save every payment**; "Save 10% of every payment" | the rule |
+| a sweep | **saved**, "an automatic save" | sweep |
+| the delegate allowance | **limit**: "Scrip can move at most $200" | allowance |
+| `revoke`, pause | **stop saving** | revoke |
+| the float | **prepaid saves** | float |
+| a handle | **name, optional** | handle |
+| SPYx, NVDAx | **S&P 500, Nvidia**; ticker and issuer in small type (`lib/save/names.ts`, the catalogue) | the symbol |
+| keeper, watermark, slot, band, keep-rate | never | as is |
+| `Receipt` when drawn | a **receipt**; the stub is its shape | a stub; "prints" |
+| `Payout` kind Settle / Sponsor | **pay** / **gift** | pay / gift |
+| `Grant`, `vest` | a **grant that vests** | grant, vest |
+| send | **pay in stock** | pay in stock |
 
-Never "token", never "yield", never "projected". Arithmetic on the past, labelled, is the
-limit.
+Never "token" as a pitch word, never "yield", never "projected", never "401(k)", "pension",
+"guaranteed" or "floor price". A hand-paid amount is never a "match": that word belongs to a
+Plan's `match_receipt`. Arithmetic on the past, labelled, is the limit.
 
 ## Non-negotiable rules
 
@@ -42,12 +54,13 @@ limit.
    element: links, primary buttons, focus rings, the mark. On dark ground it is
    `--accent-inverse`; money outcomes on dark are `--ok-inverse` / `--err-inverse`.
    `--gold` is the chip colour for the one metal on the registry and nothing else.
-   **The dark ground** (`--surface-inverse`) is for the front door's opening and close, the
-   printer, the tape and the market band — the floor at night. Every document surface
-   (the app, receipts, the pay page, the ledger) stays paper.
-5. **Figures are mono with tabular numerals.** Amounts, units, addresses, hashes, dates.
-   IBM Plex Mono. Words are Instrument Sans. **Units are the largest thing on any page they
-   appear on.** Units before dollars.
+   **The dark ground** (`--surface-inverse`) is for `/proof` only: the floor at night, the
+   printer, the tape, the market band. Every consumer surface stays paper, the front door
+   included. Green on a consumer screen is only money a sponsor added (or a settled state).
+5. **Figures are tabular.** On a consumer screen, amounts and units are Instrument Sans with
+   tabular numerals, body at 17 px; IBM Plex Mono is for addresses, hashes, raw units and the
+   Proof drawers. On a receipt the units are the largest thing on the page; in the save flow
+   the dollars lead, with the viewer's own money beside them (`components/save/local-amount.tsx`).
 6. **Radii are 6 / 10 / 16.** `--r-pill` (999px) is for status chips only.
 7. **No emoji in UI.** Lucide line icons, `size={14|16}`, `strokeWidth={2}`.
 8. **Never render a number that chain state or a stored receipt cannot confirm.** An empty
@@ -56,7 +69,7 @@ limit.
    forward-looking sentence in the product is "about N more arrivals complete your first
    whole SPYx", computed from that register's own receipts and labelled as arithmetic.
 9. **Server-first.** React Server Components by default; `"use client"` only at
-   interactive leaves. The receipt page ships no client JavaScript except the copy button.
+   interactive leaves. A receipt ships only its small leaves: local time, local money, share.
 10. **Motion is a scene entering, never decoration.** The front door is a film: each
     section has one real object that enters when reached (`<Reveal>` adds `is-in`; the CSS
     of the object decides what that means — a stub prints, a bar fills, a figure rolls to
@@ -66,7 +79,15 @@ limit.
 11. **Sentence case everywhere.** No all-caps eyebrows or stat labels, no accent-coloured
     word in a headline, no meta strings joined with middle dots, no arrows appended to
     buttons. Lines under 80 characters.
-12. **Per-row disclosure, never a banner.** Every asset row says what is true of that mint.
+12. **Per-row disclosure, never a banner.** Every asset row says what is true of that mint:
+    the issuer's line from its own documents and the powers read off the mint (`disclosure()`
+    in `lib/save/catalogue.ts`).
+13. **One job per screen, and a trust line above every signature.** One primary button. Before
+    a wallet opens: what moves, what it becomes, the least it can become, the fee in cents,
+    what the issuer can do. Above the rule's signature: "Your stock stays in your wallet. Scrip
+    can move at most $200 … and cannot raise that limit without a new signature."
+14. **Targets are at least 44 × 44 px**, a phone gutter is 16 px, and nothing jumps as it
+    loads: a line whose content arrives late reserves its height.
 
 ## Token quick reference
 
@@ -103,22 +124,21 @@ wordmark and a statement's title line.
 
 | Surface | Pattern |
 | --- | --- |
-| `/` | A film. Dark opening: the hero (headline, the front book printing under the printer, the scan-to-pay line), the tape, the mechanism (the last sweep replayed from its receipt, instruction by instruction), the market band with rolling figures. The paper tears off: the line; the three firsts, each a scene whose object enters (a stub prints, the rule plate fills, a receipt draws itself); the evidence as bars; the honesty rows; the record with rolling counters and three stubs printing. Dark close |
+| `/` | Save now, on paper. The paper nav (Scrip, For teams, Proof, Save). Headline and lede beside the save card (`components/save/save-now.tsx`): the income line when a connected wallet was paid lately, else $5 / $10 / $25 and Other; six companies and Search; the live line ("$5 · PKR 1,385 becomes about 0.00637 S&P 500"); one button "Save $5". Then three promises, one real receipt, "then make it automatic" with the evidence, the teams line, "before you save", a link to /proof |
+| the save sheet | A native `<dialog>`, a bottom sheet on a phone: the income line if it was not chosen, "Saving $5 of USDC from this wallet into Nvidia, in this wallet", You get / At the least / Network fee / First time (a deposit that comes back) / What it is, the trust line, one button "Approve in wallet". No wallet in the browser on a phone: "Open in Phantom / Solflare / Backpack" |
+| the search | A dialog: company first, ticker and issuer small, "Saves automatically" on the eleven |
+| `/receipt/[sig]`, a save | The stub prints on a fresh save; "Saved <local time>"; Share and Save again; the two asks ("Do this with every payment: 10%", "Ask whoever pays you to match it"); a Proof drawer (transaction, saver, memo, mark, route, against Pyth, fee, deposit, raw units, slot); what it is |
+| `/receipt/[sig]`, a program receipt | The stub as the hero, then two sheets: what arrived (issuer chips), where it is anchored. Unshelled, print-like |
+| `/proof` | The old front door, on ink: the hero "The proof, read from the chain", the front book printing, the floor, the mechanism, the seven firsts, the evidence, the honesty rows, the record, the dark close |
+| `/app/rule` | "Save part of every payment, by itself." One question (5%, 10%, 20%, another), the worked example as the stub with names, Name (optional), Into (names, one company folded), Limits folded (limit, most per payment, keep at least, price protection, add 1% every three months up to 50%), the trust line, one button "Save 10% of every payment", what starting costs in deposit and prepaid saves |
+| `/app` | Your savings, live: "You save 10% of every payment into S&P 500", the watching line in plain words (last save, limit left, saves prepaid), Stop saving, the receipts as stubs, holdings, the pay link last |
+| `/teams` | Paper. The saver's ask when `?from=` carries a name; what a team can do today; "Plans, in development" said plainly; what it costs |
 | `/pay/[handle]` | Two tabs — in stock, in USDC — then two columns: the form left, the quote or the transfer QR right. Unshelled |
-| `/receipt/[sig]` | The stub as the hero, then two sheets: what arrived (issuer chips), where it is anchored. Unshelled, print-like |
 | `/claim/[payer]/[rid]` | One heading, one action. Unshelled |
-| `/ledger` | Aggregates as a ruled strip, then a wall of compact stubs. Shelled |
-| `/keepers` | Scrip's keeper's health, the roster from receipts, can/cannot rows, run-one. Shelled |
-| `/@handle` | A person's live register, read-only, opt-in; or an organisation's page (pays in stock since, people paid, runs, grants vesting, every payment with its reason). Unshelled; `opengraph-image` is the proof-of-saving card or the "pays in stock" card |
-| `/run/[id]`, `/grant/[pda]` | Public records: a run's lines, a grant's schedule as a bar with vested so far and the next vest. Unshelled; each has an `opengraph-image` |
-| `/floor` | The tape on ink: every stub as it prints over SSE, the slept share, the keepers, the corporate actions. Shelled |
-| `/people`, `/teams`, `/grants`, `/company`, `/security`, `/bounties`, `/changelog`, `/brand`, `/actions` | The marketing map: `SiteFrame` (dark nav, perforated seam, paper body), `SiteSection` with a label and an aside, `Row` for facts. Facts are stated, never animated in |
-| `/app/org/*` | Pay in stock: forms that say what happens in the same words as their button; a run is a file preview then one signature; a grant is a schedule then one signature; results are receipts, linked |
-| `/app/statements/[ym]` | A month as the stub: statement head, the title in Fraunces, ruled facts, every line; prints to one page (`print-button.tsx`, `statement.css` print rules) |
-| `/m/@handle/[id]` | A moment: one line, the stub that crossed it, the register it belongs to. Understated — no badge, no confetti, no rank. Unshelled; the `opengraph-image` is that stub beside that line |
-| `/assets` | Row list, issuer named on every row, powers as chips. Shelled |
-| `/app` | The rule in one line, the watching line, actions; the story (landed, became, units, worth today, the staircase); the register with the ghost stub; holdings, still-held, the pay link last |
-| `/app/rule` | One question, answerable before any wallet: three large presets and another rate; handle and asset as ruled rows; everything with a default folded; the wallet is asked for only at the moment of signing, and the answer survives the popup |
+| `/ledger`, `/keepers`, `/floor`, `/actions` | Reached from `/proof`. Shelled; machine words allowed |
+| `/@handle`, `/run/[id]`, `/grant/[pda]`, `/m/@handle/[id]` | Public records, unshelled, each with an `opengraph-image` |
+| marketing pages | `SiteFrame`: the paper nav, `SiteSection` with a label, `Row` for facts. Facts are stated, never animated in |
+| `/app/statements/[ym]` | A month as the stub: statement head, the title in Fraunces, ruled facts, every line; prints to one page |
 | `/docs/*` | Reading surface, measure capped at 720px |
 
 ## The shell

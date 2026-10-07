@@ -6,7 +6,8 @@
  *
  * THE EXEMPTIONS, all for the same reason — the visitor is not the owner:
  *
- *   `/`             the landing carries its own public nav.
+ *   `/`             the front door carries its own public nav: save now, on paper.
+ *   `/proof`        the machine in the open, on ink, with its own nav.
  *   `/pay/…`        a payer with no account; owner chrome offering "your book" is noise.
  *   `/@handle`      a person's or an organisation's public page, watched by strangers.
  *   `/run/…`        a payroll run; `/grant/…` a grant: both public records.
@@ -21,4 +22,4 @@ export function isAppRoute(p: string): boolean {
 }
 
 /** The routes the rail offers that deliberately have no shell. Held by a test. */
-export const SHELL_EXEMPT: readonly string[] = ["/docs"];
+export const SHELL_EXEMPT: readonly string[] = ["/", "/proof", "/docs"];

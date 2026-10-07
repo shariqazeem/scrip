@@ -37,8 +37,12 @@ export const DEFAULT_ESCALATION_BPS = 100;
 /** The cap's default: $5,000 per inflow. */
 export const DEFAULT_CAP_USDC = 5_000_000_000n;
 export const DEFAULT_TOLERANCE_BPS = 100;
-/** The delegate allowance's default: $1,000. */
-export const DEFAULT_ALLOWANCE_USDC = 1_000_000_000n;
+/**
+ * The limit's default: $200. The most Scrip can ever move from this wallet before the owner
+ * signs again (it is the token delegate's approved amount). The final plan's number: small
+ * enough that a careful person says yes, large enough for weeks of 10% saves.
+ */
+export const DEFAULT_ALLOWANCE_USDC = 200_000_000n;
 /** The float's suggested deposit, in lamports. About fourteen sweeps. */
 /**
  * WHAT A SWEEP COSTS THE FLOAT, measured on mainnet on 2026-09-21.

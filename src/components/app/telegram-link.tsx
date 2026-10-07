@@ -16,9 +16,9 @@ export function TelegramLink({ owner, bot }: { owner: string; bot: string | null
       .then((j: { linked: boolean; code: string | null }) => setState(j))
       .catch(() => setState({ linked: false, code: null }));
   }, [owner]);
-  if (!bot) return <p className="sp-fact-note">Telegram messages are not configured on this deployment. When they are, a one-time code links this register to a chat, and every receipt arrives as one message.</p>;
+  if (!bot) return <p className="sp-fact-note">Telegram messages are not configured on this deployment. When they are, a one-time code links your savings to a chat, and every save arrives as one message.</p>;
   if (!state) return <p className="sp-fact-note">Checking…</p>;
-  if (state.linked) return <p className="sp-fact-note">Linked to Telegram. Every stub that prints for this register is one message; tap it to open the receipt.</p>;
+  if (state.linked) return <p className="sp-fact-note">Linked to Telegram. Every save is one message; tap it to open the receipt.</p>;
   const link = `https://t.me/${bot}?start=${state.code ?? ""}`;
   return (
     <div>
@@ -29,7 +29,7 @@ export function TelegramLink({ owner, bot }: { owner: string; bot: string | null
           Open in Telegram
         </a>
       </div>
-      <p className="sp-fact-note">Press Start in the bot; the code links this register once. Unlink by sending /stop.</p>
+      <p className="sp-fact-note">Press Start in the bot; the code links your savings once. Unlink by sending /stop.</p>
     </div>
   );
 }

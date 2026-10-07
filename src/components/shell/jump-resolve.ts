@@ -5,7 +5,10 @@
  * filesystem to say so.
  */
 export const JUMP_PAGES: ReadonlyArray<readonly [href: string, name: string, what: string]> = [
-  ["/app", "Home", "your register, live"],
+  ["/", "Save", "part of the USDC you were paid, into a stock, now"],
+  ["/proof", "Proof", "how Scrip works, every number read from the chain"],
+  ["/teams", "Teams", "pay people in stock, and add to what they save"],
+  ["/app", "Home", "your savings, live"],
   ["/app/rule", "Rule", "how much of every payment becomes stock"],
   ["/app/holdings", "Holdings", "what the rule bought, held or not"],
   ["/app/receipts", "Receipts", "every stub, one per arrival"],

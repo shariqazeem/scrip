@@ -1,0 +1,306 @@
+/**
+ * THE FRONT DOOR, ON PAPER — one job, one primary button, nothing a stranger has to decode.
+ *
+ * Body at 17 px, a 16 px gutter on a phone, the save card within reach of the first screen.
+ * The dark floor lives at /proof; nothing here is ink. Every value is a token.
+ */
+
+.sp-home {
+  --home-fs: 1.0625rem;
+  --home-gutter: var(--s-4);
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: var(--home-fs);
+  line-height: 1.6;
+}
+
+/* ── nav ───────────────────────────────────────────────────────────── */
+.sp-home-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: 1120px;
+  margin: 0 auto;
+  /* The nav also heads every marketing page, outside .sp-home: the gutter falls back. */
+  padding: var(--s-3) var(--home-gutter, var(--s-4));
+  font-size: 1.0625rem;
+}
+.sp-home-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.sp-home-nav-spacer {
+  flex: 1;
+}
+.sp-home-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--s-3);
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  border-radius: var(--r-sm);
+}
+.sp-home-nav-link:hover {
+  color: var(--ink);
+}
+.sp-home-nav-save {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--s-5);
+  margin-left: var(--s-1);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: var(--r-md);
+  text-decoration: none;
+}
+.sp-home-nav-save:hover {
+  background: var(--accent-strong);
+}
+@media (max-width: 420px) {
+  .sp-home-nav-link {
+    padding: 0 var(--s-2);
+  }
+  .sp-home-nav-save {
+    padding: 0 var(--s-4);
+  }
+}
+
+/* ── hero: the copy and the card ───────────────────────────────────── */
+.sp-home-hero {
+  display: grid;
+  gap: var(--s-6);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--s-6) var(--home-gutter) var(--s-8);
+  grid-template-areas: "copy" "card";
+}
+.sp-home-hero-copy {
+  grid-area: copy;
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+}
+.sp-home-card {
+  grid-area: card;
+  padding: var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sheet);
+  scroll-margin-top: var(--s-5);
+}
+@media (min-width: 960px) {
+  .sp-home-hero {
+    grid-template-columns: minmax(0, 1fr) 460px;
+    grid-template-areas: "copy card";
+    align-items: start;
+    padding-top: var(--s-9);
+  }
+  .sp-home-card {
+    padding: var(--s-6);
+  }
+}
+.sp-home-display {
+  margin: 0;
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tracking-display);
+  font-weight: 600;
+}
+.sp-home-lede {
+  margin: 0;
+  max-width: 34ch;
+  font-size: var(--fs-lead);
+  line-height: var(--lh-lead);
+  color: var(--ink-muted);
+}
+.sp-home-points {
+  display: grid;
+  gap: var(--s-2);
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink);
+}
+.sp-home-points li {
+  position: relative;
+  padding-left: var(--s-5);
+}
+.sp-home-points li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
+@media (max-width: 959px) {
+  /* On a phone the card comes right after the headline: the points can wait below it. */
+  .sp-home-hero {
+    grid-template-areas: "title" "lede" "card" "points";
+    gap: var(--s-4);
+    padding-top: var(--s-4);
+  }
+  .sp-home-hero-copy {
+    display: contents;
+  }
+  .sp-home-display {
+    grid-area: title;
+  }
+  .sp-home-lede {
+    grid-area: lede;
+  }
+  .sp-home-card {
+    margin-top: var(--s-2);
+  }
+  .sp-home-points {
+    grid-area: points;
+    margin: var(--s-2) 0 0;
+  }
+}
+
+/* ── sections ──────────────────────────────────────────────────────── */
+.sp-home-sec {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--s-7) var(--home-gutter);
+  border-top: 1px solid var(--border);
+}
+.sp-home-h2 {
+  margin: 0 0 var(--s-4);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  letter-spacing: var(--tracking-h2);
+  font-weight: 600;
+}
+.sp-home-body {
+  margin: 0 0 var(--s-4);
+  max-width: var(--measure);
+  color: var(--ink-muted);
+}
+.sp-home-link {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sp-home-link:hover {
+  color: var(--accent-strong);
+}
+.sp-home-three {
+  display: grid;
+  gap: var(--s-5);
+}
+@media (min-width: 760px) {
+  .sp-home-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.sp-home-three .t {
+  margin: 0 0 var(--s-2);
+  font-weight: 600;
+}
+.sp-home-three .p {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+.sp-home-receipt {
+  display: grid;
+  gap: var(--s-6);
+  align-items: start;
+}
+@media (min-width: 860px) {
+  .sp-home-receipt {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+}
+.sp-home-evidence {
+  display: grid;
+  gap: var(--s-5);
+  margin: var(--s-5) 0;
+}
+@media (min-width: 760px) {
+  .sp-home-evidence {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.sp-home-evidence figure {
+  margin: 0;
+  padding: var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.sp-home-evidence .big {
+  margin: 0 0 var(--s-2);
+  font-size: var(--fs-h1);
+  line-height: 1.1;
+  letter-spacing: var(--tracking-h1);
+  font-weight: 600;
+}
+.sp-home-evidence figcaption {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.sp-home-rows {
+  display: grid;
+  gap: 0;
+  margin: 0 0 var(--s-5);
+  max-width: var(--measure);
+}
+.sp-home-rows > div {
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--border);
+}
+.sp-home-rows > div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.sp-home-rows dt {
+  font-weight: 600;
+}
+.sp-home-rows dd {
+  margin: var(--s-1) 0 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+/* ── foot ──────────────────────────────────────────────────────────── */
+.sp-home-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4);
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: var(--s-6) var(--home-gutter) var(--s-8);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-home-foot a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+.sp-home-foot a:hover {
+  color: var(--ink);
+}

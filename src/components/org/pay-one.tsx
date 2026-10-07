@@ -26,12 +26,12 @@ type Built = {
   error?: string;
 };
 
-export function PayOne({ owner, cluster, site }: { owner: string; cluster: string; site: string }) {
+export function PayOne({ owner, cluster, site, prefill }: { owner: string; cluster: string; site: string; prefill?: { to: string; amount: string; reason: string } }) {
   const router = useRouter();
-  const [to, setTo] = useState("");
-  const [amount, setAmount] = useState("");
+  const [to, setTo] = useState(prefill?.to ?? "");
+  const [amount, setAmount] = useState(prefill?.amount ?? "");
   const [stockPct, setStockPct] = useState(100);
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState(prefill?.reason ?? "");
   const [preview, setPreview] = useState<Built | null>(null);
   const [why, setWhy] = useState<string | null>(null);
   const [phase, setPhase] = useState<"idle" | "quoting" | "signing" | "confirming" | "done">("idle");

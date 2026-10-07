@@ -321,3 +321,13 @@
 .sp-org-form p,
 .sp-org-form label,
 .sp-org-form .sp-hint { overflow-wrap: anywhere; }
+
+/* the Welcome-bonus invites: wallet, note, savings, the one action */
+.sp-org-row.is-invite {
+  grid-template-columns: minmax(110px, 0.6fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(110px, auto);
+}
+@media (max-width: 720px) {
+  .sp-org-row.is-invite {
+    grid-template-columns: 1fr 1fr;
+  }
+}
