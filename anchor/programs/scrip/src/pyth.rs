@@ -36,9 +36,9 @@ pub struct PythPrice {
 /// Parse a PriceUpdateV2. Refuses a partial verification: a fully verified update carries
 /// the guardian quorum, and money does not move on less.
 pub fn parse_price_update(data: &[u8]) -> Result<PythPrice> {
-    require!(data.len() >= 101, ScripError::PriceInvalid);
-    require!(data[..8] == PRICE_UPDATE_V2_DISCRIMINATOR, ScripError::PriceInvalid);
-    require!(data[40] == 1, ScripError::PriceNotFullyVerified);
+    ensure!(data.len() >= 101, ScripError::PriceInvalid);
+    ensure!(data[..8] == PRICE_UPDATE_V2_DISCRIMINATOR, ScripError::PriceInvalid);
+    ensure!(data[40] == 1, ScripError::PriceNotFullyVerified);
     let base = 41usize;
     let mut feed_id = [0u8; 32];
     feed_id.copy_from_slice(&data[base..base + 32]);
@@ -46,7 +46,7 @@ pub fn parse_price_update(data: &[u8]) -> Result<PythPrice> {
     let conf = u64::from_le_bytes(data[base + 40..base + 48].try_into().unwrap());
     let expo = i32::from_le_bytes(data[base + 48..base + 52].try_into().unwrap());
     let publish_time = i64::from_le_bytes(data[base + 52..base + 60].try_into().unwrap());
-    require!(price > 0, ScripError::PriceInvalid);
+    ensure!(price > 0, ScripError::PriceInvalid);
     Ok(PythPrice { feed_id, price, conf, expo, publish_time })
 }
 

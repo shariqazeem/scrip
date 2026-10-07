@@ -14,6 +14,19 @@ use anchor_spl::associated_token::{
 use anchor_spl::token::{self as spl, Token};
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface};
 
+/// `require!` without the source location. Anchor's `require!` builds a filename and a line
+/// number into every check; this calls the error's own `From` once per check instead. The
+/// error's code, name and message are exactly the same, so every client decodes it the same
+/// way; only the line the check sat on leaves the log. Part of what kept the Plans upgrade
+/// small enough to cost a deposit that comes back, rather than rent that stays.
+macro_rules! ensure {
+    ($cond:expr, $err:expr $(,)?) => {
+        if !($cond) {
+            return Err(anchor_lang::error::Error::from($err));
+        }
+    };
+}
+
 pub mod errors;
 pub mod plan;
 pub mod pyth;
@@ -62,12 +75,12 @@ pub mod scrip {
     /// Open a book: a handle, an asset, an attestation. One per owner. The rent may be paid
     /// by somebody else, so a claim from an empty wallet can open a book on the way.
     pub fn open_book(ctx: Context<OpenBook>, slug: String, terms_version: u8, kind: HandleKind) -> Result<()> {
-        require!(valid_slug(&slug), ScripError::SlugInvalid);
+        ensure!(valid_slug(&slug), ScripError::SlugInvalid);
         let entry = registry::lookup(&ctx.accounts.asset_mint.key())
             .ok_or(ScripError::AssetNotRegistered)?;
-        require!(!entry.xstocks || terms_version >= 1, ScripError::TermsRequired);
-        require!(registry::usdc_allowed(&ctx.accounts.usdc_mint.key()), ScripError::WrongUsdcMint);
-        require!(ctx.accounts.usdc_mint.decimals == 6, ScripError::WrongUsdcDecimals);
+        ensure!(!entry.xstocks || terms_version >= 1, ScripError::TermsRequired);
+        ensure!(registry::usdc_allowed(&ctx.accounts.usdc_mint.key()), ScripError::WrongUsdcMint);
+        ensure!(ctx.accounts.usdc_mint.decimals == 6, ScripError::WrongUsdcDecimals);
 
         let book = &mut ctx.accounts.book;
         book.owner = ctx.accounts.owner.key();
@@ -95,10 +108,10 @@ pub mod scrip {
     /// change never taxes money that already landed.
     pub fn set_asset(ctx: Context<SetAsset>, terms_version: u8) -> Result<()> {
         let book = &mut ctx.accounts.book;
-        require!(book.pending.is_none(), ScripError::RulePending);
+        ensure!(book.pending.is_none(), ScripError::RulePending);
         let entry = registry::lookup(&ctx.accounts.asset_mint.key())
             .ok_or(ScripError::AssetNotRegistered)?;
-        require!(!entry.xstocks || terms_version >= 1, ScripError::TermsRequired);
+        ensure!(!entry.xstocks || terms_version >= 1, ScripError::TermsRequired);
         book.asset = entry.mint;
         book.feed_raw = entry.feed_raw;
         book.feed_adjusted = entry.feed_adjusted;
@@ -111,8 +124,8 @@ pub mod scrip {
     /// Close the book and its handle. Returns the rent and the float to the owner.
     pub fn close_book(ctx: Context<CloseBook>) -> Result<()> {
         let book = &ctx.accounts.book;
-        require!(!book.rule.enabled, ScripError::RuleStillOn);
-        require!(book.pending.is_none(), ScripError::RulePending);
+        ensure!(!book.rule.enabled, ScripError::RuleStillOn);
+        ensure!(book.pending.is_none(), ScripError::RulePending);
         Ok(())
     }
 
@@ -122,7 +135,7 @@ pub mod scrip {
     /// transfer of float BEFORE this instruction in the same transaction, so "on" on chain
     /// means the delegate really is set.
     pub fn enable_rule(
-        ctx: Context<EnableRule>,
+        ctx: Context<RuleOwner>,
         rate_bps: u16,
         escalate_bps: u16,
         floor_usdc: u64,
@@ -131,8 +144,8 @@ pub mod scrip {
     ) -> Result<()> {
         check_rule_ranges(rate_bps, escalate_bps, tolerance_bps)?;
         let book = &mut ctx.accounts.book;
-        require!(!book.rule.enabled, ScripError::RuleAlreadyEnabled);
-        require!(book.pending.is_none(), ScripError::RulePending);
+        ensure!(!book.rule.enabled, ScripError::RuleAlreadyEnabled);
+        ensure!(book.pending.is_none(), ScripError::RulePending);
         require_delegate(&ctx.accounts.owner_usdc, &book.key())?;
 
         let now = Clock::get()?.unix_timestamp;
@@ -157,7 +170,7 @@ pub mod scrip {
     /// balance, so money that landed while paused is not taxed retroactively. The escalation
     /// clock restarts only if the rate or the escalation changed.
     pub fn set_rule(
-        ctx: Context<SetRule>,
+        ctx: Context<RuleOwner>,
         rate_bps: u16,
         escalate_bps: u16,
         floor_usdc: u64,
@@ -166,8 +179,8 @@ pub mod scrip {
     ) -> Result<()> {
         check_rule_ranges(rate_bps, escalate_bps, tolerance_bps)?;
         let book = &mut ctx.accounts.book;
-        require!(book.rule.enabled, ScripError::RuleNotEnabled);
-        require!(book.pending.is_none(), ScripError::RulePending);
+        ensure!(book.rule.enabled, ScripError::RuleNotEnabled);
+        ensure!(book.pending.is_none(), ScripError::RulePending);
         require_delegate(&ctx.accounts.owner_usdc, &book.key())?;
 
         let now = Clock::get()?.unix_timestamp;
@@ -189,13 +202,13 @@ pub mod scrip {
     /// Turn the rule off. The client puts `revoke` BEFORE this instruction; the program
     /// checks that the delegate is gone. Pausing WITHOUT this instruction is `revoke` alone,
     /// which this program cannot see coming and cannot prevent.
-    pub fn disable_rule(ctx: Context<DisableRule>) -> Result<()> {
+    pub fn disable_rule(ctx: Context<RuleOwner>) -> Result<()> {
         let book = &mut ctx.accounts.book;
-        require!(book.rule.enabled, ScripError::RuleNotEnabled);
-        require!(book.pending.is_none(), ScripError::RulePending);
+        ensure!(book.rule.enabled, ScripError::RuleNotEnabled);
+        ensure!(book.pending.is_none(), ScripError::RulePending);
         let d = &ctx.accounts.owner_usdc;
         let still = d.delegate.map(|k| k == book.key()).unwrap_or(false) && d.delegated_amount > 0;
-        require!(!still, ScripError::DelegateStillSet);
+        ensure!(!still, ScripError::DelegateStillSet);
         book.rule.enabled = false;
         emit!(RuleChanged { book: book.key(), enabled: false, rate_bps: book.rule.rate_bps, watermark: book.rule.watermark });
         Ok(())
@@ -209,9 +222,9 @@ pub mod scrip {
     /// adjustment needs a transaction of its own.
     pub fn sync_watermark(ctx: Context<SyncWatermark>) -> Result<()> {
         let book = &mut ctx.accounts.book;
-        require!(book.pending.is_none(), ScripError::RulePending);
+        ensure!(book.pending.is_none(), ScripError::RulePending);
         let bal = ctx.accounts.owner_usdc.amount;
-        require!(bal < book.rule.watermark, ScripError::WatermarkNotAbove);
+        ensure!(bal < book.rule.watermark, ScripError::WatermarkNotAbove);
         book.rule.watermark = bal;
         emit!(RuleChanged { book: book.key(), enabled: book.rule.enabled, rate_bps: book.rule.rate_bps, watermark: bal });
         Ok(())
@@ -220,10 +233,10 @@ pub mod scrip {
     /// Take float back. Depositing needs no instruction: a system transfer to the Book's
     /// address is the deposit.
     pub fn withdraw_float(ctx: Context<WithdrawFloat>, lamports: u64) -> Result<()> {
-        require!(lamports > 0, ScripError::NothingToWithdraw);
+        ensure!(lamports > 0, ScripError::NothingToWithdraw);
         let book = ctx.accounts.book.to_account_info();
         let min = Rent::get()?.minimum_balance(book.data_len());
-        require!(book.lamports().saturating_sub(lamports) >= min, ScripError::FloatBelowRent);
+        ensure!(book.lamports().saturating_sub(lamports) >= min, ScripError::FloatBelowRent);
         book.sub_lamports(lamports)?;
         ctx.accounts.owner.to_account_info().add_lamports(lamports)?;
         Ok(())
@@ -237,15 +250,15 @@ pub mod scrip {
     /// this same transaction. If it does not, this refuses. If it does and fails, everything
     /// here reverts with it, including this transfer.
     pub fn begin_sweep(ctx: Context<BeginSweep>, release_id: [u8; 16]) -> Result<()> {
-        require!(get_stack_height() == 1, ScripError::NotTopLevel);
+        ensure!(get_stack_height() == 1, ScripError::NotTopLevel);
         let book_key = ctx.accounts.book.key();
         require_finish_follows(&ctx.accounts.instructions, &book_key, &release_id)?;
 
         let clock = Clock::get()?;
         let rent = Rent::get()?;
         let book = &mut ctx.accounts.book;
-        require!(book.rule.enabled, ScripError::RuleNotEnabled);
-        require!(book.pending.is_none(), ScripError::RulePending);
+        ensure!(book.rule.enabled, ScripError::RuleNotEnabled);
+        ensure!(book.pending.is_none(), ScripError::RulePending);
 
         // ── the slice ────────────────────────────────────────────────────────────
         let bal = ctx.accounts.owner_usdc.amount;
@@ -259,8 +272,8 @@ pub mod scrip {
             rate_bps: rate,
         })?;
         let d = &ctx.accounts.owner_usdc;
-        require!(d.delegate.map(|k| k == book_key).unwrap_or(false), ScripError::DelegateNotSet);
-        require!(d.delegated_amount >= s.slice, ScripError::AllowanceTooLow);
+        ensure!(d.delegate.map(|k| k == book_key).unwrap_or(false), ScripError::DelegateNotSet);
+        ensure!(d.delegated_amount >= s.slice, ScripError::AllowanceTooLow);
 
         // ── the owner's asset account, created by the keeper if it does not exist ────
         let owner_asset = &ctx.accounts.owner_asset;
@@ -269,7 +282,7 @@ pub mod scrip {
             &ctx.accounts.asset_mint.key(),
             &ctx.accounts.asset_token_program.key(),
         );
-        require_keys_eq!(owner_asset.key(), expected, ScripError::WrongAta);
+        ensure!(owner_asset.key() == expected, ScripError::WrongAta);
         let mut ata_rent = 0u64;
         if owner_asset.data_is_empty() {
             associated_token::create_idempotent(CpiContext::new(
@@ -295,7 +308,7 @@ pub mod scrip {
             .and_then(|n| n.checked_add(receipt_rent))
             .and_then(|n| n.checked_add(ata_rent))
             .ok_or(ScripError::Overflow)?;
-        require!(book.to_account_info().lamports() >= needed, ScripError::FloatTooLow);
+        ensure!(book.to_account_info().lamports() >= needed, ScripError::FloatTooLow);
 
         // ── move the slice: owner's USDC → keeper's USDC, signed by the Book as delegate ──
         let owner_key = book.owner;
@@ -336,14 +349,14 @@ pub mod scrip {
     /// keeper from the float. Any failure here reverts the whole transaction, delegate
     /// transfer included.
     pub fn finish_sweep(ctx: Context<FinishSweep>, release_id: [u8; 16]) -> Result<()> {
-        require!(get_stack_height() == 1, ScripError::NotTopLevel);
+        ensure!(get_stack_height() == 1, ScripError::NotTopLevel);
         let clock = Clock::get()?;
         let rent = Rent::get()?;
         let book = &mut ctx.accounts.book;
         let p = book.pending.ok_or(ScripError::NoPending)?;
-        require!(p.release_id == release_id, ScripError::PendingMismatch);
-        require_keys_eq!(p.keeper, ctx.accounts.keeper.key(), ScripError::PendingMismatch);
-        require!(ctx.accounts.owner_usdc.amount == p.usdc_before, ScripError::CashMoved);
+        ensure!(p.release_id == release_id, ScripError::PendingMismatch);
+        ensure!(p.keeper == ctx.accounts.keeper.key(), ScripError::PendingMismatch);
+        ensure!(ctx.accounts.owner_usdc.amount == p.usdc_before, ScripError::CashMoved);
 
         // ── the price ──────────────────────────────────────────────────────────────
         let price = {
@@ -352,9 +365,9 @@ pub mod scrip {
         };
         let basis_raw = price.feed_id == book.feed_raw && book.feed_raw != registry::ZERO_FEED;
         let basis_adjusted = price.feed_id == book.feed_adjusted && book.feed_adjusted != registry::ZERO_FEED;
-        require!(basis_raw || basis_adjusted, ScripError::PriceFeedWrong);
-        require!(clock.unix_timestamp - price.publish_time <= FEED_MAX_AGE, ScripError::PriceStale);
-        require!(
+        ensure!(basis_raw || basis_adjusted, ScripError::PriceFeedWrong);
+        ensure!(clock.unix_timestamp - price.publish_time <= FEED_MAX_AGE, ScripError::PriceStale);
+        ensure!(
             (price.conf as u128) * TOTAL_BPS <= (price.price as u128) * MAX_CONF_BPS,
             ScripError::PriceUncertain
         );
@@ -386,7 +399,7 @@ pub mod scrip {
             .amount
             .checked_sub(p.asset_before_raw)
             .ok_or(ScripError::ReceivedBelowMinimum)?;
-        require!(received_raw >= min_raw && received_raw > 0, ScripError::ReceivedBelowMinimum);
+        ensure!(received_raw >= min_raw && received_raw > 0, ScripError::ReceivedBelowMinimum);
 
         // ── the receipt ────────────────────────────────────────────────────────────
         let receipt = &mut ctx.accounts.receipt;
@@ -426,7 +439,7 @@ pub mod scrip {
             .ok_or(ScripError::Overflow)?;
         let book_info = book.to_account_info();
         let book_min = rent.minimum_balance(book_info.data_len());
-        require!(book_info.lamports().saturating_sub(reimburse) >= book_min, ScripError::FloatTooLow);
+        ensure!(book_info.lamports().saturating_sub(reimburse) >= book_min, ScripError::FloatTooLow);
         book_info.sub_lamports(reimburse)?;
         ctx.accounts.keeper.to_account_info().add_lamports(reimburse)?;
 
@@ -462,18 +475,18 @@ pub mod scrip {
         min_out_raw: u64,
         run_id: [u8; 16],
     ) -> Result<()> {
-        require!(declared_usdc > 0, ScripError::EscrowEmpty);
+        ensure!(declared_usdc > 0, ScripError::EscrowEmpty);
         let asset = ctx.accounts.asset_mint.key();
         match kind {
             PayoutKind::Settle => {
-                require!(recipient != Pubkey::default(), ScripError::RecipientRequired);
+                ensure!(recipient != Pubkey::default(), ScripError::RecipientRequired);
                 let book = ctx.accounts.recipient_book.as_ref().ok_or(ScripError::BookRequired)?;
-                require_keys_eq!(book.owner, recipient, ScripError::NotTheRecipient);
-                require_keys_eq!(book.asset, asset, ScripError::AssetMismatch);
+                ensure!(book.owner == recipient, ScripError::NotTheRecipient);
+                ensure!(book.asset == asset, ScripError::AssetMismatch);
             }
             PayoutKind::Sponsor => {
-                require!(registry::lookup(&asset).is_some(), ScripError::AssetNotRegistered);
-                require!(
+                ensure!(registry::lookup(&asset).is_some(), ScripError::AssetNotRegistered);
+                ensure!(
                     recipient != Pubkey::default() || claimant != Pubkey::default(),
                     ScripError::RecipientRequired
                 );
@@ -498,10 +511,10 @@ pub mod scrip {
     /// Release a settle payout: escrow → the recipient's own account, receipt, close.
     pub fn release_payout(ctx: Context<ReleasePayout>) -> Result<()> {
         let payout = &ctx.accounts.payout;
-        require!(payout.kind == PayoutKind::Settle, ScripError::WrongKind);
+        ensure!(payout.kind == PayoutKind::Settle, ScripError::WrongKind);
         let amount = ctx.accounts.escrow.amount;
-        require!(amount > 0, ScripError::EscrowEmpty);
-        require!(amount >= payout.min_out_raw, ScripError::EscrowBelowMinimum);
+        ensure!(amount > 0, ScripError::EscrowEmpty);
+        ensure!(amount >= payout.min_out_raw, ScripError::EscrowBelowMinimum);
 
         let clock = Clock::get()?;
         let stamp = optional_stamp(ctx.accounts.price_update.as_ref(), &ctx.accounts.recipient_book);
@@ -555,16 +568,16 @@ pub mod scrip {
     /// (the client prepends `open_book`); the fee and the rent may be paid by a relayer.
     pub fn claim_payout(ctx: Context<ClaimPayout>) -> Result<()> {
         let payout = &ctx.accounts.payout;
-        require!(payout.kind == PayoutKind::Sponsor, ScripError::WrongKind);
+        ensure!(payout.kind == PayoutKind::Sponsor, ScripError::WrongKind);
         let claimer = ctx.accounts.claimer.key();
         if payout.recipient != Pubkey::default() {
-            require_keys_eq!(claimer, payout.recipient, ScripError::NotTheRecipient);
+            ensure!(claimer == payout.recipient, ScripError::NotTheRecipient);
         } else {
             let key = ctx.accounts.claim_key.as_ref().ok_or(ScripError::ClaimKeyRequired)?;
-            require_keys_eq!(key.key(), payout.claimant, ScripError::ClaimKeyRequired);
+            ensure!(key.key() == payout.claimant, ScripError::ClaimKeyRequired);
         }
         let amount = ctx.accounts.escrow.amount;
-        require!(amount > 0, ScripError::EscrowEmpty);
+        ensure!(amount > 0, ScripError::EscrowEmpty);
 
         let clock = Clock::get()?;
         let stamp = optional_stamp(ctx.accounts.price_update.as_ref(), &ctx.accounts.claimer_book);
@@ -617,9 +630,9 @@ pub mod scrip {
     /// Take back a sponsored position nobody claimed, after thirty days.
     pub fn cancel_payout(ctx: Context<CancelPayout>) -> Result<()> {
         let payout = &ctx.accounts.payout;
-        require!(payout.kind == PayoutKind::Sponsor, ScripError::WrongKind);
+        ensure!(payout.kind == PayoutKind::Sponsor, ScripError::WrongKind);
         let now = Clock::get()?.unix_timestamp;
-        require!(now >= payout.created_unix + SPONSOR_CANCEL_AFTER, ScripError::TooEarlyToCancel);
+        ensure!(now >= payout.created_unix + SPONSOR_CANCEL_AFTER, ScripError::TooEarlyToCancel);
         let amount = ctx.accounts.escrow.amount;
         move_escrow_and_close(
             &ctx.accounts.payout,
@@ -652,11 +665,11 @@ pub mod scrip {
         run_id: [u8; 16],
     ) -> Result<()> {
         let recipient = ctx.accounts.recipient.key();
-        require!(recipient != Pubkey::default(), ScripError::GrantRecipientRequired);
-        require!(declared_usdc > 0, ScripError::EscrowEmpty);
+        ensure!(recipient != Pubkey::default(), ScripError::GrantRecipientRequired);
+        ensure!(declared_usdc > 0, ScripError::EscrowEmpty);
         let asset = ctx.accounts.asset_mint.key();
-        require!(registry::lookup(&asset).is_some(), ScripError::AssetNotRegistered);
-        require!(
+        ensure!(registry::lookup(&asset).is_some(), ScripError::AssetNotRegistered);
+        ensure!(
             (cliff_secs as i64).saturating_add(duration_secs as i64) <= MAX_GRANT_SECS,
             ScripError::GrantScheduleInvalid
         );
@@ -693,9 +706,9 @@ pub mod scrip {
         let amount = ctx.accounts.escrow.amount;
         let (payer, recipient, asset, grant_id, run_id, reason_hash, declared_usdc, start_unix, cliff_secs, duration_secs, revocable) = {
             let g = &mut ctx.accounts.grant;
-            require!(!g.sealed, ScripError::GrantAlreadySealed);
-            require!(amount > 0, ScripError::EscrowEmpty);
-            require!(amount >= g.min_out_raw, ScripError::EscrowBelowMinimum);
+            ensure!(!g.sealed, ScripError::GrantAlreadySealed);
+            ensure!(amount > 0, ScripError::EscrowEmpty);
+            ensure!(amount >= g.min_out_raw, ScripError::EscrowBelowMinimum);
             g.total_raw = amount;
             g.sealed = true;
             (g.payer, g.recipient, g.asset, g.grant_id, g.run_id, g.reason_hash, g.declared_usdc, g.start_unix, g.cliff_secs, g.duration_secs, g.revocable)
@@ -759,10 +772,10 @@ pub mod scrip {
         let rent = Rent::get()?;
         let (amount, payer, recipient, asset, run_id, reason_hash, declared_usdc, total_raw, released_after, completed) = {
             let g = &mut ctx.accounts.grant;
-            require!(g.sealed, ScripError::GrantNotSealed);
-            require!(g.state != GrantState::Completed, ScripError::GrantNotActive);
+            ensure!(g.sealed, ScripError::GrantNotSealed);
+            ensure!(g.state != GrantState::Completed, ScripError::GrantNotActive);
             let amount = g.releasable_raw(clock.unix_timestamp);
-            require!(amount > 0, ScripError::NothingToVest);
+            ensure!(amount > 0, ScripError::NothingToVest);
             g.released_raw = g.released_raw.checked_add(amount).ok_or(ScripError::Overflow)?;
             g.vests = g.vests.saturating_add(1);
             let cap = g.total_raw.min(g.release_cap_raw);
@@ -810,7 +823,7 @@ pub mod scrip {
         let reimburse = KEEPER_TIP.checked_add(receipt_rent).ok_or(ScripError::Overflow)?;
         let grant_info = ctx.accounts.grant.to_account_info();
         let grant_min = rent.minimum_balance(grant_info.data_len());
-        require!(grant_info.lamports().saturating_sub(reimburse) >= grant_min, ScripError::GrantFloatTooLow);
+        ensure!(grant_info.lamports().saturating_sub(reimburse) >= grant_min, ScripError::GrantFloatTooLow);
         grant_info.sub_lamports(reimburse)?;
         ctx.accounts.keeper.to_account_info().add_lamports(reimburse)?;
         emit!(Vested {
@@ -832,9 +845,9 @@ pub mod scrip {
         let now = Clock::get()?.unix_timestamp;
         let (back, payer) = {
             let g = &mut ctx.accounts.grant;
-            require!(g.sealed, ScripError::GrantNotSealed);
-            require!(g.revocable, ScripError::GrantNotRevocable);
-            require!(g.state == GrantState::Active, ScripError::GrantNotActive);
+            ensure!(g.sealed, ScripError::GrantNotSealed);
+            ensure!(g.revocable, ScripError::GrantNotRevocable);
+            ensure!(g.state == GrantState::Active, ScripError::GrantNotActive);
             let accrued = g.scheduled_raw(now).min(g.total_raw);
             g.release_cap_raw = accrued;
             g.state = GrantState::Revoked;
@@ -860,8 +873,8 @@ pub mod scrip {
         {
             let g = &ctx.accounts.grant;
             if g.sealed {
-                require!(g.state != GrantState::Active, ScripError::GrantStillOpen);
-                require!(amount == 0, ScripError::GrantStillOpen);
+                ensure!(g.state != GrantState::Active, ScripError::GrantStillOpen);
+                ensure!(amount == 0, ScripError::GrantStillOpen);
             }
         }
         move_grant_escrow(
@@ -895,9 +908,9 @@ pub mod scrip {
         escalate_bps: u16,
         reason_hash: [u8; 32],
     ) -> Result<()> {
-        require!(match_bps > 0 && match_bps <= plan::MAX_MATCH_BPS, ScripError::PlanTermsInvalid);
-        require!(monthly_cap_usdc > 0, ScripError::PlanTermsInvalid);
-        require!(default_rate_bps <= MAX_RATE_BPS && escalate_bps <= MAX_RATE_BPS, ScripError::PlanTermsInvalid);
+        ensure!(match_bps > 0 && match_bps <= plan::MAX_MATCH_BPS, ScripError::PlanTermsInvalid);
+        ensure!(monthly_cap_usdc > 0, ScripError::PlanTermsInvalid);
+        ensure!(default_rate_bps <= MAX_RATE_BPS && escalate_bps <= MAX_RATE_BPS, ScripError::PlanTermsInvalid);
         let entry = registry::lookup(&ctx.accounts.asset_mint.key()).ok_or(ScripError::AssetNotRegistered)?;
         let now = Clock::get()?.unix_timestamp;
         let p = &mut ctx.accounts.plan;
@@ -924,7 +937,7 @@ pub mod scrip {
 
     /// The sponsor invites one wallet. Several in one transaction for a team.
     pub fn add_member(ctx: Context<AddMember>) -> Result<()> {
-        require!(ctx.accounts.plan.status == PlanStatus::Active, ScripError::PlanNotActive);
+        ensure!(ctx.accounts.plan.status == PlanStatus::Active, ScripError::PlanNotActive);
         let now = Clock::get()?.unix_timestamp;
         let m = &mut ctx.accounts.member;
         m.plan = ctx.accounts.plan.key();
@@ -946,10 +959,10 @@ pub mod scrip {
 
     /// The member joins, by their own signature: only receipts written from now on can match.
     pub fn accept_member(ctx: Context<AcceptMember>) -> Result<()> {
-        require!(ctx.accounts.plan.status == PlanStatus::Active, ScripError::PlanNotActive);
+        ensure!(ctx.accounts.plan.status == PlanStatus::Active, ScripError::PlanNotActive);
         let clock = Clock::get()?;
         let m = &mut ctx.accounts.member;
-        require!(m.status == MemberStatus::Invited, ScripError::MemberNotInvited);
+        ensure!(m.status == MemberStatus::Invited, ScripError::MemberNotInvited);
         m.status = MemberStatus::Active;
         m.joined_unix = clock.unix_timestamp;
         m.joined_slot = clock.slot;
@@ -974,17 +987,17 @@ pub mod scrip {
         let clock = Clock::get()?;
         let (plan_key, match_bps, monthly_cap, feed_raw, feed_adjusted, sponsor, plan_id, bump) = {
             let p = &ctx.accounts.plan;
-            require!(p.status == PlanStatus::Active, ScripError::PlanNotActive);
+            ensure!(p.status == PlanStatus::Active, ScripError::PlanNotActive);
             (p.key(), p.match_bps, p.monthly_cap_usdc, p.feed_raw, p.feed_adjusted, p.sponsor, p.plan_id, p.bump)
         };
         let r = &ctx.accounts.receipt;
-        require!(r.kind == ReceiptKind::Sweep, ScripError::NotASweep);
-        require_keys_eq!(r.recipient, ctx.accounts.member.owner, ScripError::NotTheMember);
+        ensure!(r.kind == ReceiptKind::Sweep, ScripError::NotASweep);
+        ensure!(r.recipient == ctx.accounts.member.owner, ScripError::NotTheMember);
         let (receipt_slot, slice_usdc, receipt_key) = (r.settled_slot, r.paid_usdc, r.key());
         {
             let m = &ctx.accounts.member;
-            require!(m.status == MemberStatus::Active, ScripError::MemberNotActive);
-            require!(receipt_slot > m.last_matched_slot, ScripError::AlreadyMatched);
+            ensure!(m.status == MemberStatus::Active, ScripError::MemberNotActive);
+            ensure!(receipt_slot > m.last_matched_slot, ScripError::AlreadyMatched);
         }
 
         // ── the price: the same rules as finish_sweep ────────────────────────────────
@@ -994,9 +1007,9 @@ pub mod scrip {
         };
         let basis_raw = price.feed_id == feed_raw && feed_raw != registry::ZERO_FEED;
         let basis_adjusted = price.feed_id == feed_adjusted && feed_adjusted != registry::ZERO_FEED;
-        require!(basis_raw || basis_adjusted, ScripError::PriceFeedWrong);
-        require!(clock.unix_timestamp - price.publish_time <= FEED_MAX_AGE, ScripError::PriceStale);
-        require!((price.conf as u128) * TOTAL_BPS <= (price.price as u128) * MAX_CONF_BPS, ScripError::PriceUncertain);
+        ensure!(basis_raw || basis_adjusted, ScripError::PriceFeedWrong);
+        ensure!(clock.unix_timestamp - price.publish_time <= FEED_MAX_AGE, ScripError::PriceStale);
+        ensure!((price.conf as u128) * TOTAL_BPS <= (price.price as u128) * MAX_CONF_BPS, ScripError::PriceUncertain);
         let multiplier_e12 = if basis_adjusted {
             let mint_info = ctx.accounts.asset_mint.to_account_info();
             let data = mint_info.try_borrow_data()?;
@@ -1014,12 +1027,12 @@ pub mod scrip {
             plan::roll_period(m.period_start, m.matched_this_period_usdc, clock.unix_timestamp)
         };
         let usdc_wanted = plan::match_usdc(slice_usdc, match_bps, monthly_cap, matched_before);
-        require!(usdc_wanted > 0, ScripError::NothingToMatch);
+        ensure!(usdc_wanted > 0, ScripError::NothingToMatch);
         // At price PLUS band: the sponsor never pays more stock than the dollars are worth.
         let units_wanted = min_out_raw(usdc_wanted, 0, price.price, price.conf, price.expo, ctx.accounts.asset_mint.decimals, multiplier_e12)?;
-        require!(units_wanted > 0, ScripError::NothingToMatch);
+        ensure!(units_wanted > 0, ScripError::NothingToMatch);
         let (units, usdc) = plan::limit_by_escrow(units_wanted, usdc_wanted, ctx.accounts.escrow.amount);
-        require!(units > 0, ScripError::PlanEmpty);
+        ensure!(units > 0, ScripError::PlanEmpty);
 
         let seeds: &[&[u8]] = &[b"plan", sponsor.as_ref(), plan_id.as_ref(), &[bump]];
         token_interface::transfer_checked(
@@ -1072,7 +1085,7 @@ pub mod scrip {
     /// Close a Plan with no members left: what is in the escrow returns to the sponsor, and the
     /// rent with it. Matches already paid sit in members' wallets and are not touched.
     pub fn close_plan(ctx: Context<ClosePlan>) -> Result<()> {
-        require!(ctx.accounts.plan.members == 0, ScripError::PlanHasMembers);
+        ensure!(ctx.accounts.plan.members == 0, ScripError::PlanHasMembers);
         let amount = ctx.accounts.escrow.amount;
         let (sponsor, plan_id, bump) = (ctx.accounts.plan.sponsor, ctx.accounts.plan.plan_id, ctx.accounts.plan.bump);
         let seeds: &[&[u8]] = &[b"plan", sponsor.as_ref(), plan_id.as_ref(), &[bump]];
@@ -1110,12 +1123,12 @@ pub mod scrip {
     /// Record the recipient's raw balance of the asset at 7 or 30 days. Anyone may call it;
     /// the answer comes from the recipient's own token account and nowhere else.
     pub fn measure_receipt(ctx: Context<MeasureReceipt>, window_days: u8) -> Result<()> {
-        require!(window_days == 7 || window_days == 30, ScripError::WindowInvalid);
+        ensure!(window_days == 7 || window_days == 30, ScripError::WindowInvalid);
         let now = Clock::get()?.unix_timestamp;
         let receipt = &mut ctx.accounts.receipt;
-        require!(now >= receipt.settled_unix + (window_days as i64) * DAY, ScripError::TooEarlyToMeasure);
+        ensure!(now >= receipt.settled_unix + (window_days as i64) * DAY, ScripError::TooEarlyToMeasure);
         let already = if window_days == 7 { receipt.measured_7d.at } else { receipt.measured_30d.at };
-        require!(already == 0, ScripError::AlreadyMeasured);
+        ensure!(already == 0, ScripError::AlreadyMeasured);
         let recipient = receipt.recipient;
         let asset = receipt.asset;
 
@@ -1124,7 +1137,7 @@ pub mod scrip {
             &asset,
             &ctx.accounts.asset_token_program.key(),
         );
-        require_keys_eq!(ctx.accounts.recipient_asset.key(), expected, ScripError::WrongAta);
+        ensure!(ctx.accounts.recipient_asset.key() == expected, ScripError::WrongAta);
         let balance_raw = if ctx.accounts.recipient_asset.data_is_empty() {
             0
         } else {
@@ -1150,9 +1163,9 @@ fn valid_slug(s: &str) -> bool {
 }
 
 fn check_rule_ranges(rate_bps: u16, escalate_bps: u16, tolerance_bps: u16) -> Result<()> {
-    require!(rate_bps >= 1 && rate_bps <= MAX_RATE_BPS, ScripError::RateOutOfRange);
-    require!(escalate_bps <= MAX_RATE_BPS, ScripError::EscalationOutOfRange);
-    require!(
+    ensure!(rate_bps >= 1 && rate_bps <= MAX_RATE_BPS, ScripError::RateOutOfRange);
+    ensure!(escalate_bps <= MAX_RATE_BPS, ScripError::EscalationOutOfRange);
+    ensure!(
         (MIN_TOLERANCE_BPS..=MAX_TOLERANCE_BPS).contains(&tolerance_bps),
         ScripError::ToleranceOutOfRange
     );
@@ -1161,7 +1174,7 @@ fn check_rule_ranges(rate_bps: u16, escalate_bps: u16, tolerance_bps: u16) -> Re
 
 fn require_delegate(usdc: &spl::TokenAccount, book: &Pubkey) -> Result<()> {
     let set = usdc.delegate.map(|k| &k == book).unwrap_or(false) && usdc.delegated_amount >= MIN_SLICE;
-    require!(set, ScripError::DelegateNotSet);
+    ensure!(set, ScripError::DelegateNotSet);
     Ok(())
 }
 
@@ -1191,8 +1204,8 @@ fn require_finish_follows(ix_sysvar: &AccountInfo, book: &Pubkey, release_id: &[
         }
         i += 1;
     }
-    require!(begins == 1, ScripError::MultipleBeginSweeps);
-    require!(finish_follows, ScripError::NoFinishSweep);
+    ensure!(begins == 1, ScripError::MultipleBeginSweeps);
+    ensure!(finish_follows, ScripError::NoFinishSweep);
     Ok(())
 }
 
@@ -1201,9 +1214,9 @@ fn require_finish_follows(ix_sysvar: &AccountInfo, book: &Pubkey, release_id: &[
 /// is supposed to be for.
 fn token_amount(account: &AccountInfo, mint: &Pubkey, owner: &Pubkey) -> Result<u64> {
     let data = account.try_borrow_data()?;
-    require!(data.len() >= 72, ScripError::WrongAta);
-    require!(&data[..32] == mint.as_ref(), ScripError::WrongAta);
-    require!(&data[32..64] == owner.as_ref(), ScripError::WrongAta);
+    ensure!(data.len() >= 72, ScripError::WrongAta);
+    ensure!(&data[..32] == mint.as_ref(), ScripError::WrongAta);
+    ensure!(&data[32..64] == owner.as_ref(), ScripError::WrongAta);
     Ok(u64::from_le_bytes(data[64..72].try_into().unwrap()))
 }
 
@@ -1385,42 +1398,11 @@ pub struct CloseBook<'info> {
     pub handle: Box<Account<'info, Handle>>,
 }
 
+/// One account list for `enable_rule`, `set_rule` and `disable_rule`: the three check exactly
+/// the same accounts, so one definition compiles the checks once. Nothing calls Scrip by CPI,
+/// so no client depends on three separate names.
 #[derive(Accounts)]
-pub struct EnableRule<'info> {
-    pub owner: Signer<'info>,
-    #[account(mut, seeds = [b"book", owner.key().as_ref()], bump = book.bump, has_one = owner @ ScripError::NotTheOwner)]
-    pub book: Box<Account<'info, Book>>,
-    #[account(address = book.usdc_mint)]
-    pub usdc_mint: Box<Account<'info, spl::Mint>>,
-    #[account(
-        associated_token::mint = usdc_mint,
-        associated_token::authority = owner,
-        associated_token::token_program = usdc_program,
-    )]
-    pub owner_usdc: Box<Account<'info, spl::TokenAccount>>,
-    pub usdc_program: Program<'info, Token>,
-}
-
-/// The same accounts as `EnableRule`. Anchor generates a client module per context, so the
-/// two are spelled out rather than aliased.
-#[derive(Accounts)]
-pub struct SetRule<'info> {
-    pub owner: Signer<'info>,
-    #[account(mut, seeds = [b"book", owner.key().as_ref()], bump = book.bump, has_one = owner @ ScripError::NotTheOwner)]
-    pub book: Box<Account<'info, Book>>,
-    #[account(address = book.usdc_mint)]
-    pub usdc_mint: Box<Account<'info, spl::Mint>>,
-    #[account(
-        associated_token::mint = usdc_mint,
-        associated_token::authority = owner,
-        associated_token::token_program = usdc_program,
-    )]
-    pub owner_usdc: Box<Account<'info, spl::TokenAccount>>,
-    pub usdc_program: Program<'info, Token>,
-}
-
-#[derive(Accounts)]
-pub struct DisableRule<'info> {
+pub struct RuleOwner<'info> {
     pub owner: Signer<'info>,
     #[account(mut, seeds = [b"book", owner.key().as_ref()], bump = book.bump, has_one = owner @ ScripError::NotTheOwner)]
     pub book: Box<Account<'info, Book>>,

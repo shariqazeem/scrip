@@ -67,14 +67,14 @@ pub struct Slice {
 pub fn compute_slice(i: SliceInput) -> Result<Slice> {
     let watermark = i.watermark.min(i.balance);
     let inbound = i.balance - watermark;
-    require!(inbound >= i.min_inbound, ScripError::InboundBelowMinimum);
+    ensure!(inbound >= i.min_inbound, ScripError::InboundBelowMinimum);
 
     let taxable = if i.cap > 0 { inbound.min(i.cap) } else { inbound };
     let mut slice = ((taxable as u128) * (i.rate_bps as u128) / TOTAL_BPS) as u64;
     if i.floor > 0 {
         slice = slice.min(i.balance.saturating_sub(i.floor));
     }
-    require!(slice >= MIN_SLICE, ScripError::SliceBelowMinimum);
+    ensure!(slice >= MIN_SLICE, ScripError::SliceBelowMinimum);
     Ok(Slice { inbound, taxable, slice })
 }
 
@@ -96,9 +96,9 @@ pub fn min_out_raw(
     asset_decimals: u8,
     multiplier_e12: Option<u128>,
 ) -> Result<u64> {
-    require!(price > 0, ScripError::PriceInvalid);
-    require!((-18..=0).contains(&expo), ScripError::PriceInvalid);
-    require!(asset_decimals <= 18, ScripError::PriceInvalid);
+    ensure!(price > 0, ScripError::PriceInvalid);
+    ensure!((-18..=0).contains(&expo), ScripError::PriceInvalid);
+    ensure!(asset_decimals <= 18, ScripError::PriceInvalid);
     let p_hi = (price as u128).checked_add(conf as u128).ok_or(ScripError::Overflow)?;
 
     // min_units = slice_usd × (1 − tol) / p_hi, expressed in the mint's decimals.
@@ -117,7 +117,7 @@ pub fn min_out_raw(
     let mut min = numerator / denominator;
 
     if let Some(mult) = multiplier_e12 {
-        require!(mult > 0, ScripError::MultiplierInvalid);
+        ensure!(mult > 0, ScripError::MultiplierInvalid);
         // The feed priced a UI unit; the token account counts raw units, and raw × mult = UI.
         min = min.checked_mul(1_000_000_000_000).ok_or(ScripError::Overflow)? / mult;
     }

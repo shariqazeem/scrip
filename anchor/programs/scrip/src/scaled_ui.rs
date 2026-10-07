@@ -86,7 +86,7 @@ fn find_extension(mint_data: &[u8], wanted: u16) -> Option<&[u8]> {
 /// activation observed on chain was 04:00 UTC, not the 00:30 the issuer's docs describe.
 pub fn live_multiplier_e12(cfg: &ScaledUi, now: i64) -> Result<u128> {
     let live = if now >= cfg.effective_at { cfg.new_multiplier } else { cfg.multiplier };
-    require!(live.is_finite() && live >= SANITY_MIN && live <= SANITY_MAX, ScripError::MultiplierInvalid);
+    ensure!(live.is_finite() && live >= SANITY_MIN && live <= SANITY_MAX, ScripError::MultiplierInvalid);
     Ok((live * 1e12 + 0.5) as u128)
 }
 
