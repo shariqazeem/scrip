@@ -219,7 +219,7 @@ export const saves = sqliteTable(
 );
 
 /**
- * AN INVITE FOR THE WELCOME BONUS: a wallet the operator approved, by hand, for $5 of S&P 500
+ * AN INVITE FOR THE WELCOME BONUS: a wallet the operator approved, by hand, for $5 of stock
  * on its first save. One per wallet by construction (the address is the key); whether it was
  * paid is never stored here, it is read from the receipts, whose reason carries "Welcome bonus
  * from Scrip". Invite-only, so nobody can farm it.

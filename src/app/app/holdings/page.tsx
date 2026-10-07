@@ -1,85 +1,60 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageFrame } from "@/components/app/page-frame";
-import { ConnectWallet, SignOut } from "@/components/auth/connect";
+import { SignOut } from "@/components/auth/connect";
+import { SavingsHead, SignInPanel } from "@/components/app/savings-home";
 import { GrantBar } from "@/components/org/grant-bar";
 import { liveView } from "@/lib/book/live";
-import { dateUTC, short, unitsFromRaw, usd } from "@/lib/format";
+import { dateUTC, short, unitsFromRaw } from "@/lib/format";
+import { readStockHoldings } from "@/lib/save/holdings";
+import { savingsTotals } from "@/lib/save/totals";
 import { currentOwner } from "@/lib/session/server";
 import "@/components/org/org.css";
 
-export const metadata: Metadata = { title: "Holdings" };
+export const metadata: Metadata = { title: "Stocks" };
 export const dynamic = "force-dynamic";
 
 /**
- * HOLDINGS — units first. What the register holds, share-equivalents through the live
- * multiplier, what is worth today on Jupiter, and every grant vesting to this wallet with
- * its schedule. Dividends explained per row.
+ * YOUR STOCKS — every stock in this wallet that Scrip knows, whoever put it there, with what
+ * it is worth today at Jupiter's price; then every grant vesting to this wallet, with its
+ * schedule. Units are the token's own, the figure every receipt prints.
  */
 export default async function HoldingsPage() {
   const owner = await currentOwner();
   if (!owner) {
     return (
-      <PageFrame eyebrow="Holdings" title="What your register holds." sub="Sign in first.">
-        <ConnectWallet />
+      <PageFrame eyebrow="Stocks" title="Your stocks">
+        <SignInPanel lead="Sign in with the Solana wallet you save from to see every stock in it. It is a signature, not a transaction: nothing moves." />
       </PageFrame>
     );
   }
-  const v = await liveView(owner, { refresh: false });
-  if (!v.ok) {
-    return (
-      <PageFrame eyebrow="Holdings" title="What your register holds." actions={<SignOut />}>
-        <p className="sp-register-empty">{v.why}</p>
-      </PageFrame>
-    );
-  }
-  const view = v.value;
+  const [v, stocks, totals] = await Promise.all([liveView(owner, { refresh: false }), readStockHoldings(owner), savingsTotals(owner)]);
   const now = Math.floor(Date.now() / 1000);
+  const vesting = v.ok ? v.value.vesting : [];
   return (
-    <PageFrame eyebrow={view.handle ? `@${view.handle}` : "Holdings"} title="What your register holds." sub="Units first; dollars only where a live price exists, and labelled as display. Vesting grants sit in escrows you can see." actions={<SignOut />}>
+    <PageFrame
+      eyebrow={v.ok && v.value.handle ? `@${v.value.handle}` : "Stocks"}
+      title="Your stocks"
+      sub="In your own wallet, whoever put them there. Dollars are Jupiter's price right now, for display; stocks go down as well as up, and these tokens reinvest dividends rather than pay them."
+      actions={<SignOut />}
+    >
+      <SavingsHead holdings={stocks.ok ? stocks.value : []} totals={totals} why={stocks.ok ? null : stocks.why} />
+      {stocks.ok && stocks.value.length === 0 ? (
+        <p className="sp-register-empty">
+          No stocks in this wallet yet. <Link href="/app/save">Your first save</Link> puts one here, in an account only you control.
+        </p>
+      ) : null}
       <div className="sp-org">
         <section className="sp-org-section">
           <p className="sp-section-label">
-            <span>Owned, in your own token accounts</span>
-            <span>share-equivalents through the live multiplier</span>
-          </p>
-          {view.holdings.length === 0 ? (
-            <p className="sp-register-empty">Nothing yet. Your first save puts stock here, in an account only you control.</p>
-          ) : (
-            <div>
-              {view.holdings.map((h) => {
-                const worth = view.asset && h.mint === view.asset.mint && view.priceUsd !== null ? (Number(h.qtyRaw) / 10 ** h.decimals) * view.priceUsd : null;
-                return (
-                  <p key={h.mint} className="sp-fact">
-                    <span className="k">
-                      {h.symbol}
-                      <span className="sp-fact-note" style={{ display: "block" }}>
-                        {h.multiplier !== "1" && h.multiplier !== "unknown" ? `multiplier ×${Number(h.multiplier).toFixed(6)}: dividends reinvested, not paid` : h.multiplier === "unknown" ? "multiplier unread; raw units shown" : "no multiplier on this mint"}
-                      </span>
-                    </span>
-                    <span className="v is-big">
-                      {unitsFromRaw(BigInt(h.qtyAdjusted), h.decimals)}
-                      <span className="unit">{h.symbol}</span>
-                      {worth !== null ? <span className="unit">≈ {usd(worth)} on Jupiter</span> : null}
-                    </span>
-                  </p>
-                );
-              })}
-              <p className="sp-fact-note">{unitsFromRaw(BigInt(view.holdings[0]?.qtyRaw ?? "0"), view.holdings[0]?.decimals ?? 0) === "" ? "" : "Raw units are what the token account holds; the register shows share-equivalents so a dividend never reads as a gain."}</p>
-            </div>
-          )}
-        </section>
-
-        <section className="sp-org-section">
-          <p className="sp-section-label">
             <span>Vesting to you</span>
-            <span>{view.vesting.length}</span>
+            <span>{vesting.length}</span>
           </p>
-          {view.vesting.length === 0 ? (
+          {vesting.length === 0 ? (
             <p className="sp-register-empty">No grant is vesting to this wallet. When an organisation grants you stock on a schedule, it appears here with its cliff and its next vest.</p>
           ) : (
             <div className="sp-org-rows">
-              {view.vesting.map((g) => (
+              {vesting.map((g) => (
                 <div key={g.pda} className="sp-org-row" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
                   <span className="what">
                     <Link href={`/grant/${g.pda}`}>

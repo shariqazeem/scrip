@@ -750,11 +750,22 @@
   border-radius: var(--r-sm);
   flex: none;
 }
+.sp-doors[aria-busy="true"] {
+  min-height: 46px; /* the door is decided after mount; its height is reserved, nothing jumps */
+}
+.sp-doors-lead {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
 .sp-doors-note {
   margin: 0;
-  font-size: var(--fs-caption);
-  line-height: 1.5;
-  color: var(--ink-faint);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+.sp-doors-note a {
+  color: var(--accent);
 }
 .sp-doors-error {
   margin: 0;

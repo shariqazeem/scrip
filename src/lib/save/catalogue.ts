@@ -1,5 +1,5 @@
 import data from "@/lib/assets/catalogue.json";
-import { type Asset, assetByMint, offeredAssets } from "@/lib/assets/registry";
+import { type Asset, DEFAULT_ASSET_SYMBOL, assetByMint, offeredAssets } from "@/lib/assets/registry";
 import { AUTO_NAMES } from "./names";
 
 /**
@@ -95,9 +95,13 @@ export type SaveStock = {
 
 type Row = (typeof data.stocks)[number];
 
-/** The six a person sees before they search, in this order. S&P 500 is selected. */
-export const FEATURED_SYMBOLS = ["SPYx", "NVDAx", "AAPLx", "MSFTx", "TSLAx", "QQQx"] as const;
-export const DEFAULT_STOCK_SYMBOL = "SPYx";
+/**
+ * The six a person sees before they search, in this order, with the default selected. The
+ * default is the registry's (`DEFAULT_ASSET_SYMBOL`, and why it is the Nasdaq 100): a save made
+ * with the default, then "do this with every payment", must land on something that settles.
+ */
+export const FEATURED_SYMBOLS = ["QQQx", "SPYx", "NVDAx", "AAPLx", "MSFTx", "TSLAx"] as const;
+export const DEFAULT_STOCK_SYMBOL = DEFAULT_ASSET_SYMBOL;
 
 /** A route that moves the price more than this at $100 is too thin to offer a saver. */
 const MAX_IMPACT_AT_100 = 2;

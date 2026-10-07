@@ -9,7 +9,7 @@ import type { PickerStock } from "@/lib/save/catalogue";
  *
  * The catalogue is curated by rules (`scripts/stock-catalogue.ts`): three issuers whose
  * documents Scrip has read, a real route at $5 and $100, no restricted transfers. A row is
- * the company first, then the ticker and the issuer in small type, and "Saves automatically"
+ * the company first, then the ticker and the issuer in small type, and "Can save automatically"
  * on the eleven the chain can price.
  */
 export function StockSearch({
@@ -75,7 +75,7 @@ export function StockSearch({
               <span className="meta">
                 {s.ticker} · {s.issuer}
               </span>
-              {s.auto ? <span className="auto">Saves automatically</span> : null}
+              {s.auto ? <span className="auto">Can save automatically</span> : null}
             </button>
           </li>
         ))}

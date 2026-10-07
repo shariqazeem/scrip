@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { books, invites, receipts, saves } from "@/lib/db/schema";
 
 /**
- * THE WELCOME BONUS — $5 of S&P 500 from Scrip on an invited wallet's first save, paid through
+ * THE WELCOME BONUS — $5 of stock from Scrip on an invited wallet's first save, paid through
  * pay in stock with the reason below, so the receipt says exactly what it is. It is a bonus,
  * never a "match": that word belongs to a sponsor's Plan, enforced by the program.
  *

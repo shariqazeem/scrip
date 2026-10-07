@@ -3,8 +3,10 @@ import Link from "next/link";
 import { PageFrame } from "@/components/app/page-frame";
 import { ConnectWallet, SignOut } from "@/components/auth/connect";
 import { InviteForm } from "@/components/org/invite-form";
+import { defaultAsset } from "@/lib/assets/registry";
 import { BONUS_REASON, BONUS_USD, bonusBudgetUsd, bonusesPaid, inviteRows, isOperator } from "@/lib/bonus";
 import { short, usd } from "@/lib/format";
+import { nameOf } from "@/lib/save/names";
 import { currentOwner } from "@/lib/session/server";
 import "@/components/org/org.css";
 
@@ -13,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * THE WELCOME BONUS, FOR THE OPERATOR — invite a wallet, see whether it has saved, and pay its
- * $5 of S&P 500 through pay in stock with the reason "Welcome bonus from Scrip". The founder
+ * $5 of stock through pay in stock with the reason "Welcome bonus from Scrip". The founder
  * signs every bonus in their own wallet; nothing here pays by itself. Paid or not is read from
  * the receipts, so the page cannot claim a bonus the chain does not show.
  */
@@ -39,8 +41,8 @@ export default async function BonusPage() {
   return (
     <PageFrame
       eyebrow="Welcome bonus"
-      title={`${usd(BONUS_USD)} of S&P 500 on an invited wallet's first save.`}
-      sub={`Paid through pay in stock with the reason "${BONUS_REASON}", signed in your own wallet. Invite-only and one per wallet. ${paid.count} paid so far, ${usd(paid.usd)} of ${usd(budget)}; ${usd(left)} left.`}
+      title={`${usd(BONUS_USD)} of stock on an invited wallet's first save.`}
+      sub={`Paid through pay in stock with the reason "${BONUS_REASON}", signed in your own wallet, into the stock the wallet saves into, or the ${nameOf(defaultAsset().symbol)} when it has not chosen one. Invite-only and one per wallet. ${paid.count} paid so far, ${usd(paid.usd)} of ${usd(budget)}; ${usd(left)} left.`}
       actions={<SignOut />}
     >
       <div className="sp-org">

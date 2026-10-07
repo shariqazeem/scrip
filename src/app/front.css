@@ -66,12 +66,97 @@
 .sp-home-nav-save:hover {
   background: var(--accent-strong);
 }
-@media (max-width: 420px) {
-  .sp-home-nav-link {
-    padding: 0 var(--s-2);
+/* The way into your savings: a quiet button beside the primary one, never hidden in a menu. */
+.sp-home-nav-account {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  margin-left: var(--s-1);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sp-home-nav-account:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.sp-home-nav-account.is-pending {
+  visibility: hidden; /* holds the width while the session is read */
+}
+.sp-home-nav-account .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  flex: none;
+}
+.sp-home-nav-link:focus-visible,
+.sp-home-nav-save:focus-visible,
+.sp-home-nav-account:focus-visible,
+.sp-home-nav-menu-btn:focus-visible,
+.sp-home-nav-sheet-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The phone menu: everything a stranger might want, one tap behind the mark. */
+.sp-home-nav {
+  position: relative;
+}
+.sp-home-nav-menu {
+  display: none;
+}
+.sp-home-nav-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.sp-home-nav-sheet {
+  position: absolute;
+  top: calc(100% - var(--s-2));
+  right: var(--home-gutter, var(--s-4));
+  z-index: 40;
+  display: grid;
+  width: min(280px, calc(100vw - 2 * var(--s-4)));
+  padding: var(--s-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sheet);
+}
+.sp-home-nav-sheet-link {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--s-3);
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: var(--r-md);
+}
+.sp-home-nav-sheet-link:hover {
+  background: var(--bg);
+}
+@media (max-width: 680px) {
+  .sp-home-nav .is-wide {
+    display: none;
   }
-  .sp-home-nav-save {
-    padding: 0 var(--s-4);
+  .sp-home-nav-menu {
+    display: block;
   }
 }
 
@@ -317,3 +402,112 @@
   border: 1px solid var(--warn-border);
   border-radius: var(--r-md);
 }
+
+/* ── how it works: three steps, each with the one thing to do ─────── */
+.sp-home-steps {
+  display: grid;
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+@media (min-width: 860px) {
+  .sp-home-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.sp-home-steps li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  column-gap: var(--s-3);
+  row-gap: var(--s-2);
+  align-items: center;
+  padding: var(--s-4) var(--s-5) var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.sp-home-steps li > .p,
+.sp-home-steps li > .sp-home-btn {
+  grid-column: 1 / -1;
+}
+.sp-home-steps li > .p {
+  align-self: start;
+}
+.sp-home-steps .n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sp-home-steps .t {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+.sp-home-steps .p {
+  margin: 0 0 var(--s-3);
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+.sp-home-steps .sp-home-btn {
+  justify-self: start;
+}
+
+/* A button on paper: the primary in the accent, the rest quiet. Every one at least 44 px. */
+.sp-home-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 var(--s-5);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sp-home-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.sp-home-btn.is-primary {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.sp-home-btn.is-primary:hover {
+  color: var(--accent-ink);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+.sp-home-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* What saves automatically today: a fact, not a warning, while the default can settle. */
+.sp-home-note {
+  margin: 0 0 var(--s-4);
+  max-width: var(--measure);
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--ink-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+

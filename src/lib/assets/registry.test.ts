@@ -49,9 +49,9 @@ describe("the registry", () => {
     expect(gold.unit).toBe("troy-ounce");
   });
 
-  it("every rule asset has a raw feed, and the default is SPYx", () => {
+  it("every rule asset has a raw feed, and the default is an index, the Nasdaq 100", () => {
     for (const a of ruleAssets()) expect(a.feedRaw, a.symbol).not.toBeNull();
-    expect(defaultAsset().symbol).toBe("SPYx");
+    expect(defaultAsset().symbol).toBe("QQQx");
     expect(defaultAsset().singleName).toBe(false);
   });
 

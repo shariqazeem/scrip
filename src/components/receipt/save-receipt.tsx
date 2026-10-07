@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { type StubSection, Stub } from "@/components/stub/stub";
 import { short, sol, stampUTC, unitsFromRaw, usd, usdc } from "@/lib/format";
+import { defaultAsset } from "@/lib/assets/registry";
 import { ISSUERS, disclosure, pricedAsset } from "@/lib/save/catalogue";
+import { nameOf } from "@/lib/save/names";
 import { SAVE_MARK, SAVE_MEMO } from "@/lib/save/mark";
 import { type SaveView, hopLabel } from "@/lib/save/read";
 import { describeDeviation } from "@/lib/receipt/figures";
@@ -84,7 +86,7 @@ export function SaveReceipt({ view, names, fresh, waiting }: { view: SaveView; n
           <span className="p">
             {auto
               ? `Every USDC payment into this wallet saves 10% into ${name}. Scrip can move at most $200 in total, and you can stop any time.`
-              : `Every USDC payment into this wallet saves 10% into the S&P 500. Automatic saving works with the eleven stocks the chain can price.`}
+              : `Every USDC payment into this wallet saves 10% into the ${nameOf(defaultAsset().symbol)}. ${name} itself cannot be saved automatically: that needs a price Scrip can verify on Solana.`}
             {waiting
               ? ` Right now automatic saves are waiting: the newest price Pyth published on Solana is ${waiting} old, so payments stay as USDC until one returns.`
               : ""}

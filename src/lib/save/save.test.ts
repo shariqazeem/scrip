@@ -4,7 +4,7 @@
 import { sha256 } from "@noble/hashes/sha256";
 import { PublicKey } from "@solana/web3.js";
 import { describe, expect, it } from "vitest";
-import { USDC_MINT, offeredAssets } from "@/lib/assets/registry";
+import { USDC_MINT, defaultAsset, offeredAssets } from "@/lib/assets/registry";
 import { MEMO_PROGRAM_ID } from "@/lib/intake/memo";
 import { fromBase58, toBase58 } from "@/lib/solana/base58";
 import { SCRIP_PROGRAM_ID } from "@/lib/solana/program";
@@ -205,9 +205,11 @@ describe("the catalogue and the registry agree", () => {
     expect(catalogue().filter((s) => s.auto)).toHaveLength(offeredAssets().length);
   });
 
-  it("has the six a person sees first, S&P 500 by default, and no mint twice", () => {
+  it("has the six a person sees first, the registry's default selected, and no mint twice", () => {
     expect(featured().map((s) => s.symbol)).toEqual([...FEATURED_SYMBOLS]);
-    expect(defaultStock().name).toBe("S&P 500");
+    expect(defaultStock().name).toBe("Nasdaq 100");
+    expect(defaultStock().mint).toBe(defaultAsset().mint);
+    expect(featured()[0]!.mint).toBe(defaultStock().mint);
     const mints = catalogue().map((s) => s.mint);
     expect(new Set(mints).size).toBe(mints.length);
   });

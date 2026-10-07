@@ -39,7 +39,7 @@ export function ShareReceipt({ title, text, className = "sp-btn-link", label = "
 }
 
 /** "Ask whoever pays you to match it": a message, with a link to /teams that names the saver. */
-export function AskForMatch({ from, className }: { from: string; className?: string }) {
+export function AskForMatch({ from, className, label = "Ask whoever pays you to match it" }: { from: string; className?: string; label?: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
@@ -65,7 +65,7 @@ export function AskForMatch({ from, className }: { from: string; className?: str
         }
       }}
     >
-      {done ? "Message copied: send it to whoever pays you" : "Ask whoever pays you to match it"}
+      {done ? "Message copied: send it to whoever pays you" : label}
     </button>
   );
 }

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SignInPanel } from "@/components/app/savings-home";
 import { PageFrame } from "@/components/app/page-frame";
-import { ConnectWallet, SignOut } from "@/components/auth/connect";
+import { SignOut } from "@/components/auth/connect";
 import { StubFromRow } from "@/components/stub/from-row";
 import { resolveAssets } from "@/lib/assets/stand-in";
 import { receiptsFor } from "@/lib/ledger/indexer";
@@ -19,8 +20,8 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Pro
   const owner = await currentOwner();
   if (!owner) {
     return (
-      <PageFrame eyebrow="Receipts" title="Every receipt, yours." sub="Sign in first.">
-        <ConnectWallet />
+      <PageFrame eyebrow="Receipts" title="Every receipt, yours.">
+        <SignInPanel lead="Sign in with the Solana wallet you save from to see every receipt it has. It is a signature, not a transaction: nothing moves." />
       </PageFrame>
     );
   }

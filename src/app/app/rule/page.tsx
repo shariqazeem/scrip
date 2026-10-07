@@ -3,7 +3,7 @@ import { TriangleAlert } from "lucide-react";
 import { PageFrame } from "@/components/app/page-frame";
 import { RuleEditor } from "@/components/app/rule-editor";
 import { SignOut } from "@/components/auth/connect";
-import { offeredAssets, ruleAssets } from "@/lib/assets/registry";
+import { defaultAsset, offeredAssets, ruleAssets } from "@/lib/assets/registry";
 import { loadBook } from "@/lib/book/read-book";
 import { currentOwner } from "@/lib/session/server";
 import { prices as jupPrices } from "@/lib/jupiter/client";
@@ -26,8 +26,10 @@ export default async function RulePage({ searchParams }: { searchParams: Promise
   // "Do this with every payment", from a save's receipt: the stock that save bought, when the
   // chain can price it for an automatic save.
   const initialAsset = (await searchParams).asset ?? null;
-  // Only what a keeper can price on chain today: a rule on anything else could only wait.
-  const assets = offeredAssets();
+  // Only what a keeper can price on chain today: a rule on anything else could only wait. The
+  // default first, so the order matches the save card's.
+  const defaultMint = defaultAsset().mint;
+  const assets = [...offeredAssets()].sort((a, b) => Number(b.mint === defaultMint) - Number(a.mint === defaultMint));
 
   // Jupiter's display price, so the worked example shows real units for the rate the person
   // is choosing. Display only — a sweep still settles against Pyth on chain, and the stub's
@@ -48,9 +50,10 @@ export default async function RulePage({ searchParams }: { searchParams: Promise
   // Whether a sweep could settle against each asset now, and how long the chain's newest price
   // has waited: said above the signature, so nobody turns saving on expecting "as it lands".
   const waits = Object.fromEntries(assets.map((a, i) => [a.mint, states[i]!.ready === false ? waitedFor(states[i]!.lastAt) ?? "days" : null]));
-  // Start on something that can settle today: the S&P 500 when it can, else the first that can.
+  // Start on something that can settle today: the default when it can (or when the chain could
+  // not be asked), else the first that can.
   const readyMint = assets.find((a, i) => states[i]!.ready === true)?.mint ?? null;
-  const startMint = states[0]?.ready === true ? assets[0]!.mint : (readyMint ?? assets[0]?.mint ?? null);
+  const startMint = states[0]?.ready !== false ? assets[0]!.mint : (readyMint ?? assets[0]?.mint ?? null);
 
   if (!owner) {
     // The question first, the wallet second: choose a rate before anything asks for a signature.

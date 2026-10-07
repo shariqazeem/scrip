@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { House, Send, SlidersHorizontal } from "lucide-react";
+import { House, PiggyBank, SlidersHorizontal } from "lucide-react";
 import { ServiceWorker } from "@/components/app/offline";
 import { AppRail } from "./app-rail";
 import { NetworkChip } from "./network-chip";
@@ -15,22 +15,24 @@ import "./app-shell.css";
  * pill. Mounted once in the root layout and shown only on app routes. Sets
  * `html[data-app-shell="on"]` so page content clears the fixed chrome.
  *
- * TWO SEGMENTS, AND THEY ARE THE TWO THINGS AN OWNER DOES HERE: look at what arrived, or set
- * the rule. Everything else is a detail of one of those.
+ * THREE SEGMENTS, THE THREE THINGS A SAVER DOES HERE: look at what they own, save now, and
+ * save every payment. Paying someone in stock is the payer's side and lives in the rail. On a
+ * phone the bottom bar carries the same doors, so the pill is a computer's only.
  */
 function ModePill({ pathname }: { pathname: string }) {
   const onRule = pathname.startsWith("/app/rule");
-  const onOrg = pathname.startsWith("/app/org");
+  const onSave = pathname.startsWith("/app/save");
+  const onHome = pathname === "/app";
   return (
     <div className="mode-pill" role="group" aria-label="Mode">
-      <Link href="/app" className={`mode-seg${!onRule && !onOrg ? " on" : ""}`}>
+      <Link href="/app" className={`mode-seg${onHome ? " on" : ""}`}>
         <House size={14} strokeWidth={2} /> Home
+      </Link>
+      <Link href="/app/save" className={`mode-seg${onSave ? " on" : ""}`}>
+        <PiggyBank size={14} strokeWidth={2} /> Save now
       </Link>
       <Link href="/app/rule" className={`mode-seg${onRule ? " on" : ""}`}>
         <SlidersHorizontal size={14} strokeWidth={2} /> Every payment
-      </Link>
-      <Link href="/app/org" className={`mode-seg${onOrg ? " on" : ""}`}>
-        <Send size={14} strokeWidth={2} /> Pay
       </Link>
     </div>
   );

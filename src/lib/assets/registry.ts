@@ -124,8 +124,14 @@ const XSTOCK_DISCLOSURE =
 
 const READ_AT = "2026-09-15";
 
-/** The default asset for a new rule. */
-export const DEFAULT_ASSET_SYMBOL = "SPYx";
+/**
+ * The default asset for a new rule, a pay link and a grant. The Nasdaq 100, not the S&P 500,
+ * since 7 October 2026: Pyth stopped pushing US equity prices to Solana around 28 September,
+ * so an automatic save settles only where a keeper can post a verified price itself, and the
+ * key Scrip's keepers hold is entitled to the Nasdaq 100 and not to the S&P 500. A default
+ * that can only wait is not a default. One line each here and in the catalogue to go back.
+ */
+export const DEFAULT_ASSET_SYMBOL = "QQQx";
 /** The pay-in asset. The rule watches the owner's USDC associated token account. */
 export const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 export const USDC_DECIMALS = 6;

@@ -125,6 +125,9 @@ export default async function ProofPage() {
           <Link href="/docs" className="sp-nav-link">
             Docs
           </Link>
+          <Link href="/app" className="sp-nav-link">
+            Your savings
+          </Link>
           <Link href="/#save" className="sp-btn is-primary">
             Save
           </Link>

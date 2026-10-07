@@ -371,7 +371,13 @@ function Header() {
         <ScripMark size={20} />
         Scrip
       </Link>
-      <span className="sp-receipt-kicker">Receipt</span>
+      <span className="sp-receipt-top-right">
+        <span className="sp-receipt-kicker">Receipt</span>
+        {/* For the saver who just signed: their savings, one tap away. A stranger is asked to sign in. */}
+        <Link href="/app" className="sp-receipt-mine">
+          Your savings
+        </Link>
+      </span>
     </div>
   );
 }

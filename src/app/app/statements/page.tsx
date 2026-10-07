@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SignInPanel } from "@/components/app/savings-home";
 import { PageFrame } from "@/components/app/page-frame";
-import { ConnectWallet, SignOut } from "@/components/auth/connect";
+import { SignOut } from "@/components/auth/connect";
 import { statementsFor } from "@/lib/book/statements";
 import { unitsFromRaw, usdc } from "@/lib/format";
 import { currentOwner } from "@/lib/session/server";
@@ -15,8 +16,8 @@ export default async function StatementsPage() {
   const owner = await currentOwner();
   if (!owner) {
     return (
-      <PageFrame eyebrow="Statements" title="A statement a month." sub="Sign in first.">
-        <ConnectWallet />
+      <PageFrame eyebrow="Statements" title="A statement a month.">
+        <SignInPanel lead="Sign in with the Solana wallet you save from to see a statement for every month it saved. It is a signature, not a transaction." />
       </PageFrame>
     );
   }

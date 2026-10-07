@@ -11,6 +11,7 @@ import {
 } from "@solana/wallet-standard-features";
 import { Wallet as WalletIcon } from "lucide-react";
 import { signInMessage } from "@/lib/session/message";
+import { isPhone, walletBrowseLinks } from "@/components/save/wallets";
 
 /**
  * THE WALLET DOOR — Wallet Standard directly, with no adapter UI package.
@@ -114,16 +115,7 @@ export function ConnectWallet({ compact = false }: { compact?: boolean }) {
     [router],
   );
 
-  if (wallets.length === 0) {
-    return (
-      <div className="sp-doors">
-        <p className="sp-doors-note">
-          No Solana wallet is installed in this browser. Install one — Phantom, Solflare and
-          Backpack all work — or open Scrip in a wallet&rsquo;s own browser.
-        </p>
-      </div>
-    );
-  }
+  if (wallets.length === 0) return <NoWalletHere />;
 
   return (
     <div className="sp-doors">
@@ -147,6 +139,45 @@ export function ConnectWallet({ compact = false }: { compact?: boolean }) {
       {why ? <p className="sp-doors-error">{why}</p> : null}
       <p className="sp-doors-note">
         Signing in costs nothing and moves nothing. It is a signature, not a transaction.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * NO WALLET IN THIS BROWSER. On a phone that almost always means Safari or Chrome, while the
+ * wallet is an app: one tap reopens this same page inside the wallet's own browser, where
+ * signing works. On a computer it means no extension yet. Decided after mount, because the
+ * server cannot know which device it is rendering for.
+ */
+function NoWalletHere() {
+  const [phoneAt, setPhoneAt] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setPhoneAt(isPhone() ? window.location.href : null);
+    setReady(true);
+  }, []);
+  if (!ready) return <div className="sp-doors" aria-busy="true" />;
+  if (phoneAt) {
+    return (
+      <div className="sp-doors">
+        <p className="sp-doors-lead">Open Scrip in your wallet app</p>
+        {walletBrowseLinks(phoneAt).map((l) => (
+          <a key={l.name} href={l.href} className="sp-action sp-door">
+            <WalletIcon size={16} strokeWidth={2} aria-hidden />
+            Open in {l.name}
+          </a>
+        ))}
+        <p className="sp-doors-note">This page opens inside the wallet, where signing in takes one tap. Nothing moves.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="sp-doors">
+      <p className="sp-doors-lead">No Solana wallet in this browser yet</p>
+      <p className="sp-doors-note">
+        Install <a href="https://phantom.app">Phantom</a>, <a href="https://solflare.com">Solflare</a> or <a href="https://backpack.app">Backpack</a>, then
+        come back to this page. Scrip never holds your money: it works with the wallet you already have.
       </p>
     </div>
   );

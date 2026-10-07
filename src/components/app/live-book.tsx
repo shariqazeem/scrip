@@ -36,7 +36,25 @@ const STATE_LINE: Record<LiveView["state"], string> = {
   off: "not saving automatically",
 };
 
-export function LiveBook({ initial, mode, site, limit, children }: { initial: LiveView; mode: "owner" | "public" | "front"; site: string; limit?: number; children?: ReactNode }) {
+export function LiveBook({
+  initial,
+  mode,
+  site,
+  limit,
+  children,
+  hideHoldings = false,
+  hideHead = false,
+}: {
+  initial: LiveView;
+  mode: "owner" | "public" | "front";
+  site: string;
+  limit?: number;
+  children?: ReactNode;
+  /** The owner's home lists every stock above this; the register's own list would repeat it. */
+  hideHoldings?: boolean;
+  /** No savings record yet, only stock somebody added: the receipts without the rule's header. */
+  hideHead?: boolean;
+}) {
   const [view, setView] = useState<LiveView>(initial);
   const [printing, setPrinting] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -100,7 +118,7 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
             waiting
               ? `no ${asset?.symbol ?? "asset"} price can be verified right now; it stays in the wallet and converts when one returns`
               : view.state === "on"
-                ? "a keeper is racing for this now; the units print with the receipt"
+                ? "saving it now; the receipt prints here in seconds"
                 : `nothing is saved while ${STATE_LINE[view.state]}`
           }
           symbol={asset?.symbol ?? "stock"}
@@ -111,8 +129,8 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
       ) : null}
       {arrivals.length === 0 && unswept === 0n ? (
         <EmptyStub
-          title="Nothing has arrived under the rule yet"
-          note={view.ruleOn ? "The next USDC that lands at this address is swept within seconds, and its receipt prints here." : "Turn the rule on, and the next USDC that lands is swept with a receipt."}
+          title="No automatic saves yet"
+          note={view.ruleOn ? "The next USDC payment into this wallet is saved by itself, and its receipt prints here." : "Turn saving every payment back on, and the next USDC payment is saved with a receipt."}
         />
       ) : null}
       {arrivals.map((a: LiveArrival) => (
@@ -139,57 +157,59 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
 
   return (
     <div className="sp-live">
-      <header className="sp-live-head">
-        {view.ruleOn && asset ? (
-          <p className="sp-live-rule">
-            You save <span className="n">{bps(view.rateNowBps)}</span> of every payment into <span className="n">{nameOf(asset.symbol)}</span>
-            {view.escalateBps > 0 ? `, rising ${bps(view.escalateBps)} every three months` : ""}.
+      {hideHead ? null : (
+        <header className="sp-live-head">
+          {view.ruleOn && asset ? (
+            <p className="sp-live-rule">
+              You save <span className="n">{bps(view.rateNowBps)}</span> of every payment into <span className="n">{nameOf(asset.symbol)}</span>
+              {view.escalateBps > 0 ? `, rising ${bps(view.escalateBps)} every three months` : ""}.
+            </p>
+          ) : (
+            <p className="sp-live-rule is-off">{mode === "owner" && !view.handle ? "Not saving automatically yet." : "Not saving automatically."}</p>
+          )}
+          <p className={`sp-live-watch${warn ? " is-warn" : view.state === "off" ? " is-off" : ""}`}>
+            <span className="dot" aria-hidden />
+            <span>watching {short(view.owner)}</span>
+            <span>{waiting ? waiting.chip : STATE_LINE[view.state]}</span>
+            {view.ruleOn ? <span>last save {view.keeper.lastSweepAt ? since(view.keeper.lastSweepAt) : view.sweeps > 0 ? `${view.sweeps} so far` : "none yet"}</span> : null}
+            {view.ruleOn ? <span>limit {usdc(BigInt(view.usdc.delegatedAmount))} left</span> : null}
+            {view.ruleOn ? <span>{sweepsCovered(BigInt(view.floatLamports))} saves prepaid</span> : null}
           </p>
-        ) : (
-          <p className="sp-live-rule is-off">{mode === "owner" && !view.handle ? "Not saving automatically yet." : "Not saving automatically."}</p>
-        )}
-        <p className={`sp-live-watch${warn ? " is-warn" : view.state === "off" ? " is-off" : ""}`}>
-          <span className="dot" aria-hidden />
-          <span>watching {short(view.owner)}</span>
-          <span>{waiting ? waiting.chip : STATE_LINE[view.state]}</span>
-          {view.ruleOn ? <span>last save {view.keeper.lastSweepAt ? since(view.keeper.lastSweepAt) : view.sweeps > 0 ? `${view.sweeps} so far` : "none yet"}</span> : null}
-          {view.ruleOn ? <span>limit {usdc(BigInt(view.usdc.delegatedAmount))} left</span> : null}
-          {view.ruleOn ? <span>{sweepsCovered(BigInt(view.floatLamports))} saves prepaid</span> : null}
-        </p>
-        {view.state === "delegate-replaced" ? <p className="sp-live-why">Another app took the permission on your USDC account, which paused saving. Start again to give it back; payments count from today.</p> : null}
-        {view.state === "allowance-exhausted" ? <p className="sp-live-why">The limit is used up, so saving has paused. Set a new limit to keep saving; your USDC stays where it is until then.</p> : null}
-        {view.state === "float-empty" ? <p className="sp-live-why">The prepaid saves are used up. Prepay more to keep saving; nothing is lost while it waits.</p> : null}
-        {waiting ? <p className="sp-live-why">{waiting.detail}</p> : null}
-        {view.ruleOn && !view.keeper.alive && mode === "owner" ? <p className="sp-live-why">Nothing is submitting saves right now. Payments that land wait in your wallet; nothing is lost.</p> : null}
-        <OfflineNotice at={view.at} />
-        {mode === "owner" ? (
-          <div className="sp-live-actions">
-            {view.ruleOn ? <PauseResume state={view.state} /> : null}
-            <Link href="/app/rule" className={`sp-action${view.ruleOn ? "" : " is-primary"}`}>
-              {view.ruleOn ? "Change how much you save" : "Save every payment"}
-            </Link>
-            {view.handle ? (
-              <button type="button" className="sp-action is-quiet" disabled={publishing} onClick={() => void togglePublish()}>
-                {view.published ? "Public page on" : "Make a public page"}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-      </header>
+          {view.state === "delegate-replaced" ? <p className="sp-live-why">Another app took the permission on your USDC account, which paused saving. Start again to give it back; payments count from today.</p> : null}
+          {view.state === "allowance-exhausted" ? <p className="sp-live-why">The limit is used up, so saving has paused. Set a new limit to keep saving; your USDC stays where it is until then.</p> : null}
+          {view.state === "float-empty" ? <p className="sp-live-why">The prepaid saves are used up. Prepay more to keep saving; nothing is lost while it waits.</p> : null}
+          {waiting ? <p className="sp-live-why">{waiting.detail}</p> : null}
+          {view.ruleOn && !view.keeper.alive && mode === "owner" ? <p className="sp-live-why">Nothing is submitting saves right now. Payments that land wait in your wallet; nothing is lost.</p> : null}
+          <OfflineNotice at={view.at} />
+          {mode === "owner" ? (
+            <div className="sp-live-actions">
+              {view.ruleOn ? <PauseResume state={view.state} /> : null}
+              <Link href="/app/rule" className={`sp-action${view.ruleOn ? "" : " is-primary"}`}>
+                {view.ruleOn ? "Change how much you save" : "Save every payment"}
+              </Link>
+              {view.handle ? (
+                <button type="button" className="sp-action is-quiet" disabled={publishing} onClick={() => void togglePublish()}>
+                  {view.published ? "Public page on" : "Make a public page"}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </header>
+      )}
 
-      <Story view={view} />
+      <Story view={view} showWorth={!hideHoldings} />
 
       <div className="sp-live-grid">
         <section className="sp-section">
           <p className="sp-section-label">
-            <span>Arrivals, newest first</span>
+            <span>{mode === "owner" ? "Receipts, newest first" : "Arrivals, newest first"}</span>
             {view.arrivals.length > 0 ? <span>{view.arrivals.length}</span> : null}
           </p>
           {register}
         </section>
 
         <aside className="sp-live-side">
-          {view.holdings.length > 0 ? (
+          {view.holdings.length > 0 && !hideHoldings ? (
             <section className="sp-section">
               <p className="sp-section-label">
                 <span>In this wallet</span>
@@ -252,8 +272,8 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
                 <CopyText text={payUrl} label="Copy" />
               </div>
               <p className="sp-fact-note">
-                Most money does not need it. Send USDC to your normal address and the rule handles it. Add <span className="mono">?amount=50&amp;reason=…</span> to
-                request a sum.
+                Most money does not need it. Send USDC to your normal address and saving every payment handles it. Add{" "}
+                <span className="mono">?amount=50&amp;reason=…</span> to request a sum.
               </p>
             </section>
           ) : null}
@@ -267,7 +287,7 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
                 <span className="sp-url">{publicUrl}</span>
                 <CopyText text={publicUrl} label="Copy" />
               </div>
-              <p className="sp-fact-note">Anyone can watch arrivals settle here. Turn it off any time.</p>
+              <p className="sp-fact-note">Anyone with the link can watch your saves print here. Turn it off any time.</p>
               <InstallPrompt />
             </section>
           ) : null}
@@ -294,7 +314,7 @@ export function LiveBook({ initial, mode, site, limit, children }: { initial: Li
  * worth today, and the staircase of ownership rising with every arrival. Every point is a
  * receipt; the price is Jupiter's, for display.
  */
-function Story({ view }: { view: LiveView }) {
+function Story({ view, showWorth = true }: { view: LiveView; showWorth?: boolean }) {
   const sweeps = view.arrivals.filter((a) => a.kind === "sweep");
   const all = view.arrivals;
   if (all.length === 0) return null;
@@ -314,10 +334,10 @@ function Story({ view }: { view: LiveView }) {
       </p>
       <div className="sp-story-grid">
         <div className="sp-story-facts">
-          {landed > 0n ? <Fact k="Landed under the rule" v={usdc(landed)} /> : null}
+          {landed > 0n ? <Fact k="Paid in while saving every payment" v={usdc(landed)} /> : null}
           <Fact k="Became stock" v={usdc(paid)} />
-          {asset && asset.decimals !== null ? <Fact k={`${asset.symbol} from receipts`} v={unitsFromRaw(units, asset.decimals)} big /> : null}
-          {worth !== null ? <Fact k="Worth today, on Jupiter" v={usd(worth)} note={worth >= Number(paid) / 1e6 ? "above what went in" : "below what went in"} tone={worth >= Number(paid) / 1e6 ? "ok" : "err"} /> : null}
+          {asset && asset.decimals !== null ? <Fact k={`${nameOf(asset.symbol)} from receipts`} v={unitsFromRaw(units, asset.decimals)} big /> : null}
+          {worth !== null && showWorth ? <Fact k="Worth today, on Jupiter" v={usd(worth)} note={worth >= Number(paid) / 1e6 ? "above what went in" : "below what went in"} tone={worth >= Number(paid) / 1e6 ? "ok" : "err"} /> : null}
         </div>
         {asset && asset.decimals !== null && mine.length > 0 ? <Staircase arrivals={mine} decimals={asset.decimals} symbol={asset.symbol} /> : null}
       </div>

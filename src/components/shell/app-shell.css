@@ -348,6 +348,107 @@ html[data-app-shell="on"] .sp-page {
   }
 }
 
+/* ── the phone tabs ───────────────────────────────────────────────────────────────── */
+/* On a computer the rail carries its labels on hover, so the tab words, the More button and
+   its sheet exist only on a phone. */
+.app-rail-tab,
+.app-rail-sheet {
+  display: none;
+}
+.app-rail-item.app-rail-more {
+  display: none;
+}
+@media (max-width: 720px) {
+  /* The bar is the navigation on a phone; the mode pill above would be the same three doors
+     a second time, over the page's own title. */
+  .mode-pill,
+  .mode-scrim {
+    display: none;
+  }
+  html[data-app-shell="on"] .sp-page {
+    padding-top: 28px;
+  }
+  .app-rail-card {
+    border-radius: var(--r-lg);
+    padding: 4px;
+  }
+  .app-rail-item.is-desk {
+    display: none;
+  }
+  .app-rail-item.is-tab,
+  .app-rail-item.app-rail-more {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: auto;
+    min-width: 60px;
+    height: 54px;
+    padding: 0 6px;
+  }
+  .app-rail-item.app-rail-more {
+    font: inherit;
+    color: var(--ink-muted);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+  .app-rail-item.app-rail-more.on {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .app-rail-tab {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .app-rail-sheet {
+    display: grid;
+    position: fixed;
+    bottom: 88px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 61;
+    width: min(340px, calc(100vw - 32px));
+    padding: var(--s-2);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-float);
+  }
+  .app-rail-sheet-link {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-height: 48px;
+    padding: 0 var(--s-3);
+    border-radius: var(--r-md);
+    color: var(--ink);
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .app-rail-sheet-link.on {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .app-rail-sheet-link:focus-visible,
+  .app-rail-item.app-rail-more:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .app-rail-sheet-who {
+    margin: var(--s-2) var(--s-3) var(--s-1);
+    font-size: var(--fs-caption);
+    color: var(--ink-muted);
+  }
+  .app-rail-sheet-who a {
+    color: var(--accent);
+  }
+}
+
 /* PRINT: the shell is chrome, never content. A printed receipt must not carry a Book/Pay pill
    over its title or a network chip in its corner. */
 @media print {

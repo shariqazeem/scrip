@@ -53,6 +53,33 @@
   font-size: var(--fs-caption);
   color: var(--ink-faint);
 }
+.sp-receipt-top-right {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+.sp-receipt a.sp-receipt-mine {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--s-4);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  text-decoration: none;
+}
+.sp-receipt a.sp-receipt-mine:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+@media print {
+  .sp-receipt a.sp-receipt-mine {
+    display: none;
+  }
+}
 
 /* the stub sits centred, full width of the column */
 .sp-receipt-stub {

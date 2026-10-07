@@ -1,17 +1,10 @@
 import Link from "next/link";
 import { SaveNow } from "@/components/save/save-now";
 import { HomeNav } from "@/components/site/home-nav";
-import type { QuoteBody } from "@/components/save/types";
 import { Stub } from "@/components/stub/stub";
 import { bps, stampUTC, unitsFromRaw, usdc } from "@/lib/format";
-import { CATALOGUE_READ_AT, catalogue, defaultStock, disclosure, featured, toPicker } from "@/lib/save/catalogue";
+import { type AutomaticToday, automaticToday, listOf, saveCardProps } from "@/lib/save/card";
 import { frontReceipt } from "@/lib/save/latest";
-import { cachedQuote } from "@/lib/save/quote-cache";
-import { offeredAssets } from "@/lib/assets/registry";
-import { nameOf } from "@/lib/save/names";
-import { waitedFor } from "@/lib/pyth/price";
-import { priceStates } from "@/lib/pyth/ready";
-import { cluster } from "@/lib/solana/cluster";
 import "./front.css";
 import "@/components/save/save.css";
 
@@ -27,19 +20,8 @@ export const dynamic = "force-dynamic";
  * one primary button, and nothing a stranger has to decode.
  */
 export default async function FrontDoor() {
-  const stock = defaultStock();
-  const offered = offeredAssets();
-  const [quote, receipt, states] = await Promise.all([cachedQuote(stock, 5_000_000n, null), frontReceipt(), priceStates(offered)]);
-  // Which of the eleven can settle an automatic save right now, by name.
-  const settlingNow = offered.filter((_, i) => states[i]!.ready === true).map((a) => nameOf(a.symbol));
-  const at = offered.findIndex((a) => a.mint === stock.mint);
-  const price = at >= 0 ? states[at]! : { ready: null, lastAt: null };
-  // Automatic saving settles only against a price the program can verify. When there is none,
-  // the page says so in the chain's own numbers instead of promising "as it lands".
-  const waited = price.ready === false ? waitedFor(price.lastAt) : null;
-  const all = catalogue();
-  const initialQuote: QuoteBody | null = quote.ok ? { quote: quote.value.quote, cost: quote.value.cost, solUsd: quote.value.solUsd } : null;
-  const disclosures = Object.fromEntries(all.map((s) => [s.mint, disclosure(s)]));
+  const [card, receipt, auto] = await Promise.all([saveCardProps(), frontReceipt(), automaticToday()]);
+  const count = card.stocks.length;
 
   return (
     <div className="sp-home">
@@ -50,23 +32,53 @@ export default async function FrontDoor() {
           <h1 className="sp-home-display">Your income invests itself.</h1>
           <p className="sp-home-lede">Turn part of the USDC in your wallet into stocks you own, then save a slice of every payment by itself.</p>
           <ul className="sp-home-points">
-            <li>Into the S&amp;P 500, Nvidia, Apple and {all.length - 3} more, in your own wallet.</li>
+            <li>Into the Nasdaq 100, the S&amp;P 500, Nvidia and {count - 3} more, in your own wallet.</li>
             <li>One signature, and a receipt in seconds.</li>
             <li>Weekends too: a save is a swap, not an order that waits for a market.</li>
           </ul>
         </div>
         <section className="sp-home-card" aria-label="Save now">
-          <SaveNow
-            stocks={all.map(toPicker)}
-            featured={featured().map((s) => s.mint)}
-            defaultMint={stock.mint}
-            initialQuote={initialQuote}
-            readAt={CATALOGUE_READ_AT}
-            cluster={cluster()}
-            disclosures={disclosures}
-          />
+          <SaveNow {...card} />
         </section>
       </header>
+
+      <section className="sp-home-sec" aria-labelledby="how">
+        <h2 id="how" className="sp-home-h2">
+          How Scrip works
+        </h2>
+        <ol className="sp-home-steps">
+          <li>
+            <span className="n" aria-hidden>
+              1
+            </span>
+            <p className="t">Save now</p>
+            <p className="p">Turn some of the USDC in your wallet into a stock you own. One signature, and a receipt in seconds.</p>
+            <a href="#save" className="sp-home-btn is-primary">
+              Save $5
+            </a>
+          </li>
+          <li>
+            <span className="n" aria-hidden>
+              2
+            </span>
+            <p className="t">Save every payment</p>
+            <p className="p">Say yes once, and 10% of every USDC payment into your wallet is saved the same way, by itself. Stop any time.</p>
+            <Link href="/app/rule" className="sp-home-btn">
+              Set it up
+            </Link>
+          </li>
+          <li>
+            <span className="n" aria-hidden>
+              3
+            </span>
+            <p className="t">Watch it add up</p>
+            <p className="p">Every stock and every receipt in one place, and whoever pays you can add stock to it.</p>
+            <Link href="/app" className="sp-home-btn">
+              Open your savings
+            </Link>
+          </li>
+        </ol>
+      </section>
 
       <section className="sp-home-sec" aria-labelledby="promise">
         <h2 id="promise" className="sp-home-h2">
@@ -134,27 +146,10 @@ export default async function FrontDoor() {
           Then make it automatic.
         </h2>
         <p className="sp-home-body">
-          Say yes once, and 10% of every USDC payment into your wallet becomes stock in the same wallet. Scrip can move at most the limit
-          you set, $200 to start, and you can stop any time. Automatic saving works with the eleven stocks the chain can price, the S&amp;P
-          500 first.
+          Say yes once, and 10% of every USDC payment into your wallet becomes stock in the same wallet. Scrip can move at most the limit you set,
+          $200 to start, and you can stop any time.
         </p>
-        {price.ready === false ? (
-          <p className="sp-home-wait">
-            {settlingNow.length > 0 ? (
-              <>
-                <strong>Right now automatic saves settle into {listOf(settlingNow)}.</strong> The S&amp;P 500 is waiting: Scrip settles an
-                automatic save only against a price it can verify on Solana, and the newest S&amp;P 500 price there is {waited ?? "days"} old.
-                Payments meant for it stay in your wallet as USDC until a price returns. Saving now, above, works at any time.
-              </>
-            ) : (
-              <>
-                <strong>Right now automatic saves are waiting.</strong> Scrip settles one only against a price it can verify on Solana, and
-                the newest S&amp;P 500 price there is {waited ?? "days"} old. Until a price returns, payments you receive stay in your wallet
-                as USDC: nothing is lost and nothing is guessed. Saving now, above, works at any time.
-              </>
-            )}
-          </p>
-        ) : null}
+        <AutomaticNote auto={auto} />
         <div className="sp-home-evidence">
           <figure>
             <p className="big">37% → 86%</p>
@@ -165,11 +160,9 @@ export default async function FrontDoor() {
             <figcaption>How much people saved, when increases were set in advance instead of decided each time (Thaler &amp; Benartzi, 2004).</figcaption>
           </figure>
         </div>
-        <p className="sp-home-body">
-          <Link href="/app/rule" className="sp-home-link">
-            Save 10% of every payment
-          </Link>
-        </p>
+        <Link href="/app/rule" className="sp-home-btn is-primary">
+          Save 10% of every payment
+        </Link>
       </section>
 
       <section className="sp-home-sec" aria-labelledby="teams">
@@ -177,9 +170,12 @@ export default async function FrontDoor() {
           Whoever pays you can add to it.
         </h2>
         <p className="sp-home-body">
-          A team that pays people in USDC can pay part of it in stock, or add stock to what they save, straight to their wallets, with a
-          receipt that says why. <Link href="/teams" className="sp-home-link">Scrip for teams</Link>
+          A team that pays people in USDC can pay part of it in stock, or add stock to what they save, straight to their wallets, with a receipt
+          that says why.
         </p>
+        <Link href="/teams" className="sp-home-btn">
+          Scrip for teams
+        </Link>
       </section>
 
       <section className="sp-home-sec" aria-labelledby="before">
@@ -215,6 +211,7 @@ export default async function FrontDoor() {
       <footer className="sp-home-foot">
         <span>Scrip</span>
         <span className="sp-home-nav-spacer" />
+        <Link href="/app">Your savings</Link>
         <Link href="/proof">Proof</Link>
         <Link href="/teams">For teams</Link>
         <Link href="/security">Security</Link>
@@ -225,8 +222,28 @@ export default async function FrontDoor() {
   );
 }
 
-/** "a, b and c". */
-function listOf(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+/**
+ * WHICH STOCKS SAVE AUTOMATICALLY TODAY, in the chain's own numbers. An automatic save settles
+ * only against a price Scrip can verify on Solana; the page names exactly the stocks that have
+ * one right now, and when none does, how old the newest price is. Nothing when the chain could
+ * not be asked: an unknown is not a "no".
+ */
+function AutomaticNote({ auto }: { auto: AutomaticToday }) {
+  if (!auto.known) return null;
+  if (auto.settling.length === 0) {
+    return (
+      <p className="sp-home-wait">
+        <strong>Right now automatic saves are waiting.</strong> Scrip settles one only against a price it can verify on Solana, and the newest one
+        there is {auto.newestWait ?? "days"} old. Until a price returns, payments you receive stay in your wallet as USDC: nothing is lost and nothing
+        is guessed. Saving now, above, works at any time.
+      </p>
+    );
+  }
+  return (
+    <p className="sp-home-note">
+      Automatic saves settle only against a price Scrip can verify on Solana. Right now that is the {listOf(auto.settling)}. Other stocks wait
+      for a price, and payments meant for them stay in your wallet as USDC until one returns. Saving now, above, works with every stock at any
+      time.
+    </p>
+  );
 }

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SignInPanel } from "@/components/app/savings-home";
 import { PageFrame } from "@/components/app/page-frame";
 import { SettingsForm } from "@/components/app/settings-form";
-import { ConnectWallet, SignOut } from "@/components/auth/connect";
+import { SignOut } from "@/components/auth/connect";
 import { PublishToggle } from "@/components/org/publish-toggle";
 import { TelegramLink } from "@/components/app/telegram-link";
 import { liveView } from "@/lib/book/live";
@@ -19,8 +20,8 @@ export default async function SettingsPage() {
   const owner = await currentOwner();
   if (!owner) {
     return (
-      <PageFrame eyebrow="Settings" title="Your register's settings." sub="Sign in first.">
-        <ConnectWallet />
+      <PageFrame eyebrow="Settings" title="Settings">
+        <SignInPanel lead="Sign in with the Solana wallet you save from to change its limit, its prepaid saves and its public page. It is a signature, not a transaction." />
       </PageFrame>
     );
   }

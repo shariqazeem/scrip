@@ -1,0 +1,370 @@
+/**
+ * YOUR SAVINGS, THE FIRST SCREEN — paper, one primary button, figures in tabular numerals.
+ * Every value is a token. Green only for stock somebody else added.
+ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── signed out ────────────────────────────────────────────────────── */
+.sp-signin {
+  display: grid;
+  gap: var(--s-5);
+  max-width: var(--measure-wide);
+}
+@media (min-width: 900px) {
+  .sp-signin {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+.sp-signin-card,
+.sp-signin-inside {
+  padding: var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.sp-signin-card {
+  display: grid;
+  gap: var(--s-4);
+  box-shadow: var(--shadow-sheet);
+}
+.sp-signin-lead {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--ink);
+}
+.sp-signin-new {
+  margin: 0;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-signin-new a,
+.sp-steps .p a {
+  color: var(--accent);
+  font-weight: 500;
+}
+.sp-signin-inside {
+  background: transparent;
+}
+.sp-signin-k {
+  margin: 0 0 var(--s-4);
+  font-weight: 600;
+}
+.sp-signin-inside ul {
+  display: grid;
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-signin-inside li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: start;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+.sp-signin-inside li svg {
+  margin-top: 3px;
+  color: var(--accent);
+}
+.sp-signin-inside strong {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+}
+@media (max-width: 720px) {
+  .sp-signin-card,
+  .sp-signin-inside {
+    padding: var(--s-5);
+  }
+}
+
+/* ── what you own ──────────────────────────────────────────────────── */
+.sp-sv {
+  margin: 0 0 var(--s-5);
+  padding: var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sheet);
+}
+.sp-sv-empty {
+  margin: 0;
+  color: var(--ink-muted);
+}
+.sp-sv-sum {
+  display: grid;
+  gap: var(--s-5);
+  padding-bottom: var(--s-5);
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 760px) {
+  .sp-sv-sum {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+}
+.sp-sv-k {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.sp-sv-big {
+  margin: var(--s-1) 0 var(--s-2);
+  font-size: var(--fs-h1);
+  line-height: 1.05;
+  letter-spacing: var(--tracking-h1);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sp-sv-sum.is-flat {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.sp-sv-big.is-quiet {
+  color: var(--ink-muted);
+}
+.sp-sv-note {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.sp-sv-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-5);
+  margin: 0;
+}
+.sp-sv-facts dt {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-sv-facts dd {
+  margin: var(--s-1) 0 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sp-sv-facts dd.is-added {
+  color: var(--ok);
+}
+.sp-sv-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-sv-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: var(--s-4) 0;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.sp-sv-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.sp-sv-list .nm {
+  font-weight: 600;
+  min-width: 0;
+}
+.sp-sv-list .tk {
+  display: block;
+  font-weight: 400;
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-sv-list .u {
+  color: var(--ink-muted);
+}
+.sp-sv-list .v {
+  min-width: 72px;
+  text-align: right;
+  font-weight: 600;
+}
+@media (max-width: 720px) {
+  .sp-sv {
+    padding: var(--s-5);
+  }
+  .sp-sv-list li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 0;
+  }
+  .sp-sv-list .u {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: var(--fs-small);
+  }
+  .sp-sv-list .v {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+}
+
+/* ── your first steps ──────────────────────────────────────────────── */
+.sp-steps {
+  margin: 0 0 var(--s-6);
+  padding: var(--s-5) var(--s-6) var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.sp-steps-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+.sp-steps-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.sp-steps-head span {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sp-steps ol {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-steps li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: var(--s-4);
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--border);
+}
+.sp-steps li:first-child {
+  border-top: 0;
+}
+.sp-steps .mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border-strong);
+  color: var(--ink-muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sp-steps li.is-now .mark {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.sp-steps li.is-done .mark {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft);
+  color: var(--accent);
+}
+.sp-steps .t {
+  margin: 4px 0 var(--s-1);
+  font-weight: 600;
+}
+.sp-steps li.is-later .t,
+.sp-steps li.is-later .p {
+  color: var(--ink-faint);
+}
+.sp-steps .p {
+  margin: 0;
+  max-width: 62ch;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+.sp-steps .act {
+  margin-top: var(--s-4);
+}
+@media (max-width: 720px) {
+  .sp-steps {
+    padding: var(--s-4) var(--s-5) var(--s-5);
+  }
+  .sp-steps li {
+    gap: var(--s-3);
+  }
+  .sp-steps .act .sp-action {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ── save now, inside the app ──────────────────────────────────────── */
+.sp-app-save {
+  display: grid;
+  gap: var(--s-5);
+  max-width: var(--measure-wide);
+}
+@media (min-width: 960px) {
+  .sp-app-save {
+    grid-template-columns: 460px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+.sp-app-save-card {
+  padding: var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sheet);
+}
+.sp-app-save-side {
+  padding: var(--s-2) 0;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+.sp-app-save-side .k {
+  margin: 0 0 var(--s-3);
+  font-weight: 600;
+  color: var(--ink);
+}
+.sp-app-save-side ul {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0 0 var(--s-4);
+  padding-left: var(--s-5);
+}
+.sp-app-save-side .more {
+  margin: 0;
+}
+.sp-app-save-side a {
+  color: var(--accent);
+  font-weight: 500;
+}
+@media (max-width: 720px) {
+  .sp-app-save-card {
+    padding: var(--s-5);
+  }
+}

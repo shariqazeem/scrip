@@ -124,14 +124,15 @@ wordmark and a statement's title line.
 
 | Surface | Pattern |
 | --- | --- |
-| `/` | Save now, on paper. The paper nav (Scrip, For teams, Proof, Save). Headline and lede beside the save card (`components/save/save-now.tsx`): the income line when a connected wallet was paid lately, else $5 / $10 / $25 and Other; six companies and Search; the live line ("$5 · PKR 1,385 becomes about 0.00637 S&P 500"); one button "Save $5". Then three promises, one real receipt, "then make it automatic" with the evidence, the teams line, "before you save", a link to /proof |
+| `/` | Save now, on paper. The paper nav (Scrip, For teams, Proof, "Sign in" or "Your savings", Save; on a phone the mark, your savings and a menu). Headline and lede beside the save card (`components/save/save-now.tsx`): the income line when a connected wallet was paid lately, else $5 / $10 / $25 and Other; six stocks with the default (Nasdaq 100) first, and Search; the live line; one button "Save $5". Then "How Scrip works" (save now, save every payment, watch it add up, each with its one button), three promises, one real receipt, "then make it automatic" with which stocks save automatically today and the evidence, the teams line, "before you save", a link to /proof |
 | the save sheet | A native `<dialog>`, a bottom sheet on a phone: the income line if it was not chosen, "Saving $5 of USDC from this wallet into Nvidia, in this wallet", You get / At the least / Network fee / First time (a deposit that comes back) / What it is, the trust line, one button "Approve in wallet". No wallet in the browser on a phone: "Open in Phantom / Solflare / Backpack" |
 | the search | A dialog: company first, ticker and issuer small, "Saves automatically" on the eleven |
 | `/receipt/[sig]`, a save | The stub prints on a fresh save; "Saved <local time>"; Share and Save again; the two asks ("Do this with every payment: 10%", "Ask whoever pays you to match it"); a Proof drawer (transaction, saver, memo, mark, route, against Pyth, fee, deposit, raw units, slot); what it is |
 | `/receipt/[sig]`, a program receipt | The stub as the hero, then two sheets: what arrived (issuer chips), where it is anchored. Unshelled, print-like |
 | `/proof` | The old front door, on ink: the hero "The proof, read from the chain", the front book printing, the floor, the mechanism, the seven firsts, the evidence, the honesty rows, the record, the dark close |
 | `/app/rule` | "Save part of every payment, by itself." One question (5%, 10%, 20%, another), the worked example as the stub with names, Name (optional), Into (names, one company folded), Limits folded (limit, most per payment, keep at least, price protection, add 1% every three months up to 50%), the trust line, one button "Save 10% of every payment", what starting costs in deposit and prepaid saves |
-| `/app` | Your savings, live: "You save 10% of every payment into S&P 500", the watching line in plain words (last save, limit left, saves prepaid), Stop saving, the receipts as stubs, holdings, the pay link last |
+| `/app` | **Your savings.** Signed out: a door, never an empty page (the wallets, "Open in Phantom / Solflare / Backpack" on a phone, what is inside, "start with a $5 save"). Signed in: what the wallet owns (every catalogue stock, worth at Jupiter's price, saved with Scrip, added for you in green), **Your first steps** (save once, save every payment, ask whoever pays you, each ticked by a receipt; only the next one has a button; gone when all three are done), then the live record for whoever set up every payment ("You save 10% of every payment into Nasdaq 100", the watching line, Stop saving, receipts), then saved now |
+| `/app/save` | The save card inside the app, beside "before you sign". No sign-in needed: the save is the wallet's own transaction |
 | `/teams` | Paper. The saver's ask when `?from=` carries a name; what a team can do today; "Plans, in development" said plainly; what it costs |
 | `/pay/[handle]` | Two tabs — in stock, in USDC — then two columns: the form left, the quote or the transfer QR right. Unshelled |
 | `/claim/[payer]/[rid]` | One heading, one action. Unshelled |
@@ -143,10 +144,13 @@ wordmark and a statement's title line.
 
 ## The shell
 
-Fixed hover-expand left rail at `left: 16px`, vertically centred, `z-index: 60`. Top-centre
-mode pill (Home / Rule) with a paper scrim behind it on phones. Top-right network chip.
-Sets `html[data-app-shell="on"]`; shelled containers wear `.sp-page`. Below 720px the rail
-becomes a bottom bar and pages take `padding-bottom: 92px`. `/pay`, `/receipt`, `/claim`,
+Fixed hover-expand left rail at `left: 16px`, vertically centred, `z-index: 60`: Your savings
+(Home, Save now, Every payment, Receipts, Stocks, Statements, Settings, Pay in stock) and
+Public (Proof, Ledger, Docs). Top-centre mode pill (Home / Save now / Every payment) on a
+computer only. Top-right network chip. Sets `html[data-app-shell="on"]`; shelled containers
+wear `.sp-page`. Below 720px the rail becomes a bottom bar of **five labelled tabs** (Home,
+Save, Every payment, Receipts, More; More opens the rest as a sheet), the mode pill is gone,
+and pages take `padding-bottom: 92px`. `/pay`, `/receipt`, `/claim`,
 `/@handle`, `/run`, `/grant` and `/docs` are unshelled: the visitor is not the owner.
 **⌘K** (`shell/jump.tsx`) opens on every page and resolves a handle, a signature, a run id,
 a grant address or a page name from its shape (`jump-resolve.ts`, held by a test that reads
