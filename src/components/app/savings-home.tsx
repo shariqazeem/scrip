@@ -153,6 +153,7 @@ export function FirstSteps({
   hasRecord,
   defaultName,
   automaticNote,
+  inPlan = false,
 }: {
   owner: string;
   totals: SavingsTotals;
@@ -161,6 +162,8 @@ export function FirstSteps({
   hasRecord: boolean;
   defaultName: string;
   automaticNote: string | null;
+  /** In a sponsor's Plan: whoever pays them already adds to what they save. */
+  inPlan?: boolean;
 }) {
   const savedOnce = totals.first !== null || holdsStock;
   const steps: Step[] = [
@@ -202,8 +205,8 @@ export function FirstSteps({
     {
       key: "ask",
       title: "Ask whoever pays you to add to it",
-      done: totals.added > 0,
-      doneLine: "Someone has added stock to your savings. Every time, the receipt says who and why.",
+      done: totals.added > 0 || inPlan,
+      doneLine: inPlan ? "You are in a Plan: every automatic save is matched, up to its monthly cap." : "Someone has added stock to your savings. Every time, the receipt says who and why.",
       todo: "A message for whoever pays you in USDC, with a link that shows them how to add stock to what you save, in one signature.",
       action: <AskForMatch from={short(owner)} className="sp-action is-primary" label="Share the message" />,
     },

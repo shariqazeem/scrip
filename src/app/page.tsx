@@ -170,8 +170,8 @@ export default async function FrontDoor() {
           Whoever pays you can add to it.
         </h2>
         <p className="sp-home-body">
-          A team that pays people in USDC can pay part of it in stock, or add stock to what they save, straight to their wallets, with a receipt
-          that says why.
+          A team that pays people in USDC can match what they save with a Plan the program enforces: a share of every automatic save, in stock,
+          straight to their wallets, capped each month and never taken back. Or pay part of their pay in stock, with a receipt that says why.
         </p>
         <Link href="/teams" className="sp-home-btn">
           Scrip for teams

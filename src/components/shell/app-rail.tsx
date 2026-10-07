@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, Ellipsis, FileText, House, Layers, PiggyBank, Receipt, ScrollText, Send, Settings, ShieldCheck, SlidersHorizontal, Wallet, X } from "lucide-react";
+import { BookOpen, Ellipsis, FileText, HandCoins, House, Layers, PiggyBank, Receipt, ScrollText, Send, Settings, ShieldCheck, SlidersHorizontal, Wallet, X } from "lucide-react";
 import { ScripMark } from "@/components/brand/scrip-mark";
 import { useSession } from "@/lib/session/use-session";
 import { short } from "@/lib/format";
@@ -36,6 +36,7 @@ const NAV = [
       { href: "/app/statements", label: "Statements", phone: null, Icon: FileText },
       { href: "/app/settings", label: "Settings", phone: null, Icon: Settings },
       { href: "/app/org", label: "Pay in stock", phone: null, Icon: Send },
+      { href: "/app/org/plans", label: "Plans", phone: null, Icon: HandCoins },
     ],
   },
   {
@@ -56,6 +57,8 @@ export const RAIL_ROUTES: readonly string[] = NAV.flatMap((g) => g.items.map((i)
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/app") return pathname === "/app";
+  // Plans has its own item; pay in stock lights up for everything else under /app/org.
+  if (href === "/app/org") return (pathname === "/app/org" || pathname.startsWith("/app/org/")) && !pathname.startsWith("/app/org/plans");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

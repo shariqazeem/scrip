@@ -125,3 +125,26 @@ export function parseOwners(raw: string): Outcome<PublicKey[]> {
   }
   return ok(out);
 }
+
+/**
+ * ONE INSTRUCTION, ONE SIGNATURE — joining, removing a member, closing a Plan. Simulated before
+ * the wallet is asked, so a refusal reads as a sentence here instead of a wallet error there.
+ */
+export async function buildSingle(input: { signer: PublicKey; ix: TransactionInstruction; what: string }): Promise<Outcome<{ transactionBase64: string; lastValidBlockHeight: number }>> {
+  const conn = connection();
+  try {
+    const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
+    const tx = new VersionedTransaction(
+      new TransactionMessage({
+        payerKey: input.signer,
+        recentBlockhash: blockhash,
+        instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: 120_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: INTAKE_MICRO_LAMPORTS }), input.ix],
+      }).compileToV0Message(),
+    );
+    const refusal = await simulateFirst(conn as never, tx);
+    if (refusal) return held(`${input.what} would fail right now (${refusal.detail}). Nothing was signed.`);
+    return ok({ transactionBase64: Buffer.from(tx.serialize()).toString("base64"), lastValidBlockHeight });
+  } catch (err) {
+    return held(`${input.what} could not be assembled (${err instanceof Error ? err.message : String(err)}).`);
+  }
+}

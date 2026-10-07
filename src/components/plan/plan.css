@@ -1,0 +1,228 @@
+/**
+ * PLANS — a sponsor's match, and a member's invitation. Paper, one primary button per card,
+ * figures in tabular numerals. Green only for stock a sponsor added. Every value is a token.
+ */
+
+.sp-plan {
+  display: grid;
+  gap: var(--s-6);
+  max-width: var(--measure-wide);
+}
+.sp-plan-h2 {
+  margin: 0 0 var(--s-4);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.sp-plan-new,
+.sp-plan-card {
+  padding: var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.sp-plan-card {
+  display: grid;
+  gap: var(--s-5);
+  box-shadow: var(--shadow-sheet);
+}
+
+/* ── the form ──────────────────────────────────────────────────────── */
+.sp-plan-form {
+  display: grid;
+  gap: var(--s-5);
+  max-width: 640px;
+}
+.sp-plan-two {
+  display: grid;
+  gap: var(--s-4);
+}
+@media (min-width: 620px) {
+  .sp-plan-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.sp-hint.is-wait {
+  color: var(--warn);
+}
+.sp-plan-trust {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+/* ── a sponsor's Plan ──────────────────────────────────────────────── */
+.sp-plan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+.sp-plan-name {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.sp-plan-terms {
+  margin: var(--s-1) 0 0;
+  color: var(--ink-muted);
+  font-size: var(--fs-small);
+}
+.sp-plan-addr {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-plan-figs {
+  display: grid;
+  gap: var(--s-4);
+  margin: 0;
+  padding: var(--s-4) 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+@media (min-width: 720px) {
+  .sp-plan-figs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.sp-plan-figs dt {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-plan-figs dd {
+  margin: var(--s-1) 0 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sp-plan-figs .sub {
+  display: block;
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+.sp-plan-invite {
+  display: grid;
+  gap: var(--s-2);
+}
+.sp-plan-invite-row {
+  display: flex;
+  gap: var(--s-2);
+}
+.sp-plan-invite-row .sp-input {
+  flex: 1;
+  min-width: 0;
+}
+.sp-plan-members {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-plan-members li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.sp-plan-members .who,
+.sp-plan-members .amt {
+  display: grid;
+  font-weight: 600;
+}
+.sp-plan-members .amt {
+  text-align: right;
+}
+.sp-plan-members .st {
+  font-size: var(--fs-caption);
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+.sp-plan-foot {
+  display: grid;
+  gap: var(--s-2);
+}
+.sp-plan-close {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.sp-plan-close .sp-hint {
+  margin: 0;
+}
+.sp-plan-foot a {
+  color: var(--accent);
+}
+@media (max-width: 720px) {
+  .sp-plan-new,
+  .sp-plan-card {
+    padding: var(--s-5);
+  }
+  .sp-plan-invite-row {
+    flex-direction: column;
+  }
+  .sp-plan-members li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .sp-plan-members li .sp-action {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+/* ── a member's side, on your savings ──────────────────────────────── */
+.sp-planm {
+  margin: 0 0 var(--s-5);
+  padding: var(--s-5) var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.sp-planm.is-invite {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sheet);
+}
+.sp-planm-k {
+  margin: 0;
+  font-weight: 600;
+}
+.sp-planm-p {
+  margin: var(--s-2) 0 0;
+  max-width: 62ch;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+.sp-planm-p a {
+  color: var(--accent);
+  font-weight: 500;
+}
+.sp-planm-big {
+  margin: var(--s-1) 0 0;
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+.sp-plan-join-act {
+  margin-top: var(--s-4);
+}
+@media (max-width: 720px) {
+  .sp-planm {
+    padding: var(--s-4) var(--s-5);
+  }
+  .sp-plan-join-act .sp-action {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -5,9 +5,11 @@ import { LiveBook } from "@/components/app/live-book";
 import { PageFrame } from "@/components/app/page-frame";
 import { FirstSteps, SavingsHead, SignInPanel } from "@/components/app/savings-home";
 import { SignOut } from "@/components/auth/connect";
+import { PlanMemberships } from "@/components/plan/memberships";
 import { SavedList } from "@/components/save/saved-list";
 import { defaultAsset } from "@/lib/assets/registry";
 import { liveView } from "@/lib/book/live";
+import { membershipsOf } from "@/lib/plan/read";
 import { automaticToday, listOf } from "@/lib/save/card";
 import { stockByMint } from "@/lib/save/catalogue";
 import { readStockHoldings } from "@/lib/save/holdings";
@@ -16,6 +18,7 @@ import { nameOf } from "@/lib/save/names";
 import { savingsTotals } from "@/lib/save/totals";
 import { currentOwner } from "@/lib/session/server";
 import { siteUrl } from "@/lib/site";
+import { cluster } from "@/lib/solana/cluster";
 
 export const metadata: Metadata = { title: "Your savings" };
 export const dynamic = "force-dynamic";
@@ -40,13 +43,20 @@ export default async function HomePage() {
     );
   }
 
-  const [view, saved, stocks, totals, auto] = await Promise.all([
+  const [view, saved, stocks, savedTotals, auto, plans] = await Promise.all([
     liveView(owner, { refresh: false }),
     savesFor(owner, 20),
     readStockHoldings(owner),
     savingsTotals(owner),
     automaticToday(),
+    membershipsOf(owner),
   ]);
+  // A Plan's matches are not receipts: they are read from the Member account the program keeps,
+  // and counted with everything else somebody added.
+  const memberships = plans.ok ? plans.value : [];
+  const matchedUsdc = memberships.reduce((n, r) => n + r.member.totalMatchedUsdc, 0n);
+  const totals = { ...savedTotals, addedUsdc: savedTotals.addedUsdc + matchedUsdc, added: savedTotals.added + (matchedUsdc > 0n ? 1 : 0) };
+  const inPlan = memberships.some((r) => r.member.status === "active");
   const live = view.ok ? view.value : null;
   const hasRecord = live?.handle != null;
   const holdings = stocks.ok ? stocks.value : [];
@@ -65,7 +75,8 @@ export default async function HomePage() {
   return (
     <PageFrame eyebrow={live?.handle ? `@${live.handle}` : "Scrip"} title="Your savings" actions={<SignOut />}>
       <SavingsHead holdings={holdings} totals={totals} why={stocks.ok ? null : stocks.why} />
-      <FirstSteps owner={owner} totals={totals} holdsStock={holdings.length > 0} firstName={firstName} hasRecord={hasRecord} defaultName={defaultName} automaticNote={automaticNote} />
+      <PlanMemberships owner={owner} cluster={cluster()} rows={memberships} hasRecord={hasRecord} />
+      <FirstSteps owner={owner} totals={totals} holdsStock={holdings.length > 0} firstName={firstName} hasRecord={hasRecord} defaultName={defaultName} automaticNote={automaticNote} inPlan={inPlan} />
 
       {!view.ok ? (
         <div className="sp-held">

@@ -19,6 +19,7 @@ export const JUMP_PAGES: ReadonlyArray<readonly [href: string, name: string, wha
   ["/app/org/pay", "Pay one person", "a handle, an amount, a reason"],
   ["/app/org/runs", "Runs", "a payroll run is one file and one signature"],
   ["/app/org/grants", "Grants", "vesting from an escrow the payer cannot spend"],
+  ["/app/org/plans", "Plans", "match what your people save, enforced by the program"],
   ["/floor", "The floor", "every stub as it prints, the world over"],
   ["/ledger", "Ledger", "everything that has settled"],
   ["/keepers", "Keepers", "who runs the sweeps, and how to"],

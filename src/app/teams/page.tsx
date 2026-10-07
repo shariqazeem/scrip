@@ -4,7 +4,7 @@ import { Row, SiteFrame, SiteSection } from "@/components/site/site-frame";
 
 export const metadata: Metadata = {
   title: "For teams",
-  description: "Pay people in USDC? Add stock to what they save: pay part of their pay in stock, straight to their own wallet, with a receipt that says why.",
+  description: "Pay people in USDC? Match what they save with a Plan the program enforces, or pay part of their pay in stock, straight to their own wallet, with a receipt that says why.",
 };
 
 /** A name carried in a saver's link: short, plain text, never markup. */
@@ -18,9 +18,9 @@ function cleanFrom(raw: string | undefined): string | null {
  * FOR TEAMS — where "ask whoever pays you to match it" lands.
  *
  * A saver's receipt sends their payer here with their name in `?from=`. The page says what a
- * team can do today, in one signature each: pay part of a payment in stock to the person's
- * own wallet, pay a whole team in one run, or grant stock that vests. It says plainly that a
- * program-enforced match (a Plan) is in development, and never calls a hand-paid amount a match.
+ * team can do, in one signature each: match what its people save with a Plan the program
+ * enforces, pay part of a payment in stock to the person's own wallet, pay a whole team in one
+ * run, or grant stock that vests. A hand-paid amount is never called a match.
  */
 export default async function TeamsPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const from = cleanFrom((await searchParams).from);
@@ -50,11 +50,12 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
           <Row k="A record for the books">Every payment and grant as a file, with its transaction, for whoever keeps the accounts.</Row>
         </div>
       </SiteSection>
-      <SiteSection label="Plans, in development">
+      <SiteSection label="Match what they save, with a Plan">
         <p className="sp-body">
-          A Plan will be a match the program enforces: you fund an escrow once, and for every automatic save your people make, the program adds a
-          share in stock, capped per person each month, with a receipt each time. You can end a Plan whenever you like; you can never take back a
-          match already paid. It is being built and tested now. Until it ships, adding stock by hand is the way, and Scrip never calls that a match.
+          A Plan is a match the program enforces. You put stock into an escrow once; for every automatic save one of your people makes, the program
+          adds a share of it in stock, straight to their own wallet, capped per person each month, in its own transaction right after their save.
+          Saves made before someone joins are never matched. You can end a Plan whenever nobody is left in it and take back what is unspent; a match
+          already paid is never taken back. <Link href="/app/org/plans">Start a Plan</Link>
         </p>
       </SiteSection>
       <SiteSection label="Why stock">
@@ -78,11 +79,11 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
         </p>
       </SiteSection>
       <div className="sp-hero-cta">
-        <Link href="/app/org/pay" className="sp-btn is-primary">
-          Pay someone in stock
+        <Link href="/app/org/plans" className="sp-btn is-primary">
+          Start a Plan
         </Link>
-        <Link href="/@scrip" className="sp-btn">
-          See how Scrip pays
+        <Link href="/app/org/pay" className="sp-btn">
+          Pay someone in stock
         </Link>
       </div>
     </SiteFrame>
