@@ -28,6 +28,9 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
+    "@meteora-ag/cp-amm-sdk": "^1.5.1",
+    "@meteora-ag/dynamic-bonding-curve-sdk": "^1.5.13",
+    "@meteora-ag/dynamic-fee-sharing-sdk": "^1.1.0",
     "@noble/curves": "^1.9.7",
     "@pythnetwork/hermes-client": "^3.1.0",
     "@pythnetwork/pyth-solana-receiver": "^0.16.0",
