@@ -9,6 +9,8 @@ import { currentOwner } from "@/lib/session/server";
 import { prices as jupPrices } from "@/lib/jupiter/client";
 import { solUsd } from "@/lib/market";
 import { stockByMint } from "@/lib/save/catalogue";
+import { waitedFor } from "@/lib/pyth/price";
+import { priceStates } from "@/lib/pyth/ready";
 
 export const metadata: Metadata = { title: "Save every payment" };
 export const dynamic = "force-dynamic";
@@ -37,14 +39,24 @@ export default async function RulePage({ searchParams }: { searchParams: Promise
   // for a wallet — so it is the last page that should be missing the number.
   // Every offered stock, single companies too: "do this with every payment" often arrives
   // from a save into Nvidia, and its worked example deserves real units.
-  const [p, solPrice] = await Promise.all([jupPrices(assets.map((a) => a.mint)).catch(() => null), solUsd().catch(() => null)]);
+  const [p, solPrice, states] = await Promise.all([
+    jupPrices(assets.map((a) => a.mint)).catch(() => null),
+    solUsd().catch(() => null),
+    priceStates(assets),
+  ]);
   const priceProps = p && p.ok ? Object.fromEntries(p.value) : {};
+  // Whether a sweep could settle against each asset now, and how long the chain's newest price
+  // has waited: said above the signature, so nobody turns saving on expecting "as it lands".
+  const waits = Object.fromEntries(assets.map((a, i) => [a.mint, states[i]!.ready === false ? waitedFor(states[i]!.lastAt) ?? "days" : null]));
+  // Start on something that can settle today: the S&P 500 when it can, else the first that can.
+  const readyMint = assets.find((a, i) => states[i]!.ready === true)?.mint ?? null;
+  const startMint = states[0]?.ready === true ? assets[0]!.mint : (readyMint ?? assets[0]?.mint ?? null);
 
   if (!owner) {
     // The question first, the wallet second: choose a rate before anything asks for a signature.
     return (
       <PageFrame eyebrow="Every payment" title="Save part of every payment, by itself." sub="Say yes once. Whoever pays you keeps sending USDC to the address you already use, and a slice of every payment becomes stock in this same wallet as it lands, with a receipt.">
-        <RuleEditor owner={null} view={null} assets={assets.map(opt)} prices={priceProps} solPrice={solPrice} initialAsset={initialAsset} />
+        <RuleEditor owner={null} view={null} assets={assets.map(opt)} prices={priceProps} solPrice={solPrice} initialAsset={initialAsset ?? startMint} waits={waits} />
       </PageFrame>
     );
   }
@@ -90,7 +102,8 @@ export default async function RulePage({ searchParams }: { searchParams: Promise
           }}
           prices={priceProps}
           solPrice={solPrice}
-          initialAsset={initialAsset}
+          initialAsset={initialAsset ?? startMint}
+          waits={waits}
           assets={[...assets, ...(view.value.asset && !assets.some((a) => a.mint === view.value.asset?.mint) ? [view.value.asset] : [])].map(opt)}
         />
       )}

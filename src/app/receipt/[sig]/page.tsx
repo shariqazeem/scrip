@@ -7,6 +7,10 @@ import { CopyLink } from "@/components/receipt/copy-link";
 import { type StubSection, Stub } from "@/components/stub/stub";
 import { readBookOf } from "@/lib/book/read-book";
 import { poolLabels, readSaveTx, viewSave } from "@/lib/save/read";
+import { pricedAsset } from "@/lib/save/catalogue";
+import { defaultAsset } from "@/lib/assets/registry";
+import { waitedFor } from "@/lib/pyth/price";
+import { priceState } from "@/lib/pyth/ready";
 import { readReceiptBySignature, NOT_YET_SETTLED } from "@/lib/book/read-receipt";
 import { db } from "@/lib/db";
 import { receipts as receiptsTable } from "@/lib/db/schema";
@@ -95,11 +99,15 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
   }
   if (saved.ok && saved.value?.save) {
     const [view, names] = await Promise.all([viewSave(saved.value.save), poolLabels()]);
+    // Whether "every payment" could settle today, for the ask under the receipt.
+    const ruleAsset = (view.stock ? pricedAsset(view.stock) : undefined) ?? defaultAsset();
+    const state = await priceState(ruleAsset);
+    const waiting = state.ready === false ? (waitedFor(state.lastAt) ?? "days") : null;
     return (
       <main className="sp-receipt">
         <div className="sp-receipt-col">
           <Header />
-          <SaveReceipt view={view} names={names} fresh={fresh} />
+          <SaveReceipt view={view} names={names} fresh={fresh} waiting={waiting} />
           <SaveFoot />
         </div>
       </main>

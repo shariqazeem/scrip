@@ -597,7 +597,8 @@ function health(): KeeperHealth {
 }
 
 async function main(): Promise<void> {
-  log(`scrip keeper ${keeper.publicKey.toBase58()} on ${CLUSTER} via ${RPC}`);
+  // The endpoint's host only: a paid RPC's key travels in the query string, and logs are read.
+  log(`scrip keeper ${keeper.publicKey.toBase58()} on ${CLUSTER} via ${RPC.replace(/[?#].*$/, "").replace(/\/[^/]{24,}$/, "/…")}`);
   log(`program ${SCRIP_PROGRAM_ID.toBase58()}; hermes ${hermesKey() ? "keyed" : "KEYLESS — mainnet sweeps will wait for a fresh price forever"}`);
   const sol = await conn.getBalance(keeper.publicKey);
   log(`keeper balance ${(sol / 1e9).toFixed(4)} SOL`);

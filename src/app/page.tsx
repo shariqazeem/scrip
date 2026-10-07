@@ -7,6 +7,10 @@ import { bps, stampUTC, unitsFromRaw, usdc } from "@/lib/format";
 import { CATALOGUE_READ_AT, catalogue, defaultStock, disclosure, featured, toPicker } from "@/lib/save/catalogue";
 import { frontReceipt } from "@/lib/save/latest";
 import { cachedQuote } from "@/lib/save/quote-cache";
+import { offeredAssets } from "@/lib/assets/registry";
+import { nameOf } from "@/lib/save/names";
+import { waitedFor } from "@/lib/pyth/price";
+import { priceStates } from "@/lib/pyth/ready";
 import { cluster } from "@/lib/solana/cluster";
 import "./front.css";
 import "@/components/save/save.css";
@@ -24,7 +28,15 @@ export const dynamic = "force-dynamic";
  */
 export default async function FrontDoor() {
   const stock = defaultStock();
-  const [quote, receipt] = await Promise.all([cachedQuote(stock, 5_000_000n, null), frontReceipt()]);
+  const offered = offeredAssets();
+  const [quote, receipt, states] = await Promise.all([cachedQuote(stock, 5_000_000n, null), frontReceipt(), priceStates(offered)]);
+  // Which of the eleven can settle an automatic save right now, by name.
+  const settlingNow = offered.filter((_, i) => states[i]!.ready === true).map((a) => nameOf(a.symbol));
+  const at = offered.findIndex((a) => a.mint === stock.mint);
+  const price = at >= 0 ? states[at]! : { ready: null, lastAt: null };
+  // Automatic saving settles only against a price the program can verify. When there is none,
+  // the page says so in the chain's own numbers instead of promising "as it lands".
+  const waited = price.ready === false ? waitedFor(price.lastAt) : null;
   const all = catalogue();
   const initialQuote: QuoteBody | null = quote.ok ? { quote: quote.value.quote, cost: quote.value.cost, solUsd: quote.value.solUsd } : null;
   const disclosures = Object.fromEntries(all.map((s) => [s.mint, disclosure(s)]));
@@ -122,10 +134,27 @@ export default async function FrontDoor() {
           Then make it automatic.
         </h2>
         <p className="sp-home-body">
-          Say yes once, and 10% of every USDC payment into your wallet becomes stock as it lands, in the same wallet. Scrip can move at most
-          the limit you set, $200 to start, and you can stop any time. Automatic saving works with the eleven stocks the chain can price,
-          the S&amp;P 500 first.
+          Say yes once, and 10% of every USDC payment into your wallet becomes stock in the same wallet. Scrip can move at most the limit
+          you set, $200 to start, and you can stop any time. Automatic saving works with the eleven stocks the chain can price, the S&amp;P
+          500 first.
         </p>
+        {price.ready === false ? (
+          <p className="sp-home-wait">
+            {settlingNow.length > 0 ? (
+              <>
+                <strong>Right now automatic saves settle into {listOf(settlingNow)}.</strong> The S&amp;P 500 is waiting: Scrip settles an
+                automatic save only against a price it can verify on Solana, and the newest S&amp;P 500 price there is {waited ?? "days"} old.
+                Payments meant for it stay in your wallet as USDC until a price returns. Saving now, above, works at any time.
+              </>
+            ) : (
+              <>
+                <strong>Right now automatic saves are waiting.</strong> Scrip settles one only against a price it can verify on Solana, and
+                the newest S&amp;P 500 price there is {waited ?? "days"} old. Until a price returns, payments you receive stay in your wallet
+                as USDC: nothing is lost and nothing is guessed. Saving now, above, works at any time.
+              </>
+            )}
+          </p>
+        ) : null}
         <div className="sp-home-evidence">
           <figure>
             <p className="big">37% → 86%</p>
@@ -194,4 +223,10 @@ export default async function FrontDoor() {
       </footer>
     </div>
   );
+}
+
+/** "a, b and c". */
+function listOf(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }

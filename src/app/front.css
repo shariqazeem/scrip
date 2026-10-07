@@ -304,3 +304,16 @@
 .sp-home-foot a:hover {
   color: var(--ink);
 }
+
+/* an honest waiting state, in the chain's own numbers */
+.sp-home-wait {
+  margin: 0 0 var(--s-4);
+  max-width: var(--measure);
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--warn-soft);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--r-md);
+}

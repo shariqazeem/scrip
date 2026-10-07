@@ -90,3 +90,8 @@ export function describeAge(seconds: number): string {
   if (hours < 48) return `${hours} hour${hours === 1 ? "" : "s"}`;
   return `${Math.floor(hours / 24)} days`;
 }
+
+/** How long ago the chain's newest price was published, in `describeAge`'s words; null when unknown. */
+export function waitedFor(lastAt: number | null, now = Date.now()): string | null {
+  return lastAt ? describeAge(Math.max(0, Math.floor(now / 1000) - lastAt)) : null;
+}

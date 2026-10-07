@@ -91,6 +91,16 @@ export function InstallPrompt() {
 export function ServiceWorker() {
   useEffect(() => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    // A dev server's chunks keep their names while their contents change, so a cache-first
+    // worker serves yesterday's code to every session after the first. Production only, and a
+    // worker left by an earlier dev session is removed.
+    if (process.env.NODE_ENV !== "production") {
+      void navigator.serviceWorker
+        .getRegistrations()
+        .then((all) => Promise.all(all.map((r) => r.unregister())))
+        .catch(() => undefined);
+      return;
+    }
     if (window.location.protocol !== "https:" && window.location.hostname !== "localhost") return;
     const id = setTimeout(() => void navigator.serviceWorker.register("/sw.js").catch(() => undefined), 1_200);
     return () => clearTimeout(id);

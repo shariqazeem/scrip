@@ -20,7 +20,7 @@ import { AskForMatch, ShareReceipt } from "./share";
  * transaction, the memo, the mark, the route hop by hop, the fill against Pyth where the chain
  * prices the stock, and what the network took.
  */
-export function SaveReceipt({ view, names, fresh }: { view: SaveView; names: Record<string, string>; fresh: boolean }) {
+export function SaveReceipt({ view, names, fresh, waiting }: { view: SaveView; names: Record<string, string>; fresh: boolean; waiting: string | null }) {
   const stock = view.stock;
   const name = stock?.name ?? `${view.mint.slice(0, 4)}…`;
   const units = unitsFromRaw(view.amountRaw, view.decimals);
@@ -83,8 +83,11 @@ export function SaveReceipt({ view, names, fresh }: { view: SaveView; names: Rec
           <span className="t">Do this with every payment: 10%</span>
           <span className="p">
             {auto
-              ? `Every USDC payment into this wallet saves 10% into ${name} as it lands. Scrip can move at most $200 in total, and you can stop any time.`
-              : `Every USDC payment into this wallet saves 10% into the S&P 500 as it lands. Automatic saving works with the eleven stocks the chain can price.`}
+              ? `Every USDC payment into this wallet saves 10% into ${name}. Scrip can move at most $200 in total, and you can stop any time.`
+              : `Every USDC payment into this wallet saves 10% into the S&P 500. Automatic saving works with the eleven stocks the chain can price.`}
+            {waiting
+              ? ` Right now automatic saves are waiting: the newest price Pyth published on Solana is ${waiting} old, so payments stay as USDC until one returns.`
+              : ""}
           </span>
         </Link>
         <div className="sp-receipt-ask">

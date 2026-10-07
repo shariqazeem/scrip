@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PRICE_UPDATE_V2_DISCRIMINATOR, displayable, parsePriceAccount, priceToUsd, priceToUsdcBase, settleable } from "./price";
+import { PRICE_UPDATE_V2_DISCRIMINATOR, displayable, parsePriceAccount, priceToUsd, priceToUsdcBase, settleable, waitedFor } from "./price";
 
 /** A partial verification (level 0) carries one extra byte, so every field shifts by one. */
 function fixture(level: number, price: bigint, conf: bigint, expo: number, publish: number): Uint8Array {
@@ -63,5 +63,18 @@ describe("displayable", () => {
   it("shows a two-day-old price and refuses a three-day-old one", () => {
     expect(p.ok && displayable(p.value, 1_789_000_000 + 40 * 3600).ok).toBe(true);
     expect(p.ok && displayable(p.value, 1_789_000_000 + 72 * 3600).ok).toBe(false);
+  });
+});
+
+describe("waitedFor", () => {
+  const now = 1_759_800_000_000;
+  it("says how long the newest price has waited, in days once it is two of them", () => {
+    expect(waitedFor(now / 1000 - 8 * 86_400 - 5_000, now)).toBe("8 days");
+    expect(waitedFor(now / 1000 - 5 * 3600, now)).toBe("5 hours");
+    expect(waitedFor(now / 1000 - 12 * 60, now)).toBe("12 minutes");
+  });
+  it("says nothing when no price was ever read", () => {
+    expect(waitedFor(null, now)).toBeNull();
+    expect(waitedFor(0, now)).toBeNull();
   });
 });

@@ -35,7 +35,7 @@ const SITE = siteUrl();
  */
 const TITLE = "Scrip — your income invests itself";
 const DESCRIPTION =
-  "Scrip is a rule on your wallet. Set a rate once on the Solana address you already use; a slice of every USDC that lands becomes S&P 500 in the same wallet, with a permanent receipt anyone can open and a keep-rate measured on chain. Payers keep sending dollars.";
+  "Scrip turns part of the USDC in your Solana wallet into stocks you own, such as the S&P 500, Nvidia and Apple, with one signature and a public receipt read from the chain. Say yes once, and a slice of every USDC payment into that wallet is saved the same way, by itself, in the same wallet.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),

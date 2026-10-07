@@ -69,6 +69,7 @@ export function RuleEditor({
   prices = {},
   solPrice = null,
   initialAsset = null,
+  waits = {},
 }: {
   owner: string | null;
   view: View | null;
@@ -78,6 +79,8 @@ export function RuleEditor({
   solPrice?: number | null;
   /** The stock a save's receipt asked about: "do this with every payment". */
   initialAsset?: string | null;
+  /** Per mint, how long the chain's newest verifiable price has waited, when no sweep could settle now. */
+  waits?: Record<string, string | null>;
 }) {
   const router = useRouter();
   const view: View = viewIn ?? SIGNED_OUT;
@@ -408,6 +411,12 @@ export function RuleEditor({
         {!validity.ok ? (
           <p className="sp-why">
             <TriangleAlert size={14} strokeWidth={2} aria-hidden /> {validity.why}
+          </p>
+        ) : null}
+        {waits[asset.mint] ? (
+          <p className="sp-q-wait">
+            Right now no price for {label} can be verified on Solana: the newest one Pyth published there is {waits[asset.mint]} old. Turning
+            saving on is safe, but until a price returns, payments stay in your wallet as USDC and nothing is saved automatically.
           </p>
         ) : null}
         {owner && !enabled ? (
