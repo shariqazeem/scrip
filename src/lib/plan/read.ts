@@ -115,6 +115,34 @@ export async function plansOf(sponsor: string): Promise<Outcome<PlanView[]>> {
   }
 }
 
+/**
+ * EVERY PLAN ON THE CHAIN, SUMMED: how many are open, how many people they count, and what
+ * they have matched. For the public pages; read in one call, never cached past a minute.
+ */
+export type PlansSummary = { readonly plans: number; readonly members: number; readonly matches: number; readonly matchedUsdc: bigint };
+const g2 = globalThis as typeof globalThis & { __scripPlansSummary?: { at: number; value: PlansSummary } };
+export async function plansSummary(): Promise<Outcome<PlansSummary>> {
+  const hit = g2.__scripPlansSummary;
+  if (hit && Date.now() - hit.at < 60_000) return ok(hit.value);
+  try {
+    const accounts = await connection().getProgramAccounts(SCRIP_PROGRAM_ID, { commitment: "confirmed", filters: [discriminatorFilter("Plan")] });
+    const plans = accounts.flatMap(({ account }) => {
+      const p = decodePlan(account.data);
+      return p.ok ? [p.value] : [];
+    });
+    const value: PlansSummary = {
+      plans: plans.length,
+      members: plans.reduce((n, p) => n + p.members, 0),
+      matches: plans.reduce((n, p) => n + p.matches, 0),
+      matchedUsdc: plans.reduce((n, p) => n + p.matchedUsdc, 0n),
+    };
+    g2.__scripPlansSummary = { at: Date.now(), value };
+    return ok(value);
+  } catch (err) {
+    return held(`The Plans could not be read just now (${err instanceof Error ? err.message : String(err)}).`);
+  }
+}
+
 /** One Plan by its address. */
 export async function planAt(address: string): Promise<Outcome<PlanView | null>> {
   try {
