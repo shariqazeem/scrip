@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { outsideTeam } from "@/lib/team";
+import { isStranger, outsideTeam } from "@/lib/team";
 import Link from "next/link";
 import { after } from "next/server";
 import { inArray } from "drizzle-orm";
@@ -48,7 +48,10 @@ export default async function LedgerPage() {
   const now = Math.floor(Date.now() / 1000);
   const asRows = rows.map(toRow);
   const outside = outsideTeam(rows);
-  const rates = WINDOWS.map((w) => ({ w, rate: keepRate(asRows, w, now), first: firstMaturity(asRows, w, now) }));
+  // Kept apart for people outside the team: the team's own wallets include test wallets whose
+  // stock was moved on purpose, and a judge should not read those as "people sell".
+  const strangerRows = asRows.filter((r) => isStranger(r.recipient));
+  const rates = WINDOWS.map((w) => ({ w, rate: keepRate(asRows, w, now), first: firstMaturity(asRows, w, now), outside: keepRate(strangerRows, w, now) }));
   const registered = units.filter((u) => assetByMint(u.asset));
   const unregistered = units.filter((u) => !assetByMint(u.asset));
 
@@ -80,13 +83,21 @@ export default async function LedgerPage() {
               note={unregistered.length > 0 && registered.length > 0 ? "plus receipts in mints not on the registry, not counted" : "raw units, as the token accounts hold them"}
             />
             <Fact k="Wallets with the rule on" v={totals.rulesOn.toLocaleString("en-US")} note={`${totals.books.toLocaleString("en-US")} books opened`} />
-            {rates.map(({ w, rate, first }) => (
+            {rates.map(({ w, rate, first, outside: out }) => (
               <Fact
                 key={w}
                 k={`Keep-rate at ${w} days`}
                 v={rate.ok ? bps(rate.value.bps) : null}
                 held={rate.ok ? null : first ? `The first receipt is ${w} days old on ${dateUTC(first)}.` : rate.why}
-                note={rate.ok ? `over ${rate.value.receipts} receipt${rate.value.receipts === 1 ? "" : "s"} and ${rate.value.recipients} wallet${rate.value.recipients === 1 ? "" : "s"}` : undefined}
+                note={
+                  rate.ok
+                    ? `over ${rate.value.receipts} receipt${rate.value.receipts === 1 ? "" : "s"} and ${rate.value.recipients} wallet${rate.value.recipients === 1 ? "" : "s"}. ${
+                        out.ok
+                          ? `Outside the team: ${bps(out.value.bps)} over ${out.value.receipts} receipt${out.value.receipts === 1 ? "" : "s"}`
+                          : "All of them the team's own wallets, including test wallets whose stock was moved during testing; outside the team, none measured yet"
+                      }`
+                    : undefined
+                }
               />
             ))}
           </div>
