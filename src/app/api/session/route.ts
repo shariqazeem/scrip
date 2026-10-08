@@ -1,7 +1,7 @@
 import { ed25519 } from "@noble/curves/ed25519";
 import { PublicKey } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
-import { isFreshIssuedAt, signInMessage } from "@/lib/session/message";
+import { isFreshIssuedAt, signInMessage, signInTextMatches } from "@/lib/session/message";
 import {
   NONCE_COOKIE,
   SESSION_COOKIE,
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const nonceCookie = req.cookies.get(NONCE_COOKIE)?.value;
   if (!nonceCookie) return deny();
 
-  let body: { pubkey?: unknown; signature?: unknown; nonce?: unknown; issuedAt?: unknown };
+  let body: { pubkey?: unknown; signature?: unknown; nonce?: unknown; issuedAt?: unknown; signedMessage?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -69,7 +69,20 @@ export async function POST(req: NextRequest) {
   }
   if (sig.length !== 64) return deny();
 
-  const expected = new TextEncoder().encode(signInMessage(pubkey, nonce, issuedAt));
+  // A wallet's own sign-in wrote the message itself; it must still be ours, line by line.
+  let expected: Uint8Array;
+  if (typeof body.signedMessage === "string") {
+    let signed: Uint8Array;
+    try {
+      signed = Uint8Array.from(Buffer.from(body.signedMessage, "base64"));
+    } catch {
+      return deny();
+    }
+    if (!signInTextMatches(new TextDecoder().decode(signed), { pubkey, nonce, issuedAt })) return deny();
+    expected = signed;
+  } else {
+    expected = new TextEncoder().encode(signInMessage(pubkey, nonce, issuedAt));
+  }
   let valid = false;
   try {
     valid = ed25519.verify(sig, expected, owner.toBytes());

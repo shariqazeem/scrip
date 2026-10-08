@@ -4,7 +4,7 @@ import { Check, Layers, Receipt, Repeat } from "lucide-react";
 import { ConnectWallet } from "@/components/auth/connect";
 import { AskForMatch } from "@/components/receipt/share";
 import { unitsText } from "@/components/save/types";
-import { dateUTC, short, usd, usdc } from "@/lib/format";
+import { short, usd, usdc } from "@/lib/format";
 import type { StockHolding } from "@/lib/save/holdings";
 import { worthOf } from "@/lib/save/holdings";
 import type { SavingsTotals } from "@/lib/save/totals";
@@ -27,9 +27,7 @@ export function SignInPanel({ lead }: { lead?: ReactNode }) {
           {lead ?? "Sign in with the Solana wallet you save from. It is a signature, not a transaction: nothing moves, and it costs nothing."}
         </p>
         <ConnectWallet />
-        <p className="sp-signin-new">
-          New to Scrip? <Link href="/app/save">Start with a $5 save</Link>, then come back here.
-        </p>
+        <p className="sp-signin-new">New to Scrip? Start below: one approval, and your first stock lands in seconds.</p>
       </section>
       <section className="sp-signin-inside" aria-labelledby="inside">
         <p id="inside" className="sp-signin-k">
@@ -140,51 +138,28 @@ function SumFacts({ totals }: { totals: SavingsTotals }) {
 type Step = { readonly key: string; readonly title: string; readonly done: boolean; readonly doneLine: ReactNode; readonly todo: ReactNode; readonly action: ReactNode };
 
 /**
- * YOUR FIRST STEPS — the product in the order a person meets it: save once, save every payment,
- * ask whoever pays you to add to it. Each step is read from the chain's receipts, never ticked
- * by hand: "done" means a receipt or a savings record says so. Only the next step carries a
- * button, so the screen has one primary action. Gone once all three are done.
+ * YOUR NEXT STEP — after starting, what is left: saving every payment (done the moment the
+ * start card ran) and asking whoever pays you to add to it. Saving once stopped being a step
+ * of its own on 8 October, when the start card began making the first save in the same
+ * approval. Each step is read from the chain, never ticked by hand; only the next carries a
+ * button; gone once both are done.
  */
 export function FirstSteps({
   owner,
   totals,
-  holdsStock,
-  firstName,
   hasRecord,
-  defaultName,
   automaticNote,
   inPlan = false,
 }: {
   owner: string;
   totals: SavingsTotals;
-  holdsStock: boolean;
-  firstName: string | null;
   hasRecord: boolean;
-  defaultName: string;
   automaticNote: string | null;
   /** In a sponsor's Plan: whoever pays them already adds to what they save. */
   inPlan?: boolean;
 }) {
-  const savedOnce = totals.first !== null || holdsStock;
+  // Saving once is part of starting now (the start card), so it is no longer a step of its own.
   const steps: Step[] = [
-    {
-      key: "save",
-      title: "Save once",
-      done: savedOnce,
-      doneLine: totals.first ? (
-        <>
-          <Link href={`/receipt/${totals.first.sig}`}>{usdc(totals.first.paidUsdc)}</Link> into {firstName ?? "a stock"} on {dateUTC(totals.first.unix)}.
-        </>
-      ) : (
-        "This wallet already holds stock."
-      ),
-      todo: `Turn $5 of the USDC in this wallet into the ${defaultName}, or any of the other stocks. One signature, and a receipt in seconds.`,
-      action: (
-        <Link href="/app/save" className="sp-action is-primary">
-          Save $5 now
-        </Link>
-      ),
-    },
     {
       key: "every",
       title: "Save every payment",

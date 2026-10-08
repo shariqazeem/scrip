@@ -100,10 +100,10 @@ function summarise(stock: SaveStock, q: Quote, usdc: bigint): SaveQuote {
   };
 }
 
-async function freshQuote(stock: SaveStock, usdc: bigint): Promise<Outcome<Quote>> {
+async function freshQuote(stock: SaveStock, usdc: bigint, maxAccounts = SAVE_MAX_ACCOUNTS): Promise<Outcome<Quote>> {
   if (usdc < MIN_SAVE_USDC) return held("The smallest save is $1.");
   if (usdc > MAX_SAVE_USDC) return held("The largest save in one go is $10,000.");
-  const q = await jupQuote({ inputMint: USDC_MINT, outputMint: stock.mint, amount: usdc, slippageBps: SAVE_SLIPPAGE_BPS, maxAccounts: SAVE_MAX_ACCOUNTS });
+  const q = await jupQuote({ inputMint: USDC_MINT, outputMint: stock.mint, amount: usdc, slippageBps: SAVE_SLIPPAGE_BPS, maxAccounts });
   if (!q.ok) return q;
   const impact = Number(q.value.priceImpactPct) * 100;
   if (Number.isFinite(impact) && impact > MAX_SAVE_IMPACT_PCT) {
@@ -125,7 +125,7 @@ export async function quoteSave(stock: SaveStock, usdc: bigint, owner: PublicKey
 }
 
 /** Rent for the saver's stock account when it does not exist yet; zero when it does. */
-async function depositFor(owner: PublicKey, stock: SaveStock): Promise<number> {
+export async function depositFor(owner: PublicKey, stock: SaveStock): Promise<number> {
   const conn = connection();
   const ata = stockAccount(owner, stock);
   const info = await conn.getAccountInfo(ata, "confirmed").catch(() => null);
@@ -177,6 +177,51 @@ function assemble(input: {
     ...(input.route.cleanup ? [input.route.cleanup] : []),
   ];
   return new VersionedTransaction(new TransactionMessage({ payerKey: input.owner, recentBlockhash: input.blockhash, instructions: ixs }).compileToV0Message(input.alts));
+}
+
+/** The instructions of a save, before they are put in a transaction: what `start` composes with. */
+export type SaveParts = {
+  readonly quote: SaveQuote;
+  readonly memo: TransactionInstruction;
+  readonly open: TransactionInstruction;
+  readonly setup: TransactionInstruction[];
+  readonly swap: TransactionInstruction;
+  readonly cleanup: TransactionInstruction | null;
+  readonly alts: AddressLookupTableAccount[];
+  readonly depositLamports: number;
+};
+
+/**
+ * A save's instructions for a wallet that holds the USDC, checked the same way `buildSave`
+ * checks them, but not yet assembled. `maxAccounts` asks Jupiter for a shorter route when the
+ * save has to share its transaction with something else.
+ */
+export async function saveParts(input: { owner: PublicKey; stock: SaveStock; usdc: bigint; maxAccounts?: number }): Promise<Outcome<SaveParts>> {
+  const { owner, stock, usdc } = input;
+  const conn = connection();
+  const usdcAccount = getAssociatedTokenAddressSync(new PublicKey(USDC_MINT), owner, false, TOKEN_PROGRAM_ID);
+  const balance = await conn.getTokenAccountBalance(usdcAccount, "confirmed").then((r) => BigInt(r.value.amount)).catch(() => 0n);
+  if (balance < usdc) return held(`This wallet holds ${usdcText(balance)} of USDC, and this save needs ${usdcText(usdc)}. Nothing was signed.`);
+  const q = await freshQuote(stock, usdc, input.maxAccounts);
+  if (!q.ok) return q;
+  const ata = stockAccount(owner, stock);
+  const route = await swapInstructions({ quote: q.value, userPublicKey: owner, destinationTokenAccount: ata });
+  if (!route.ok) return route;
+  const alts = await lookupTables(conn, route.value.lookupTableAddresses);
+  if (!alts.ok) return alts;
+  const open = openWithMark(owner, stock);
+  const ataProgram = open.programId.toBase58();
+  const setup = route.value.setup.filter((ix) => !(ix.programId.toBase58() === ataProgram && ix.keys[1]?.pubkey.equals(ata)));
+  return ok({
+    quote: summarise(stock, q.value, usdc),
+    memo: memoIx(owner, SAVE_MEMO),
+    open,
+    setup,
+    swap: route.value.swap,
+    cleanup: route.value.cleanup,
+    alts: alts.value,
+    depositLamports: await depositFor(owner, stock),
+  });
 }
 
 /**

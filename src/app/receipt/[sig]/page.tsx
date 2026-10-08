@@ -9,6 +9,7 @@ import { type StubSection, Stub } from "@/components/stub/stub";
 import { readBookOf } from "@/lib/book/read-book";
 import { poolLabels, readSaveTx, viewSave } from "@/lib/save/read";
 import { pricedAsset } from "@/lib/save/catalogue";
+import { nameOf } from "@/lib/save/names";
 import { defaultAsset } from "@/lib/assets/registry";
 import { waitedFor } from "@/lib/pyth/price";
 import { priceState } from "@/lib/pyth/ready";
@@ -20,7 +21,7 @@ import { solUsd } from "@/lib/market";
 import { describeDeviation, describeSeconds, fillVsPyth, landedToStock, splitCost } from "@/lib/receipt/figures";
 import { multiplierAt } from "@/lib/receipt/multiplier";
 import { measuredReading } from "@/lib/keep-rate";
-import { assetByFeedId } from "@/lib/assets/registry";
+import { assetByFeedId, assetByMint } from "@/lib/assets/registry";
 import { explorerUrl } from "@/lib/solana/cluster";
 import { connection } from "@/lib/solana/connection";
 import { PublicKey } from "@solana/web3.js";
@@ -104,15 +105,21 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
   }
   if (saved.ok && saved.value?.save) {
     const [view, names] = await Promise.all([viewSave(saved.value.save), poolLabels()]);
-    // Whether "every payment" could settle today, for the ask under the receipt.
-    const ruleAsset = (view.stock ? pricedAsset(view.stock) : undefined) ?? defaultAsset();
+    // Already saving every payment? Then the receipt says so instead of asking; a start turns it
+    // on in the same transaction as this save.
+    const book = await readBookOf(connection(), new PublicKey(view.owner)).catch(() => null);
+    const rule = book && book.ok && book.value && book.value.rule.enabled ? book.value : null;
+    const savingInto = rule ? assetByMint(rule.asset) : undefined;
+    // Whether "every payment" could settle today, for the ask (or the fact) under the receipt.
+    const ruleAsset = savingInto ?? (view.stock ? pricedAsset(view.stock) : undefined) ?? defaultAsset();
     const state = await priceState(ruleAsset);
     const waiting = state.ready === false ? (waitedFor(state.lastAt) ?? "days") : null;
+    const saving = rule ? { rateBps: rule.rule.rateBps, stockName: savingInto ? nameOf(savingInto.symbol) : "your stock" } : null;
     return (
       <main className="sp-receipt">
         <div className="sp-receipt-col">
           <Header />
-          <SaveReceipt view={view} names={names} fresh={fresh} waiting={waiting} />
+          <SaveReceipt view={view} names={names} fresh={fresh} waiting={waiting} saving={saving} />
           <SaveFoot />
         </div>
       </main>

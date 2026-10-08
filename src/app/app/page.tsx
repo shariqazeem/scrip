@@ -7,17 +7,16 @@ import { FirstSteps, SavingsHead, SignInPanel } from "@/components/app/savings-h
 import { SignOut } from "@/components/auth/connect";
 import { PlanMemberships } from "@/components/plan/memberships";
 import { SavedList } from "@/components/save/saved-list";
-import { defaultAsset } from "@/lib/assets/registry";
+import { StartCard } from "@/components/start/start-card";
 import { liveView } from "@/lib/book/live";
 import { membershipsOf } from "@/lib/plan/read";
 import { automaticToday, listOf } from "@/lib/save/card";
-import { stockByMint } from "@/lib/save/catalogue";
 import { readStockHoldings } from "@/lib/save/holdings";
 import { savesFor } from "@/lib/save/index-saves";
-import { nameOf } from "@/lib/save/names";
 import { savingsTotals } from "@/lib/save/totals";
 import { currentOwner } from "@/lib/session/server";
 import { siteUrl } from "@/lib/site";
+import { startCardProps } from "@/lib/start/card";
 import { cluster } from "@/lib/solana/cluster";
 
 export const metadata: Metadata = { title: "Your savings" };
@@ -36,20 +35,27 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const owner = await currentOwner();
   if (!owner) {
+    // Already saving: sign in. New: the start card, the same one as the front door.
+    const start = await startCardProps();
     return (
       <PageFrame eyebrow="Scrip" title="Your savings" sub="Every stock you own, every save with its receipt, and saving every payment, in one place.">
         <SignInPanel />
+        <section className="sp-start-panel" aria-labelledby="new-here">
+          <h2 id="new-here">New to Scrip? Start here.</h2>
+          <StartCard {...start} compact />
+        </section>
       </PageFrame>
     );
   }
 
-  const [view, saved, stocks, savedTotals, auto, plans] = await Promise.all([
+  const [view, saved, stocks, savedTotals, auto, plans, start] = await Promise.all([
     liveView(owner, { refresh: false }),
     savesFor(owner, 20),
     readStockHoldings(owner),
     savingsTotals(owner),
     automaticToday(),
     membershipsOf(owner),
+    startCardProps(),
   ]);
   // A Plan's matches are not receipts: they are read from the Member account the program keeps,
   // and counted with everything else somebody added.
@@ -60,9 +66,6 @@ export default async function HomePage() {
   const live = view.ok ? view.value : null;
   const hasRecord = live?.handle != null;
   const holdings = stocks.ok ? stocks.value : [];
-  const firstMint = totals.first?.mint ?? null;
-  const firstName = firstMint ? (stockByMint(firstMint)?.name ?? null) : null;
-  const defaultName = nameOf(defaultAsset().symbol);
   // Said only while it is true: an automatic save settles against a price the program can
   // verify, and today that is a short list.
   const automaticNote =
@@ -76,7 +79,15 @@ export default async function HomePage() {
     <PageFrame eyebrow={live?.handle ? `@${live.handle}` : "Scrip"} title="Your savings" actions={<SignOut />}>
       <SavingsHead holdings={holdings} totals={totals} why={stocks.ok ? null : stocks.why} />
       <PlanMemberships owner={owner} cluster={cluster()} rows={memberships} hasRecord={hasRecord} />
-      <FirstSteps owner={owner} totals={totals} holdsStock={holdings.length > 0} firstName={firstName} hasRecord={hasRecord} defaultName={defaultName} automaticNote={automaticNote} inPlan={inPlan} />
+      {hasRecord ? (
+        <FirstSteps owner={owner} totals={totals} hasRecord={hasRecord} automaticNote={automaticNote} inPlan={inPlan} />
+      ) : (
+        // Nothing set up yet: the one thing to do is start, and the card does all of it at once.
+        <section className="sp-start-panel" aria-labelledby="start-here">
+          <h2 id="start-here">Start saving</h2>
+          <StartCard {...start} compact />
+        </section>
+      )}
 
       {!view.ok ? (
         <div className="sp-held">

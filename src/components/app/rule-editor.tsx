@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, TriangleAlert } from "lucide-react";
 import { ConnectWallet } from "@/components/auth/connect";
 import { bps as fmtBps, sol, usd, usdc } from "@/lib/format";
-import { normalizeSlug, validateSlug } from "@/lib/handle";
+import { nameFromAddress, normalizeSlug, validateSlug } from "@/lib/handle";
 import {
   DEFAULT_ALLOWANCE_USDC,
   DEFAULT_CAP_USDC,
@@ -57,10 +57,6 @@ type View = {
 /** What the page shows before a wallet is connected: the question, answerable, with nothing to sign yet. */
 const SIGNED_OUT: View = { hasBook: false, slug: null, assetMint: null, state: "off", rule: null, usdcBalance: "0", usdcExists: true, usdcAccountRentLamports: "0", delegatedAmount: "0", floatLamports: "0", sweepsCovered: 0, ownerLamports: "0", openCostLamports: "0" };
 
-/** A name for an owner who chose none: their address, lowercased, behind an "s". Unique in practice; the program refuses a taken one. */
-export function nameFromAddress(owner: string): string {
-  return `s${normalizeSlug(owner).slice(0, 11)}`;
-}
 
 export function RuleEditor({
   owner,

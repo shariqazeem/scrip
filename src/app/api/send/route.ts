@@ -2,14 +2,17 @@ import { VersionedTransaction } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
 import { confirmSignature } from "@/lib/solana/confirm";
 import { connection } from "@/lib/solana/connection";
+import { SAVE_MARK } from "@/lib/save/mark";
 import { SCRIP_PROGRAM_ID } from "@/lib/solana/program";
 
 export const dynamic = "force-dynamic";
 
 /**
  * BROADCAST A SIGNED SCRIP TRANSACTION. A run signs many transactions in one wallet prompt
- * and sends them here one by one; the server only relays what the wallet already signed,
- * and only if the transaction touches this program. The payer paid; nothing here can spend.
+ * and sends them here one by one, and so does a start too long for one transaction (its save,
+ * then its rule); the server only relays what the wallet already signed, and only if the
+ * transaction touches this program or carries the save mark. The payer paid; nothing here
+ * can spend.
  */
 export async function POST(req: NextRequest) {
   let body: { transactionBase64?: unknown };
@@ -26,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "The transaction could not be read." }, { status: 400 });
   }
   const keys = tx.message.staticAccountKeys.map((k) => k.toBase58());
-  if (!keys.includes(SCRIP_PROGRAM_ID.toBase58())) return NextResponse.json({ error: "This relay only broadcasts Scrip transactions." }, { status: 400 });
+  if (!keys.includes(SCRIP_PROGRAM_ID.toBase58()) && !keys.includes(SAVE_MARK.toBase58())) return NextResponse.json({ error: "This relay only broadcasts Scrip transactions." }, { status: 400 });
   if (!tx.signatures[0] || tx.signatures[0].every((b) => b === 0)) return NextResponse.json({ error: "The transaction is not signed." }, { status: 400 });
   const conn = connection();
   try {

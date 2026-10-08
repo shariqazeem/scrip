@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { NONCE_TTL_SECONDS, newNonce } from "@/lib/session/message";
+import { NONCE_TTL_SECONDS, newNonce, signInFields } from "@/lib/session/message";
 import { NONCE_COOKIE } from "@/lib/session/token";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const nonce = newNonce();
-  const res = NextResponse.json({ nonce, issuedAt: new Date().toISOString() });
+  // The fields too, so a wallet's own sign-in writes exactly the message the server expects.
+  const res = NextResponse.json({ nonce, issuedAt: new Date().toISOString(), ...signInFields() });
   res.cookies.set(NONCE_COOKIE, nonce, {
     httpOnly: true,
     sameSite: "lax",

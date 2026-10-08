@@ -184,6 +184,17 @@
   box-shadow: var(--shadow-sheet);
   scroll-margin-top: var(--s-5);
 }
+.sp-home-once {
+  margin: var(--s-4) 0 0;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-home-once a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
 @media (min-width: 960px) {
   .sp-home-hero {
     grid-template-columns: minmax(0, 1fr) 460px;

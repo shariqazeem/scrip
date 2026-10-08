@@ -26,3 +26,8 @@ export function normalizeSlug(raw: string): string {
     .replace(/[^a-z0-9]/g, "")
     .slice(0, MAX_SLUG_LEN);
 }
+
+/** A name for an owner who chose none: their address, lowercased, behind an "s". Unique in practice; the program refuses a taken one. */
+export function nameFromAddress(owner: string): string {
+  return `s${normalizeSlug(owner).slice(0, 11)}`;
+}

@@ -10,7 +10,7 @@ import {
   type SolanaSignMessageFeature,
 } from "@solana/wallet-standard-features";
 import { Wallet as WalletIcon } from "lucide-react";
-import { signInMessage } from "@/lib/session/message";
+import { signInWith } from "@/lib/session/sign-in";
 import { isPhone, walletBrowseLinks } from "@/components/save/wallets";
 
 /**
@@ -64,53 +64,19 @@ export function ConnectWallet({ compact = false }: { compact?: boolean }) {
     async (wallet: Connectable) => {
       setBusy(wallet.name);
       setWhy(null);
-      try {
-        const connected = await wallet.features[StandardConnect].connect();
-        const account = connected.accounts.find((a) => a.chains.some((c) => c.startsWith("solana:")));
-        if (!account) {
-          setWhy(`${wallet.name} did not offer a Solana account.`);
-          return;
-        }
-
-        const res = await fetch("/api/session/nonce", { cache: "no-store" });
-        if (!res.ok) {
-          setWhy("Could not start a sign-in. Try again in a moment.");
-          return;
-        }
-        const { nonce, issuedAt } = (await res.json()) as { nonce: string; issuedAt: string };
-
-        // The SAME template the server rebuilds. If these ever drift, every sign-in fails
-        // closed rather than open — the server compares byte-for-byte.
-        const message = new TextEncoder().encode(signInMessage(account.address, nonce, issuedAt));
-        const [signed] = await wallet.features[SolanaSignMessage].signMessage({ account, message });
-        if (!signed) {
-          setWhy("The wallet returned no signature.");
-          return;
-        }
-
-        const post = await fetch("/api/session", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            pubkey: account.address,
-            signature: toBase64(signed.signature),
-            nonce,
-            issuedAt,
-          }),
-        });
-        if (!post.ok) {
-          setWhy("That signature could not be verified. Nothing was changed.");
-          return;
-        }
-        router.refresh();
-      } catch (err) {
-        // A user closing the popup is the common case and is not an error worth shouting
-        // about. Anything else says what happened in a sentence.
-        const msg = err instanceof Error ? err.message : String(err);
-        setWhy(/reject|denied|cancel|closed/i.test(msg) ? null : msg);
-      } finally {
-        setBusy(null);
+      // One prompt where the wallet can sign in by itself; connect, then sign, where it cannot.
+      const signed = await signInWith(wallet, { session: "always" });
+      setBusy(null);
+      if (!signed.ok) {
+        // A closed popup is the common case and says nothing.
+        setWhy(signed.why || null);
+        return;
       }
+      if (!signed.value.session) {
+        setWhy("That signature could not be verified. Nothing was changed.");
+        return;
+      }
+      router.refresh();
     },
     [router],
   );
@@ -181,12 +147,6 @@ function NoWalletHere() {
       </p>
     </div>
   );
-}
-
-function toBase64(bytes: Uint8Array): string {
-  let s = "";
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s);
 }
 
 /** Sign out. Clears the cookie and re-renders whatever was reading it. */

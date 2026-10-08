@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { TriangleAlert } from "lucide-react";
 import { PageFrame } from "@/components/app/page-frame";
 import { RuleEditor } from "@/components/app/rule-editor";
+import { StartCard } from "@/components/start/start-card";
 import { SignOut } from "@/components/auth/connect";
 import { defaultAsset, offeredAssets, ruleAssets } from "@/lib/assets/registry";
 import { loadBook } from "@/lib/book/read-book";
@@ -11,6 +12,7 @@ import { solUsd } from "@/lib/market";
 import { stockByMint } from "@/lib/save/catalogue";
 import { waitedFor } from "@/lib/pyth/price";
 import { priceStates } from "@/lib/pyth/ready";
+import { startCardProps } from "@/lib/start/card";
 
 export const metadata: Metadata = { title: "Save every payment" };
 export const dynamic = "force-dynamic";
@@ -26,6 +28,20 @@ export default async function RulePage({ searchParams }: { searchParams: Promise
   // "Do this with every payment", from a save's receipt: the stock that save bought, when the
   // chain can price it for an automatic save.
   const initialAsset = (await searchParams).asset ?? null;
+
+  // Anyone not saving yet meets the start card: one question, one approval, everything at once.
+  // The full editor is for changing what is already on.
+  const view = owner ? await loadBook(owner) : null;
+  if (!owner || (view?.ok && view.value.book === null)) {
+    const start = await startCardProps();
+    return (
+      <PageFrame eyebrow="Every payment" title="Save part of every payment, by itself." sub="Say yes once. Whoever pays you keeps sending USDC to the address you already use, and a slice of every payment becomes stock in this same wallet as it lands, with a receipt.">
+        <section className="sp-start-panel" aria-label="Start saving">
+          <StartCard {...start} compact />
+        </section>
+      </PageFrame>
+    );
+  }
   // Only what a keeper can price on chain today: a rule on anything else could only wait. The
   // default first, so the order matches the save card's.
   const defaultMint = defaultAsset().mint;
@@ -36,11 +52,8 @@ export default async function RulePage({ searchParams }: { searchParams: Promise
   // own foot says the figure is arithmetic. A price that cannot be read leaves the units out
   // rather than inventing one.
   //
-  // Read BEFORE the signed-out branch, and passed to both. The signed-out page is the one a
-  // stranger meets first, and it is the whole point of answering the question before asking
-  // for a wallet — so it is the last page that should be missing the number.
-  // Every offered stock, single companies too: "do this with every payment" often arrives
-  // from a save into Nvidia, and its worked example deserves real units.
+  // Every offered stock, single companies too: a saver changing their stock deserves real
+  // units for each.
   const [p, solPrice, states] = await Promise.all([
     jupPrices(assets.map((a) => a.mint)).catch(() => null),
     solUsd().catch(() => null),
@@ -55,15 +68,6 @@ export default async function RulePage({ searchParams }: { searchParams: Promise
   const readyMint = assets.find((a, i) => states[i]!.ready === true)?.mint ?? null;
   const startMint = states[0]?.ready !== false ? assets[0]!.mint : (readyMint ?? assets[0]?.mint ?? null);
 
-  if (!owner) {
-    // The question first, the wallet second: choose a rate before anything asks for a signature.
-    return (
-      <PageFrame eyebrow="Every payment" title="Save part of every payment, by itself." sub="Say yes once. Whoever pays you keeps sending USDC to the address you already use, and a slice of every payment becomes stock in this same wallet as it lands, with a receipt.">
-        <RuleEditor owner={null} view={null} assets={assets.map(opt)} prices={priceProps} solPrice={solPrice} initialAsset={initialAsset ?? startMint} waits={waits} />
-      </PageFrame>
-    );
-  }
-  const view = await loadBook(owner);
   return (
     <PageFrame
       eyebrow="Every payment"
@@ -71,10 +75,10 @@ export default async function RulePage({ searchParams }: { searchParams: Promise
       sub="Whoever pays you keeps sending USDC to this address, and a slice of every payment becomes stock in this same wallet as it lands, with a receipt."
       actions={<SignOut />}
     >
-      {!view.ok ? (
+      {!view || !view.ok ? (
         <div className="sp-held">
           <TriangleAlert size={16} strokeWidth={2} aria-hidden />
-          <span>{view.why}</span>
+          <span>{view ? (view.ok ? "" : view.why) : ""}</span>
         </div>
       ) : (
         <RuleEditor

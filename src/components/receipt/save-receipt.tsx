@@ -22,7 +22,20 @@ import { AskForMatch, ShareReceipt } from "./share";
  * transaction, the memo, the mark, the route hop by hop, the fill against Pyth where the chain
  * prices the stock, and what the network took.
  */
-export function SaveReceipt({ view, names, fresh, waiting }: { view: SaveView; names: Record<string, string>; fresh: boolean; waiting: string | null }) {
+export function SaveReceipt({
+  view,
+  names,
+  fresh,
+  waiting,
+  saving = null,
+}: {
+  view: SaveView;
+  names: Record<string, string>;
+  fresh: boolean;
+  waiting: string | null;
+  /** The saver already saves every payment (often turned on in this very transaction): no ask, a fact. */
+  saving?: { rateBps: number; stockName: string } | null;
+}) {
   const stock = view.stock;
   const name = stock?.name ?? `${view.mint.slice(0, 4)}…`;
   const units = unitsFromRaw(view.amountRaw, view.decimals);
@@ -75,23 +88,34 @@ export function SaveReceipt({ view, names, fresh, waiting }: { view: SaveView; n
 
       <div className="sp-receipt-actions">
         <ShareReceipt title={`${usdc(view.paidUsdc)} saved into ${name}`} text={`${usdc(view.paidUsdc)} became ${units} ${name}, in my own wallet. Saved with Scrip on Solana.`} />
-        <Link href="/#save" className="sp-btn-link">
+        <Link href="/app/save" className="sp-btn-link">
           Save again
         </Link>
       </div>
 
       <section className={`sp-receipt-asks${fresh ? " is-fresh" : ""}`} aria-label="What next">
-        <Link href={ruleHref} className="sp-receipt-ask is-primary">
-          <span className="t">Do this with every payment: 10%</span>
-          <span className="p">
-            {auto
-              ? `Every USDC payment into this wallet saves 10% into ${name}. Scrip can move at most $200 in total, and you can stop any time.`
-              : `Every USDC payment into this wallet saves 10% into the ${nameOf(defaultAsset().symbol)}. ${name} itself cannot be saved automatically: that needs a price Scrip can verify on Solana.`}
-            {waiting
-              ? ` Right now automatic saves are waiting: the newest price Pyth published on Solana is ${waiting} old, so payments stay as USDC until one returns.`
-              : ""}
-          </span>
-        </Link>
+        {saving ? (
+          <Link href="/app" className="sp-receipt-ask is-primary">
+            <span className="t">Every payment saves {saving.rateBps / 100}% by itself</span>
+            <span className="p">
+              Into {saving.stockName}: whatever USDC lands in this wallet next saves its slice, with a receipt like this one.
+              {waiting ? ` Right now automatic saves are waiting for a price Scrip can verify on Solana (the newest is ${waiting} old); payments stay as USDC until one returns.` : ""}{" "}
+              Open your savings.
+            </span>
+          </Link>
+        ) : (
+          <Link href={ruleHref} className="sp-receipt-ask is-primary">
+            <span className="t">Do this with every payment: 10%</span>
+            <span className="p">
+              {auto
+                ? `Every USDC payment into this wallet saves 10% into ${name}. Scrip can move at most $200 in total, and you can stop any time.`
+                : `Every USDC payment into this wallet saves 10% into the ${nameOf(defaultAsset().symbol)}. ${name} itself cannot be saved automatically: that needs a price Scrip can verify on Solana.`}
+              {waiting
+                ? ` Right now automatic saves are waiting: the newest price Pyth published on Solana is ${waiting} old, so payments stay as USDC until one returns.`
+                : ""}
+            </span>
+          </Link>
+        )}
         <div className="sp-receipt-ask">
           <AskForMatch from={short(view.owner)} className="sp-receipt-ask-btn" />
           <span className="p">A message for whoever pays you in USDC, with a link that shows them how to add to what you save.</span>

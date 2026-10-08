@@ -29,22 +29,63 @@ export const NONCE_TTL_SECONDS = 10 * 60;
  * "The app's signature request cannot be shown due to invalid formatting." Fixing the
  * domain is what surfaced the bug, not what caused it.
  */
+/**
+ * The fields a wallet's own sign-in (`solana:signIn`) is given, so it writes the same message
+ * `signInMessage` builds. One line of statement. The wording still has to do its job in the
+ * most alarming moment in the product, so it says what this is and what it is not.
+ */
+export function signInFields(): { domain: string; statement: string; uri: string; version: "1" } {
+  const uri = siteUrl();
+  return {
+    domain: new URL(uri).host,
+    statement: "Open your Scrip savings. This signature proves the wallet is yours. It costs nothing, moves nothing, and authorises no transaction.",
+    uri,
+    version: "1",
+  };
+}
+
 export function signInMessage(pubkey: string, nonce: string, issuedAt: string): string {
-  const url = siteUrl();
-  const domain = new URL(url).host;
+  const f = signInFields();
   return [
-    `${domain} wants you to sign in with your Solana account:`,
+    `${f.domain} wants you to sign in with your Solana account:`,
     pubkey,
     "",
-    // One line. The wording still has to do its job in the most alarming moment in the
-    // product, so it says what this is and what it is not, in the popup itself.
-    "Open your Scrip register. This signature proves the wallet is yours. It costs nothing, moves nothing, and authorises no transaction.",
+    f.statement,
     "",
-    `URI: ${url}`,
-    "Version: 1",
+    `URI: ${f.uri}`,
+    `Version: ${f.version}`,
     `Nonce: ${nonce}`,
     `Issued At: ${issuedAt}`,
   ].join("\n");
+}
+
+/**
+ * A SIGN-IN THE WALLET WROTE ITSELF. With `solana:signIn` one prompt connects and signs in,
+ * and the wallet composes the message from the fields above. A wallet may add a line of its
+ * own — a chain id — so this reads the message line by line instead of comparing bytes: our
+ * domain and the claimed address on top, our statement, and among the fields exactly our URI,
+ * version, nonce and issued-at, nothing else but a Solana chain id. The signature is then
+ * checked over the exact bytes the wallet signed.
+ */
+export function signInTextMatches(text: string, expect: { pubkey: string; nonce: string; issuedAt: string }): boolean {
+  const ours = signInMessage(expect.pubkey, expect.nonce, expect.issuedAt);
+  if (text === ours) return true;
+  const want = ours.split("\n");
+  const got = text.split("\n");
+  if (got.length < 6) return false;
+  for (let i = 0; i < 5; i += 1) if (got[i] !== want[i]) return false;
+  const wanted = new Map(want.slice(5).map((line) => [line.slice(0, line.indexOf(":")), line] as const));
+  const seen = new Set<string>();
+  for (const line of got.slice(5)) {
+    const key = line.slice(0, line.indexOf(":"));
+    if (key === "Chain ID") {
+      if (!/^Chain ID: (solana:)?(mainnet|mainnet-beta|devnet|testnet|localnet)$/.test(line)) return false;
+      continue;
+    }
+    if (seen.has(key) || wanted.get(key) !== line) return false;
+    seen.add(key);
+  }
+  return seen.size === wanted.size;
 }
 
 /** A nonce is 128 bits of hex — enough that a replay needs the real one, not a guess. */
