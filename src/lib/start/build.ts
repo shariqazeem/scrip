@@ -48,6 +48,14 @@ const BASE_FEE_LAMPORTS = 5_000;
 /** A wallet must stay rent-exempt after paying: Solana's floor for an empty account. */
 const WALLET_FLOOR_LAMPORTS = 890_880;
 const MAX_TX_BYTES = 1232;
+/**
+ * Room left for the wallet on the one combined transaction. Phantom adds its Lighthouse
+ * assertions (its program key and a short instruction per account it guards) to a transaction
+ * it receives unsigned, and a priority fee where there is none; a start built to the last byte
+ * would leave it nothing. Typical starts are about 813 bytes, so only a long route is affected,
+ * and it goes out as the two halves instead.
+ */
+const WALLET_HEADROOM_BYTES = 200;
 
 export type StartInput = {
   readonly owner: PublicKey;
@@ -142,7 +150,7 @@ export async function buildStart(input: StartInput): Promise<Outcome<BuiltStart>
   if (!parts.ok) return parts;
   const p = parts.value;
   const together = [p.memo, p.open, ...p.setup, p.swap, ...(p.cleanup ? [p.cleanup] : []), ...ruleIxs];
-  const combined = await assembleMeasured(conn, owner, blockhash, together, p.alts, SAVE_MICRO_LAMPORTS);
+  const combined = await assembleMeasured(conn, owner, blockhash, together, p.alts, SAVE_MICRO_LAMPORTS, MAX_TX_BYTES - WALLET_HEADROOM_BYTES);
   if (combined.ok) {
     return ok({
       transactions: [b64(combined.value.tx)],
@@ -194,6 +202,7 @@ async function assembleMeasured(
   ixs: readonly TransactionInstruction[],
   alts: readonly AddressLookupTableAccount[],
   microLamports: number,
+  maxBytes: number = MAX_TX_BYTES,
 ): Promise<Outcome<{ tx: VersionedTransaction; feeLamports: number }>> {
   const make = (units: number) =>
     new VersionedTransaction(
@@ -206,7 +215,7 @@ async function assembleMeasured(
   let probe: VersionedTransaction;
   try {
     probe = make(SIMULATE_UNITS);
-    if (probe.serialize().length > MAX_TX_BYTES) return held("size");
+    if (probe.serialize().length > maxBytes) return held("size");
   } catch {
     // compileToV0Message or serialize throws when the message cannot be encoded at all.
     return held("size");
@@ -222,7 +231,7 @@ async function assembleMeasured(
   }
   const units = Math.min(SIMULATE_UNITS, Math.ceil(used * 1.25) + 20_000);
   const tx = make(units);
-  if (tx.serialize().length > MAX_TX_BYTES) return held("size");
+  if (tx.serialize().length > maxBytes) return held("size");
   return ok({ tx, feeLamports: BASE_FEE_LAMPORTS + Math.ceil((units * microLamports) / 1e6) });
 }
 
