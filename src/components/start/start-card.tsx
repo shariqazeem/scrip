@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Check, ShieldCheck, X } from "lucide-react";
 import type { WalletAccount } from "@wallet-standard/base";
 import type { StartCardProps, StartStock } from "@/lib/start/card";
@@ -49,7 +48,6 @@ type Connected = { wallet: Sendable; account: WalletAccount };
 type Done = { sig: string; settled: boolean; rateBps: number; stockName: string; first: { usd: number; units: string | null } | null; joined: Invite[] };
 
 export function StartCard({ stocks, defaultMint, solUsd, cluster, compact = false }: StartCardProps & { compact?: boolean }) {
-  const router = useRouter();
   const wallets = useWallets();
   const [rateBps, setRateBps] = useState(1000);
   const [rateTouched, setRateTouched] = useState(false);
@@ -157,7 +155,9 @@ export function StartCard({ stocks, defaultMint, solUsd, cluster, compact = fals
     rememberWallet(w.name);
     const c = { wallet: w, account: r.value.account };
     setConnected(c);
-    if (r.value.session) router.refresh();
+    // No refresh here, and none at the end: on /app a signed-in render draws this card in
+    // another place, which would start it over mid-flow and lose the result. "Open your
+    // savings" loads the signed-in page when the person chooses to.
     return c;
   };
 
@@ -242,7 +242,6 @@ export function StartCard({ stocks, defaultMint, solUsd, cluster, compact = fals
       joined: built.joins > 0 ? v.invites : [],
     });
     setPhase("done");
-    router.refresh();
   };
 
   function fail(message: string) {
@@ -499,9 +498,9 @@ function Started({ done, compact }: { done: Done; compact: boolean }) {
         <Link href={`/receipt/${done.sig}`} className="sp-start-first-result">
           <span className="k">Your first save</span>
           <span className="v">
-            {dollars(done.first.usd)} became {done.first.units ? <strong>{done.first.units}</strong> : "stock"} {done.stockName}
+            {dollars(done.first.usd)} became {done.first.units ? <>about <strong>{done.first.units}</strong></> : "stock in"} {done.stockName}
           </span>
-          <span className="go">See the receipt</span>
+          <span className="go">The receipt has the exact amount</span>
         </Link>
       ) : null}
       {done.joined.map((j) => (
@@ -510,9 +509,10 @@ function Started({ done, compact }: { done: Done; compact: boolean }) {
         </p>
       ))}
       <div className="sp-start-done-actions">
-        <Link href="/app" className="sp-save-go">
+        {/* A full load, so the page reads the new session and the new record for certain. */}
+        <button type="button" className="sp-save-go" onClick={() => window.location.assign("/app")}>
           Open your savings
-        </Link>
+        </button>
       </div>
     </div>
   );
