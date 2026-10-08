@@ -25,7 +25,7 @@ export default function DocsPage() {
       <ol>
         <li>
           <strong>A rule</strong> — a rate, an asset, an optional floor and cap — on your own USDC account, held in a Book you own, enforced
-          by the program, driven by permissionless keepers.
+          by the program, and carried out automatically by Scrip.
         </li>
         <li>
           <strong>A receipt</strong> — a permanent on-chain account written in the same transaction as the conversion, measured at 7 and 30
@@ -44,10 +44,10 @@ export default function DocsPage() {
       <p>
         <strong>Turn on.</strong> You open a Book (a handle, an asset, an eligibility attestation) and turn the rule on in one signature:
         the rate, floor and cap are written; your current USDC balance becomes the watermark; an allowance is approved to the Book&rsquo;s
-        address as token delegate; a small SOL float is deposited on the Book to pay for receipts and keeper tips.
+        address as token delegate; a small SOL float is deposited on the Book to pay for receipts and the small fee for submitting each save.
       </p>
       <p>
-        <strong>Sweep.</strong> Whenever your USDC balance rises above the watermark by at least the minimum, a keeper submits one atomic
+        <strong>Sweep.</strong> Whenever your USDC balance rises above the watermark by at least the minimum, Scrip submits one atomic
         transaction: the program computes the slice from on-chain state, moves exactly that much USDC through the delegate, a Jupiter swap
         turns it into the asset landing directly in your own token account, and the program verifies what arrived against Pyth and writes
         the receipt. If any step fails, nothing moves.
@@ -66,7 +66,7 @@ export default function DocsPage() {
         programs use.
       </p>
       <p>
-        <Link href="/docs/how-the-rule-sees-money">How the rule sees money</Link> · <Link href="/docs/keepers">What a keeper can and cannot do</Link> ·{" "}
+        <Link href="/docs/how-the-rule-sees-money">How the rule sees money</Link> ·{" "}
         <Link href="/docs/receipts">Receipts</Link> · <Link href="/docs/keep-rate">Keep-rate</Link> · <Link href="/docs/corporate-actions">Corporate actions</Link>
       </p>
 

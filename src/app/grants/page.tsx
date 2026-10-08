@@ -11,7 +11,7 @@ export default function GrantsPage() {
         <div className="sp-truths">
           <Row k="Bought now">The payer buys the stock at grant time; it sits in an escrow the grant itself owns. The recipient can see it. The payer cannot spend it.</Row>
           <Row k="A cliff, then linear">Nothing vests before the cliff; after it, raw units release linearly over the duration, or all at once when there is no duration.</Row>
-          <Row k="Keepers vest it">Anyone may call vest; the caller is repaid the receipt&rsquo;s rent and a fixed tip from the grant&rsquo;s float. Every vest writes a receipt.</Row>
+          <Row k="It vests on its own">Scrip releases what has vested every day; the program checks the schedule, and every vest writes a receipt. Its small cost comes from the grant&rsquo;s float.</Row>
           <Row k="Revocable, if the payer chose">What has not accrued returns to the payer; what had accrued stays claimable by the recipient, receipt and all.</Row>
           <Row k="While it vests, dividends reinvest into it">Vesting is computed on raw units, so a dividend reinvested through the multiplier while the stock waits goes to whoever the units vest to.</Row>
         </div>
@@ -20,12 +20,12 @@ export default function GrantsPage() {
         <pre>{`open_grant     payer · creates the Grant and its escrow; the recipient's own account too
   route        Jupiter, USDC → the asset, destination = the escrow
 seal_grant     payer, same transaction · escrow ≥ the payer's own minimum; total fixed; float deposited; receipt
-vest           anyone · releasable = total × clamp((now − start − cliff) / duration) − released; receipt; tip repaid
+vest           daily · releasable = total × clamp((now − start − cliff) / duration) − released; receipt; paid from the float
 revoke_grant   payer · unvested back; accrued stays claimable; state Revoked
 close_grant    payer · completed or revoked, escrow empty; rent and float back`}</pre>
       </SiteSection>
       <SiteSection label="The honest sentence">
-        <p className="sp-body">Scrip holds an asset only in an escrow the payer created, that the recipient can see, and that the payer cannot spend. A grant is that escrow with a schedule. Nobody has reviewed the legal shape of a vesting grant of securities-backed tokens executed by third-party keepers; <Link href="/security" className="sp-inline-link">the security page says so.</Link></p>
+        <p className="sp-body">Scrip holds an asset only in an escrow the payer created, that the recipient can see, and that the payer cannot spend. A grant is that escrow with a schedule. Nobody has reviewed the legal shape of a vesting grant of securities-backed tokens that releases on its own; <Link href="/security" className="sp-inline-link">the security page says so.</Link></p>
       </SiteSection>
       <div className="sp-hero-cta">
         <Link href="/app/org/grants" className="sp-btn is-primary">

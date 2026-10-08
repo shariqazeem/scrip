@@ -30,7 +30,8 @@ the boldness in one place — the receipt — and keep everything else quiet.
 | the float | **prepaid saves** | float |
 | a handle | **name, optional** | handle |
 | SPYx, NVDAx | **S&P 500, Nvidia**; ticker and issuer in small type (`lib/save/names.ts`, the catalogue) | the symbol |
-| keeper, watermark, slot, band, keep-rate | never | as is |
+| keeper, crank, permissionless, tip, relayer | **never, anywhere a person or a judge reads** — not on `/proof`, not in docs, not in the README. Say "Scrip saves it", "saved automatically", "Scrip's servers" where the actor must be named, "the fee for submitting it" for the tip | never either. `/keepers` is an operators-only page |
+| watermark, slot, band, keep-rate | never | as is |
 | `Receipt` when drawn | a **receipt**; the stub is its shape | a stub; "prints" |
 | `Payout` kind Settle / Sponsor | **pay** / **gift** | pay / gift |
 | `Grant`, `vest` | a **grant that vests** | grant, vest |

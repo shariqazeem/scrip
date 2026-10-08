@@ -210,7 +210,7 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
     });
   }
   if (cost) {
-    const parts = [`${sol(cost.rentLamports)} rent, kept with this receipt`, `${sol(cost.tipLamports)} to the keeper`];
+    const parts = [`${sol(cost.rentLamports)} rent, kept with this receipt`, `${sol(cost.tipLamports)} for submitting it`];
     if (cost.accountLamports > 0) parts.push(`${sol(cost.accountLamports)} for a new ${symbol} account`);
     sections.push({
       rows: [
@@ -330,7 +330,7 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
             </div>
           ) : (
             <div className="sp-receipt-row">
-              <span className="k">Submitted by keeper</span>
+              <span className="k">Submitted by</span>
               <span className="v">
                 <a href={explorerUrl("address", r.submitter)}>{short(r.submitter)}</a>
               </span>

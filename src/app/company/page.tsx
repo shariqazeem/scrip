@@ -33,7 +33,7 @@ export default function CompanyPage() {
         <p className="sp-body">Not a trading terminal, a robo-advisor, a lender, a card, a social feed, a launchpad, or a brokerage. It gives no advice. It never decides amounts: the rate is the owner&rsquo;s, the price is Jupiter&rsquo;s route bounded by Pyth, the timing is arrival.</p>
       </SiteSection>
       <SiteSection label="Who builds this">
-        <p className="sp-body">Shariq, and the keepers. The founder&rsquo;s own rule runs on the wallet he is paid to, and Scrip pays its own bounties in stock through <Link href="/@scrip" className="sp-inline-link">@scrip</Link>. Every payment Scrip makes is on that page, labelled as Scrip&rsquo;s.</p>
+        <p className="sp-body">Shariq. The founder&rsquo;s own rule runs on the wallet he is paid to, and Scrip pays its own bounties in stock through <Link href="/@scrip" className="sp-inline-link">@scrip</Link>. Every payment Scrip makes is on that page, labelled as Scrip&rsquo;s.</p>
       </SiteSection>
       <SiteSection label="Where it goes">
         <p className="sp-body">Rules on income. A stock slice is the first rule; the same standing instruction later routes a slice into a mix, a reserve or a set-aside, for a person, a grant program or an agent&rsquo;s treasury. Each step is the rule with one more destination, never a new product.</p>

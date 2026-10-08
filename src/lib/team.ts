@@ -9,9 +9,9 @@
 export const TEAM: ReadonlyMap<string, string> = new Map([
   ["BbDN31Q4qK53ddNuJnvpvWfC5UFMi87HGxQmuJobUv3q", "@scrip — Scrip's own register"],
   ["EsWeMEvuLDV2Q4CXigZbETzqXfEQwZntQjwD4Cy8AgY5", "@shariq — the founder"],
-  ["9zzN2FkbG2AwHZCH1cnH6Wxo4V7YzFoKKqJXRvLATohJ", "keeper one"],
-  ["E73zEBRtVvRKQNGmU5ABEgsq4ufQ8WhsC6vktTEqoJ8s", "keeper two"],
-  ["CGRv3QJTLbcYKCN9R4hNqN1pt5vEBqWY9MLNxSKu13aA", "the relayer and crank"],
+  ["9zzN2FkbG2AwHZCH1cnH6Wxo4V7YzFoKKqJXRvLATohJ", "Scrip's saving service"],
+  ["E73zEBRtVvRKQNGmU5ABEgsq4ufQ8WhsC6vktTEqoJ8s", "Scrip's saving service, second server"],
+  ["CGRv3QJTLbcYKCN9R4hNqN1pt5vEBqWY9MLNxSKu13aA", "Scrip's service wallet"],
   // Claimed from the founder's gifts while the claim flow was being tested, 22–23 September.
   // Counted as the team's until shown otherwise: a count of outsiders should err low.
   ["5hqYeJRgY8oSoYGTBaxqggpJroEhKHvSNgbrYCjuqDaj", "a claim made while testing"],

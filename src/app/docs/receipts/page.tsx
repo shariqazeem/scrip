@@ -60,7 +60,7 @@ export default function Page() {
 
       <h2>Who pays for it</h2>
       <p>
-        Rent is about 0.003 SOL, permanent. On a sweep the keeper advances it and is repaid from the owner&rsquo;s float; on an intake the payer
+        Rent is about 0.003 SOL, permanent. On an automatic save Scrip advances it and is repaid from the owner&rsquo;s prepaid saves; on an intake the payer
         pays it, shown on the pay page as &ldquo;network and permanent receipt&rdquo;. Owners pay for their own permanent records, transparently.
       </p>
     </DocFrame>

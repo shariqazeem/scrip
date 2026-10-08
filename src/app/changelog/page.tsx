@@ -7,9 +7,9 @@ const LOG: ReadonlyArray<{ date: string; items: readonly string[] }> = [
   {
     date: "16 Sep 2026",
     items: [
-      "Grants: stock bought now that vests on a schedule, from anyone to anyone. Five new instructions; a receipt at seal and at every vest; keepers vest on a cadence.",
+      "Grants: stock bought now that vests on a schedule, from anyone to anyone. Five new instructions; a receipt at seal and at every vest; it vests on its own every day.",
       "Organisations: a handle of kind org; pay one with a split; runs that sign once for a whole team, with a run page; a public page that lists everyone paid.",
-      "The floor: the live tape over server-sent events, the clock with the share of arrivals that settled while the NYSE was shut, keepers, corporate actions on stage.",
+      "The floor: the live tape over server-sent events, the clock with the share of arrivals that settled while the NYSE was shut, corporate actions on stage.",
       "The register: holdings with vesting grants, every receipt filterable and exportable, monthly statements that print, settings for allowance and float, Telegram when a stub prints.",
       "Receipt kinds renamed: sweep, pay, gift, grant, vest. Run ids on receipts. The wordmark set in Fraunces.",
     ],
@@ -19,7 +19,7 @@ const LOG: ReadonlyArray<{ date: string; items: readonly string[] }> = [
     items: [
       "The front door as a film: dark opening, the printer, the last sweep replayed from its receipt, the market band with rolling figures, a perforated tear into paper.",
       "The rule page asks its one question before any wallet; one signature opens, approves, floats and enables.",
-      "Two ways to pay: in stock, or in USDC to the normal address. A public page per register, opt-in. The keepers page.",
+      "Two ways to pay: in stock, or in USDC to the normal address. A public page per register, opt-in.",
       "The program built at opt-level z: 498,480 bytes, about 2.5 SOL of rent. Devnet stand-ins labelled as such on every surface.",
       "Webgold became Scrip: the rule, the intake, the sweep atomic without a Jupiter CPI, Pyth-bounded fills, receipts measured at 7 and 30 days, keep-rate.",
     ],

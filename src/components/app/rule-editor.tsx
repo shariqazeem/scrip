@@ -288,7 +288,7 @@ export function RuleEditor({
             */}
             <p className="sp-q-preview-cost">
               Each automatic save costs {sol(SWEEP_COST_LAMPORTS)}
-              {solPrice ? `, about ${usd((Number(SWEEP_COST_LAMPORTS) / 1e9) * solPrice)} at today’s SOL price` : ""}: 0.0005 SOL to whoever submits it,
+              {solPrice ? `, about ${usd((Number(SWEEP_COST_LAMPORTS) / 1e9) * solPrice)} at today’s SOL price` : ""}: 0.0005 SOL for submitting it,
               and the rest a deposit for its receipt, which stays on chain. Scrip waits until there is at least $2 to save, so a few small
               payments become one save.
               {solPrice && terms.rateBps > 0
@@ -523,7 +523,7 @@ export function RuleEditor({
                 />
               </span>{" "}
               prepaid for {receipts(floatLamports)}. Each automatic save
-              writes a receipt that stays on chain, and whoever submits it is paid a tip.
+              writes a receipt that stays on chain, and pays a small fee for submitting it.
             </p>
             <p className="sp-q-cost-foot">
               None of this is invested, and none of it goes to Scrip. The prepaid part sits on your own savings record, and you can

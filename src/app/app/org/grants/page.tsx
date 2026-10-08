@@ -30,7 +30,7 @@ export default async function GrantsPage() {
   const grants = v.ok ? v.value.grants : [];
   const now = Math.floor(Date.now() / 1000);
   return (
-    <PageFrame eyebrow="Pay in stock" title="Grant stock that vests." sub="Bought now, vesting on a schedule you set, from anyone to anyone, in any listed company on the registry. Keepers vest it; the recipient sees it in their register under vesting; a revoked grant returns only what had not vested." actions={<SignOut />}>
+    <PageFrame eyebrow="Pay in stock" title="Grant stock that vests." sub="Bought now, vesting on a schedule you set, from anyone to anyone, in any listed company on the registry. It vests on its own every day; the recipient sees it in their register under vesting; a revoked grant returns only what had not vested." actions={<SignOut />}>
       <div className="sp-org">
         <GrantForm owner={owner} cluster={cluster()} assets={ruleAssets().filter((a) => !a.singleName || true).map((a) => ({ mint: a.mint, symbol: a.symbol, name: a.name }))} />
         <section className="sp-org-section">

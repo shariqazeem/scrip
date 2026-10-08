@@ -179,7 +179,7 @@ export function LiveBook({
           {view.state === "allowance-exhausted" ? <p className="sp-live-why">The limit is used up, so saving has paused. Set a new limit to keep saving; your USDC stays where it is until then.</p> : null}
           {view.state === "float-empty" ? <p className="sp-live-why">The prepaid saves are used up. Prepay more to keep saving; nothing is lost while it waits.</p> : null}
           {waiting ? <p className="sp-live-why">{waiting.detail}</p> : null}
-          {view.ruleOn && !view.keeper.alive && mode === "owner" ? <p className="sp-live-why">Nothing is submitting saves right now. Payments that land wait in your wallet; nothing is lost.</p> : null}
+          {view.ruleOn && !view.keeper.alive && mode === "owner" ? <p className="sp-live-why">Automatic saving is paused on Scrip&rsquo;s side right now. Payments that land wait in your wallet; nothing is lost.</p> : null}
           <OfflineNotice at={view.at} />
           {mode === "owner" ? (
             <div className="sp-live-actions">

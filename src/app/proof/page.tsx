@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Proof",
-  description: "Scrip on Solana mainnet, read from the chain: the front book printing, the keepers, the last sweep replayed instruction by instruction, every receipt and how much of it is still held.",
+  description: "Scrip on Solana mainnet, read from the chain: the front book printing, the last automatic save replayed instruction by instruction, every receipt and how much of it is still held.",
 };
 
 /**
@@ -119,9 +119,6 @@ export default async function ProofPage() {
           <Link href="/ledger" className="sp-nav-link">
             Ledger
           </Link>
-          <Link href="/keepers" className="sp-nav-link">
-            Keepers
-          </Link>
           <Link href="/docs" className="sp-nav-link">
             Docs
           </Link>
@@ -152,7 +149,7 @@ export default async function ProofPage() {
               line lower down instead of a second button competing with the first.
             */}
             <p className="sp-lede">
-              How Scrip works, as it happens on Solana mainnet: a rule on a wallet, a keeper that races to sweep the slice, a Pyth price
+              How Scrip works, as it happens on Solana mainnet: a rule on a wallet, the slice saved within seconds, a Pyth price
               the program checks, and a receipt anyone can open, measured at 7 and 30 days.
             </p>
             <div className="sp-hero-cta">
@@ -196,8 +193,8 @@ export default async function ProofPage() {
                             </>
                           ) : (
                             <>
-                              and {bps(front.rateNowBps)} of it becomes {front.asset?.symbol ?? "stock"} in that wallet as soon as a keeper has a
-                              price it can verify, with a receipt anyone can open.
+                              and {bps(front.rateNowBps)} of it becomes {front.asset?.symbol ?? "stock"} in that wallet as soon as there is a
+                              price the program can verify, with a receipt anyone can open.
                             </>
                           )}
                         </p>
@@ -362,7 +359,7 @@ export default async function ProofPage() {
           </div>
           <div className="sp-truth">
             <span className="k">Net, not gross</span>
-            <p className="v">The rule sees the net increase of your USDC account since the last sweep. Money spent before a keeper acts is not taxed.</p>
+            <p className="v">The rule sees the net increase of your USDC account since the last sweep. Money spent before it is saved is not counted.</p>
           </div>
           <div className="sp-truth">
             <span className="k">Savings-grade, not stable</span>
@@ -449,7 +446,6 @@ export default async function ProofPage() {
           <Link href="/curve">Scrip Curve</Link>
           <Link href="/assets">Assets</Link>
           <Link href="/ledger">Ledger</Link>
-          <Link href="/keepers">Keepers</Link>
           <Link href="/docs">Docs</Link>
         </footer>
       </div>

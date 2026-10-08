@@ -5,7 +5,6 @@
 export const DOC_PAGES = [
   { href: "/docs", label: "What Scrip does" },
   { href: "/docs/how-the-rule-sees-money", label: "How the rule sees money" },
-  { href: "/docs/keepers", label: "What a keeper can and cannot do" },
   { href: "/docs/pyth", label: "How Scrip uses Pyth" },
   { href: "/docs/receipts", label: "Receipts" },
   { href: "/docs/keep-rate", label: "Keep-rate" },

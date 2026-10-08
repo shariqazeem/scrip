@@ -18,7 +18,7 @@ export default async function Page() {
       here="/docs/pyth"
       eyebrow="Docs"
       title="How Scrip uses Pyth."
-      lede="No verified Pyth price, no conversion. The program reads Pyth's price account in the same transaction as the swap, and refuses anything it cannot verify — so the worst fill any keeper can deliver is set by a price nobody at Scrip controls."
+      lede="No verified Pyth price, no conversion. The program reads Pyth's price account in the same transaction as the swap, and refuses anything it cannot verify — so the worst fill any save can get is set by a price nobody at Scrip controls."
     >
       <h2>The rule, in the program</h2>
       <p>

@@ -98,7 +98,7 @@ export default async function CurvePage() {
             does not. Collected in USDC. The launcher keeps {PRESET.creatorTradingFeePercentage}% of the partner-side fee.
           </Row>
           <Row k="Graduation">
-            To Meteora DAMM v2 at {THRESHOLD_USDC.public} USDC, where Meteora&rsquo;s keepers migrate on their own (a demonstration uses {THRESHOLD_USDC.demonstration}{" "}
+            To Meteora DAMM v2 at {THRESHOLD_USDC.public} USDC, where it migrates on its own through Meteora (a demonstration uses {THRESHOLD_USDC.demonstration}{" "}
             and the manual migrator). A {PRESET.migrationFeePercentage}% migration fee, half to the vault. The migrated pool collects its fees in USDC.
           </Row>
           <Row k="Liquidity">Every position locked for good at graduation: nobody can pull the pool, and the locked partner position keeps paying the vault.</Row>

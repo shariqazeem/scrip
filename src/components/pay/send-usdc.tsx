@@ -87,7 +87,7 @@ export function SendUsdc({ owner, who, usdcMint, rateBps, assetSymbol, standIn, 
             </div>
             <div className="sp-quote-row">
               <span className="k">Swept</span>
-              <span className="v">within seconds, by a keeper</span>
+              <span className="v">within seconds, by itself</span>
             </div>
             <div className="sp-quote-row">
               <span className="k">Receipt</span>

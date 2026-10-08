@@ -17,7 +17,7 @@ const PALETTE: ReadonlyArray<[string, string, string]> = [
 
 export default function BrandPage() {
   return (
-    <SiteFrame eyebrow="Brand" title="There is no opening bell." lede="The world of the old exchange floor, reborn without hours. The tape is the live feed; the register is the personal record; the stub is the receipt; the floor is the network; the keepers are the runners. Two materials, assigned by surface: ink for the floor, paper for the register.">
+    <SiteFrame eyebrow="Brand" title="There is no opening bell." lede="The world of the old exchange floor, reborn without hours. The tape is the live feed; the register is the personal record; the stub is the receipt; the floor is the network. Two materials, assigned by surface: ink for the floor, paper for the register.">
       <SiteSection label="The wordmark" aside="Fraunces, in exactly two places">
         <div style={{ display: "flex", gap: 32, alignItems: "center", flexWrap: "wrap" }}>
           <Wordmark size={56} />

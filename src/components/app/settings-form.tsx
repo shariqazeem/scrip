@@ -62,7 +62,7 @@ export function SettingsForm({ owner, delegatedAmount, floatLamports, sweepsCove
           </button>
         </span>
         <span className="note">
-          {sol(BigInt(floatLamports))} prepaid, about {sweepsCovered} saves. Each automatic save pays its receipt&rsquo;s deposit and a small tip to whoever submits it. Withdraw what is unused any time.
+          {sol(BigInt(floatLamports))} prepaid, about {sweepsCovered} saves. Each automatic save pays its receipt&rsquo;s deposit and a small fee for submitting it. Withdraw what is unused any time.
         </span>
       </div>
       <div className="sp-q-row">

@@ -26,7 +26,7 @@ export type SweepScene = {
 
 const STEPS = [
   { at: 0, label: "A payer sends USDC to a normal address" },
-  { at: 1, label: "The balance rises above the watermark; a keeper notices" },
+  { at: 1, label: "The balance rises above the watermark; Scrip notices" },
   { at: 2, label: "begin_sweep — the program computes the slice from on-chain state" },
   { at: 3, label: "The route — Jupiter, as a top-level instruction the program watches" },
   { at: 4, label: "finish_sweep — the fill is checked against Pyth, or everything reverts" },

@@ -18,7 +18,8 @@ describe("⌘K resolves from shape", () => {
   });
   it("a page by name, and a path as itself", () => {
     expect(resolveJump("ledger")).toBe("/ledger");
-    expect(resolveJump("Keepers")).toBe("/keepers");
+    expect(resolveJump("Plans")).toBe("/app/org/plans");
+    expect(resolveJump("Stocks")).toBe("/app/holdings");
     expect(resolveJump("/app/org/runs")).toBe("/app/org/runs");
   });
   it("nothing for a shape it does not know", () => {

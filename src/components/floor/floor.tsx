@@ -3,7 +3,7 @@ import { MarketStrip } from "@/components/market/market-strip";
 import { Reveal } from "@/components/motion/reveal";
 import { Roll } from "@/components/motion/roll";
 import type { FloorView } from "@/lib/floor";
-import { bps, dateUTC, since, usdc } from "@/lib/format";
+import { bps, dateUTC, usdc } from "@/lib/format";
 import { Tape } from "./tape";
 import "./floor.css";
 
@@ -13,7 +13,6 @@ import "./floor.css";
  * the front door and at /floor inside the app. Ink-dark: where the crowd is.
  */
 export function Floor({ view, dark = true }: { view: FloorView; dark?: boolean }) {
-  const now = view.at;
   const hoursUntil = Math.round(view.session.until / 3600);
   return (
     <div className={`sp-floor${dark ? " is-dark" : ""}`}>
@@ -48,17 +47,6 @@ export function Floor({ view, dark = true }: { view: FloorView; dark?: boolean }
             <p className="k">Keep-rate at 30 days</p>
             <p className="v">{view.keepRate30 ? <Roll value={view.keepRate30.bps / 100} kind="pct2" /> : "—"}</p>
             <p className="n">{view.keepRate30 ? `over ${view.keepRate30.receipts} receipts` : "measured on chain, by anyone"}</p>
-          </div>
-          <div className="sp-floor-fact">
-            <p className="k">Keepers racing</p>
-            <p className="v">
-              <Roll value={view.keepers.running} kind="int" />
-            </p>
-            <p className="n">
-              {view.keepers.roster} {view.keepers.roster === 1 ? "has" : "have"} won a sweep · {view.keepers.sweeps} sweeps, {view.keepers.vests} vests
-              {view.keepers.lastAt ? `, last ${since(view.keepers.lastAt, now * 1000)}` : ""}
-              {view.keepers.alive ? `, ${view.keepers.watched} registers watched now` : ", none reporting now"} · <Link href="/keepers">run one</Link>
-            </p>
           </div>
           <div className="sp-floor-fact">
             <p className="k">Receipts</p>

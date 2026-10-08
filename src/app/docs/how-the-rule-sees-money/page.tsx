@@ -9,7 +9,7 @@ export default function Page() {
       here="/docs/how-the-rule-sees-money"
       eyebrow="Docs"
       title="How the rule sees money."
-      lede="Net, not gross. The only thing verifiable on chain without trusting a keeper is the balance of your USDC account, so that is what the rule reads."
+      lede="Net, not gross. The only thing verifiable on chain without trusting anyone is the balance of your USDC account, so that is what the rule reads."
     >
       <h2>The watermark</h2>
       <p>
@@ -32,7 +32,7 @@ watermark = bal − slice`}</pre>
         nothing convert until the balance had climbed back past the old mark.
       </p>
       <p>
-        If $500 arrives and $500 leaves before a keeper acts, nothing converts. Keepers act within seconds of a balance change, so this is
+        If $500 arrives and $500 leaves before it is saved, nothing converts. Scrip saves within seconds of a balance change, so this is
         rare, and the interface says so rather than pretending otherwise.
       </p>
 
@@ -48,10 +48,10 @@ watermark = bal − slice`}</pre>
         the rate or the escalation is changed.
       </p>
 
-      <h2>What the keeper never decides</h2>
+      <h2>What Scrip never decides</h2>
       <p>
-        The amount is computed by the program from on-chain state in <span className="mono">begin_sweep</span>. The keeper passes a release
-        id and the accounts. It cannot choose more, less, or a different account.
+        The amount is computed by the program from on-chain state in <span className="mono">begin_sweep</span>. Scrip&rsquo;s servers pass a release
+        id and the accounts. They cannot choose more, less, or a different account.
       </p>
     </DocFrame>
   );

@@ -5,7 +5,7 @@ import { securityFacts } from "@/lib/security";
 import { cluster, explorerUrl } from "@/lib/solana/cluster";
 import { TEAM } from "@/lib/team";
 
-export const metadata: Metadata = { title: "Security", description: "Program ids, the upgrade authority, the build hash, what a keeper can and cannot do, what the escrow can and cannot do, and the bug bounty." };
+export const metadata: Metadata = { title: "Security", description: "Program ids, the upgrade authority, the build hash, what Scrip's servers can and cannot do, what the escrow can and cannot do, and the bug bounty." };
 export const dynamic = "force-dynamic";
 
 export default async function SecurityPage() {
@@ -27,13 +27,13 @@ export default async function SecurityPage() {
           <Row k="Source"><Link href="/docs">The docs</Link> describe every instruction; the repository is public and the IDL is committed.</Row>
         </div>
       </SiteSection>
-      <SiteSection label="What a keeper can and cannot do">
+      <SiteSection label="What Scrip's servers can and cannot do" aside="every save is checked by the program">
         <ul>
           <li><strong>Cannot choose the amount.</strong> The program computes the slice from on-chain state.</li>
           <li><strong>Cannot skip the check.</strong> <span className="mono">begin_sweep</span> refuses unless a <span className="mono">finish_sweep</span> for the same register and release follows in the same transaction.</li>
           <li><strong>Must deliver the minimum.</strong> The owner&rsquo;s own token account must gain at least the slice&rsquo;s worth at Pyth&rsquo;s price net of confidence, less the owner&rsquo;s tolerance (1% by default), or the whole sweep reverts.</li>
-          <li><strong>May keep what it does not deliver.</strong> The program checks that minimum, not the whole slice, so a keeper that delivers only the minimum keeps the rest: about the owner&rsquo;s tolerance plus Pyth&rsquo;s band, plus any move in the ten minutes a price stays valid. Scrip&rsquo;s own keepers swap the whole slice into the owner&rsquo;s account. Requiring every keeper to is the first change in the next program upgrade.</li>
-          <li><strong>Is paid the tip,</strong> 0.0005 SOL plus the receipt&rsquo;s rent, from the owner&rsquo;s float. The same for a vest, from the grant&rsquo;s float.</li>
+          <li><strong>Are trusted for the rest of the slice, for now.</strong> The program checks that minimum, not the whole slice, so a submitter that delivered only the minimum could keep the rest: about the owner&rsquo;s tolerance plus Pyth&rsquo;s band, plus any move in the ten minutes a price stays valid. Scrip&rsquo;s servers swap the whole slice into the owner&rsquo;s account. Requiring that on chain is the first change in the next program upgrade.</li>
+          <li><strong>Are paid 0.0005 SOL a save,</strong> plus the receipt&rsquo;s rent, from the saver&rsquo;s prepaid saves. The same for a vest, from the grant&rsquo;s float.</li>
         </ul>
       </SiteSection>
       <SiteSection label="The team's own wallets" aside="marked on every stub">
@@ -62,7 +62,7 @@ export default async function SecurityPage() {
       <SiteSection label="What is not done, said plainly">
         <ul>
           <li>No audit. No verifiable build yet. The upgrade authority is a key.</li>
-          <li>The legal shape — grants of securities-backed tokens on a schedule, executed by third-party keepers, non-custodial in design — has not been reviewed by a lawyer.</li>
+          <li>The legal shape — grants of securities-backed tokens on a schedule, executed automatically, non-custodial in design — has not been reviewed by a lawyer.</li>
           <li>xStocks carry a permanent delegate and a pause authority: the issuer can move, burn or freeze. Self-custody here means not our custody.</li>
         </ul>
       </SiteSection>

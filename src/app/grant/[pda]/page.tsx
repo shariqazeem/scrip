@@ -92,9 +92,9 @@ export default async function GrantPage({ params }: Params) {
           <div className="sp-org-facts">
             <Fact k="Vested so far" v={`${units(v.releasedRaw)} ${symbol}`} note={`${v.vests} vest${v.vests === 1 ? "" : "s"}`} />
             <Fact k="Still in escrow" v={`${units(v.escrowRaw)} ${symbol}`} />
-            <Fact k="Releasable now" v={`${units(v.releasableNow)} ${symbol}`} note={v.releasableNow > 0n ? "any keeper may vest it" : undefined} />
+            <Fact k="Releasable now" v={`${units(v.releasableNow)} ${symbol}`} note={v.releasableNow > 0n ? "released at the next daily vest" : undefined} />
             <Fact k="Next vest" v={v.nextVestUnix === null ? "none" : v.nextVestUnix <= now ? "continuous" : dateUTC(v.nextVestUnix)} />
-            <Fact k="Float for vests" v={sol(v.floatLamports)} note="pays each vest's receipt and tip" />
+            <Fact k="Float for vests" v={sol(v.floatLamports)} note="pays each vest's receipt and the fee for submitting it" />
             <Fact k="Revocable" v={v.revocable ? "yes, unvested only" : "no"} />
           </div>
         </section>

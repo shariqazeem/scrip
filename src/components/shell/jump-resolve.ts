@@ -22,7 +22,6 @@ export const JUMP_PAGES: ReadonlyArray<readonly [href: string, name: string, wha
   ["/app/org/plans", "Plans", "match what your people save, enforced by the program"],
   ["/floor", "The floor", "every stub as it prints, the world over"],
   ["/ledger", "Ledger", "everything that has settled"],
-  ["/keepers", "Keepers", "who runs the sweeps, and how to"],
   ["/assets", "Assets", "what a rule can buy, issuer powers on every row"],
   ["/security", "Security", "what a stranger can check"],
   ["/bounties", "Bounties", "paid in stock, on Scrip's own page"],

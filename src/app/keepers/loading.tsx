@@ -1,5 +1,5 @@
 import { SkeletonPage } from "@/components/app/skeleton";
 
 export default function Loading() {
-  return <SkeletonPage title="Keepers" />;
+  return <SkeletonPage title="" />;
 }

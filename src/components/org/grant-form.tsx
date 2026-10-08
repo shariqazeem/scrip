@@ -124,7 +124,7 @@ export function GrantForm({ owner, cluster, assets }: { owner: string; cluster: 
         <label className="sp-label" htmlFor="greason">
           For what <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>(on every vest&rsquo;s receipt)</span>
         </label>
-        <input id="greason" className="sp-input" placeholder="retention: keeper for a quarter" value={reason} maxLength={MAX_REASON_LEN} onChange={(e) => setReason(e.target.value)} />
+        <input id="greason" className="sp-input" placeholder="retention: a quarter with the team" value={reason} maxLength={MAX_REASON_LEN} onChange={(e) => setReason(e.target.value)} />
       </div>
       <div className="sp-field">
         <label className="sp-label" htmlFor="gfloat">
@@ -134,7 +134,7 @@ export function GrantForm({ owner, cluster, assets }: { owner: string; cluster: 
           <span className="sp-input-prefix">◎</span>
           <input id="gfloat" className="sp-input is-mono" inputMode="decimal" value={floatSol} onChange={(e) => setFloatSol(e.target.value.replace(/[^0-9.]/g, ""))} />
         </div>
-        <p className="sp-hint">Pays each vest&rsquo;s receipt and the keeper&rsquo;s tip, about 0.0034 SOL a vest; {sol(BigInt(Math.round(Number(floatSol || 0) * 1e9)))} covers about {Math.floor((Number(floatSol || 0) * 1e9) / 3_400_000)} vests. What is left comes back when the grant closes.</p>
+        <p className="sp-hint">Pays each vest&rsquo;s receipt and the small fee for submitting it, about 0.0034 SOL a vest; {sol(BigInt(Math.round(Number(floatSol || 0) * 1e9)))} covers about {Math.floor((Number(floatSol || 0) * 1e9) / 3_400_000)} vests. What is left comes back when the grant closes.</p>
       </div>
       <div className="sp-actions">
         <button type="submit" className="sp-action is-primary is-big" disabled={!valid || phase !== "idle"}>

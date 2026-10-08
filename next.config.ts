@@ -23,6 +23,14 @@ const nextConfig: NextConfig = {
   turbopack: { root: __dirname },
   // better-sqlite3 is a native module — keep it out of the server bundle.
   serverExternalPackages: ["better-sqlite3"],
+  /**
+   * Retired pages, kept as addresses. Saving is Scrip's job, done by its servers and checked by
+   * the program; nobody using Scrip needs a page about the machinery, so old links land on the
+   * page that says what a save is.
+   */
+  async redirects() {
+    return [{ source: "/docs/keepers", destination: "/docs/how-the-rule-sees-money", permanent: true }];
+  },
 };
 
 export default nextConfig;

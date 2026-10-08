@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { isOperator } from "@/lib/bonus";
+import { currentOwner } from "@/lib/session/server";
 import Link from "next/link";
 import { PageFrame } from "@/components/app/page-frame";
 import { since, short, usdc } from "@/lib/format";
@@ -7,7 +10,7 @@ import { keepersFromReceipts } from "@/lib/ledger/indexer";
 import { cluster } from "@/lib/solana/cluster";
 import "@/components/app/live.css";
 
-export const metadata: Metadata = { title: "Keepers", description: "The permissionless keepers that sweep Scrip's rules: who has submitted, what a keeper can and cannot do, and how to run one." };
+export const metadata: Metadata = { title: "Operations", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 /**
@@ -17,6 +20,11 @@ export const dynamic = "force-dynamic";
  * route, and the tip pays it.
  */
 export default async function KeepersPage() {
+  // Scrip's own operations view. Saving happens by itself for everyone else: nobody using Scrip
+  // should ever meet the machinery that does it, so a visitor who finds this address lands on
+  // the proof instead.
+  const me = await currentOwner();
+  if (!me || !isOperator(me)) redirect("/proof");
   const [roster, healths] = await Promise.all([keepersFromReceipts(), keeperHealths()]);
   const now = Math.floor(Date.now() / 1000);
   const health = healths[0] ?? { ok: false as const, why: "No keeper is configured on this deployment." };

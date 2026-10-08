@@ -14,7 +14,7 @@
 > | Build | 617,552 bytes, sha256 `fca62b7977b2af359cfee4544ed23dd6c293550ccd7f60b245da16cd4036d76c`, upgraded on 2026-10-08 at slot 454,396,444 to add Plans (was 585,384 bytes, `92f9cbda…`) |
 > | Verify it yourself | `solana program dump Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj out.so` reproduces that hash from the chain |
 > | Registers | [@scrip](https://scrip.work/@scrip) (an organisation), [@shariq](https://scrip.work/@shariq), [@yusih](https://scrip.work/@yusih) |
-> | Everything settled | [scrip.work/ledger](https://scrip.work/ledger) · [the keepers](https://scrip.work/keepers) |
+> | Everything settled | [scrip.work/ledger](https://scrip.work/ledger) |
 >
 > A real receipt, openable by a stranger with no wallet and no account:
 > **[$5 landed · 20% became 0.0013 SPYx, 10 seconds later, filled 0.02% from Pyth](https://scrip.work/receipt/5NcgNf2SXzEQiwXEf6bzcLtirk4JmHE3vx2Qan2uh41LHJFvFXs8SLiRNkwUCAKEKV7bqhBfUDJ92rRj7i6koicG)**
@@ -39,7 +39,7 @@ a surface in this repository, not a claim.
 | 01 | be paid | `/app/org/pay` — an organisation pays a person in stock, one signature | [`NFZucZvh…`](https://solscan.io/tx/NFZucZvh5QJAeid7WNxZECeUxuMsJgRUbFxyn57gCxmBmym5C1cP4X3yvnERN4JShde9PxLodVcohYawq3gVcza) |
 | 02 | obey a rule on an address | `/app/rule` — a slice of every arrival becomes stock | [`3ZEDeZLW…`](https://solscan.io/tx/3ZEDeZLWUqTLgMe77QmEfy3DfZBVHT5rWE8mDNhbfqo2FqP9EFAgxzjdCRYs2a3JLd4wcoJW2sNfVuPJAC7WqmVn) |
 | 03 | remember why it arrived | `/receipt/<sig>` — the reason is hashed onto the receipt | [`NFZucZvh…`](https://scrip.work/receipt/NFZucZvh5QJAeid7WNxZECeUxuMsJgRUbFxyn57gCxmBmym5C1cP4X3yvnERN4JShde9PxLodVcohYawq3gVcza) |
-| 04 | vest from anyone to anyone | `/grant/<pda>` — an escrow the payer cannot spend, released by keepers | in the mainnet program; the first mainnet grant is not opened yet |
+| 04 | vest from anyone to anyone | `/grant/<pda>` — an escrow the payer cannot spend, released on its own every day | in the mainnet program; the first mainnet grant is not opened yet |
 | 05 | arrive before the opening bell | `/floor` — the share of arrivals that settled while the NYSE was shut | most have: [`5h9QtobT…`](https://solscan.io/tx/5h9QtobTeBzNhvVzpPdL6MNLVRco6DJUx95L2HSmy6XQnbjTwGexXSPn3Q6E6vSNt1us4FxGuMCACfghNPdT5VnY) settled at 06:04 ET; the floor counts them live |
 | 06 | be given | `/claim/<payer>/<id>` — the recipient claims it into their own wallet | [`3tbreDda…`](https://solscan.io/tx/3tbreDdapAgVF7XdXGzucBiSAFK75x1xgHsALj2NVLcVRscX19J1x4J9LxZijTsh2337FRoRvWgjtWLmcMBan9vL) |
 | 07 | prove it was kept | `/ledger` — keep-rate measured on chain at 7 and 30 days | first marks 28 Sep 2026 |
@@ -65,7 +65,7 @@ token-program `revoke`. Payers keep sending dollars.
 **And the other side of the same program: get paid in ownership.** An organisation pays one
 person, a whole team from a file, or a grant that vests, in stock, with one signature; every
 line is a receipt anyone can open, with its reason; a grant sits in an escrow the payer
-cannot spend and vests by keepers. Scrip is the first organisation on it: its bounties are
+cannot spend and vests on its own. Scrip is the first organisation on it: its bounties are
 paid in stock through `@scrip`. The plan is `docs/SCRIP-COMPANY-PLAN.md`.
 
 ```bash
@@ -81,7 +81,7 @@ npm install && npm run dev
 | **Assets** | SPYx (default), QQQx, Oro GOLD, and eleven single-name xStocks — every mint read off mainnet, issuer powers on every row |
 | **Prices** | Pyth, on chain, fully verified, under ten minutes old, confidence under 1% — enforced by the program. SPYx settles against `Equity.US.SPY/USD`, which is published on weekdays, before the bell too; when no price can be verified, at a weekend, an arrival waits in the wallet and the page says so |
 | **Routing** | Jupiter, as top-level instructions the program makes atomic without a CPI |
-| **Keepers** | two, on different keys, racing for every sweep — [scrip.work/keepers](https://scrip.work/keepers) |
+| **Automatic saving** | Scrip saves within seconds of a payment; every save is one transaction the program verifies, or nothing moves |
 | **Tests** | the offline suite; 43 Rust unit tests; a live registry battery against mainnet; a 20-test on-chain battery, on devnet or a local validator with Pyth's accounts cloned |
 
 ## Try it in a minute
@@ -106,19 +106,19 @@ standing in for the route — the price is real Pyth:
 ```bash
 npm run demo:devnet -- setup      # two mints, a book at @demo, the rule on at 10%, one signature
 npm run demo:devnet -- land 200   # $200 lands in the owner's USDC account: the ghost stub appears
-npm run demo:devnet -- sweep      # the keeper sweeps it, verified against Pyth SOL/USD: the stub prints
+npm run demo:devnet -- sweep      # Scrip saves it, verified against Pyth SOL/USD: the stub prints
 npm run demo:devnet -- status
 ```
 
 Sign in at `/app` as the demo owner (`demo:devnet -- sign <nonce> <issuedAt>` signs the
 sign-in message; a wallet does the same with one click), or watch the front door without
 signing in at all. The on-chain battery (`npm run test:devnet`) runs every path the same way.
-`docs/deploy.md` is the mainnet runbook: host, RPC, keys, the program, the keeper, and the
+`docs/deploy.md` is the mainnet runbook: host, RPC, keys, the program, the saving service, and the
 front wallet anyone can pay from the front door.
 
 The mainnet deploy cost **2.978549209 SOL**, measured: 2.97 of it is the program's rent
 deposit, which comes back if the program is ever closed, and the buffer is not a second
-deposit. The keeper reads Pyth's accounts on chain; a Pyth API key is only a fallback.
+deposit. Scrip reads Pyth's accounts on chain; a Pyth API key is only a fallback.
 `npm run preflight -- --mainnet` reads the chain and prints exactly what is missing;
 `NEXT_PUBLIC_SOLANA_CLUSTER` is the only switch.
 
@@ -128,21 +128,24 @@ The rule watches your USDC associated token account. When you turn it on, the cu
 balance becomes the **watermark**. A sweep reads the balance, subtracts the watermark, and
 calls the difference the inflow; the slice is the rate applied to that, bounded by the cap
 and never below the floor; the watermark becomes the balance after the slice left. **Net,
-not gross**: if the balance fell, the watermark follows it down, and money spent before a
-keeper acts is not taxed. Swap proceeds count. `docs/how-the-rule-sees-money` on the site.
+not gross**: if the balance fell, the watermark follows it down, and money spent before it
+is saved is not counted. Swap proceeds count. `docs/how-the-rule-sees-money` on the site.
 
-## What a keeper can and cannot do
+## What Scrip's servers can and cannot do
+
+Scrip's servers submit every automatic save and every vest. The program checks each one, so
+they are trusted for very little:
 
 - cannot choose the amount: the program computes the slice from on-chain state
 - cannot omit the check: `begin_sweep` refuses unless a `finish_sweep` for the same book and release follows in the same transaction
 - must deliver the minimum: the owner's own token account, read before and after, must gain at least the slice's worth at Pyth's price net of confidence, less the owner's tolerance (1% by default)
-- **may keep what it does not deliver**: the program checks that minimum, not the whole slice, so a keeper that delivers only the minimum keeps the difference — about the tolerance plus Pyth's band, plus any move in the ten minutes a price stays valid. Scrip's own keepers swap the whole slice into the owner's account (the first two sweeps filled 0.04% above and 0.12% below Pyth). Requiring every keeper to is the first change in the next program upgrade
-- is paid a fixed tip of 0.0005 SOL plus the rent it advanced, from the owner's float
+- **are trusted for the rest of the slice, for now**: the program checks that minimum, not the whole slice, so a submitter that delivered only the minimum could keep the difference — about the tolerance plus Pyth's band, plus any move in the ten minutes a price stays valid. Scrip's servers swap the whole slice into the owner's account (the first two sweeps filled 0.04% above and 0.12% below Pyth). Requiring that on chain is the first change in the next program upgrade
+- are paid a fixed 0.0005 SOL a save plus the rent they advanced, from the owner's prepaid saves
 
 ## Atomic without a Jupiter CPI
 
 A PDA can only sign inside a CPI, so a top-level Jupiter instruction cannot draw from a
-program-owned escrow. The slice passes through the keeper's own USDC account inside one
+program-owned escrow. The slice passes through the submitting server's own USDC account inside one
 transaction, and the program guarantees — by reading the instructions sysvar, the pattern
 flash-loan programs use — that the verifying instruction runs at the end. `finish_sweep`
 checks the owner's cash is unchanged, reads a fully verified Pyth price for one of the
@@ -169,7 +172,7 @@ nobody measured is excluded and reported, never counted as spent.
 - **Pyth feeds are not one thing.** `Crypto.SPYX/USD` prices the raw token and is
   published around the clock; `Equity.US.SPY/USD` prices a share in market hours. The Book
   carries both feed ids and the program applies the multiplier only for the second. The
-  on-chain SPYX account measured 65 hours stale on 2026-09-15; the keeper posts its own.
+  on-chain SPYX account measured 65 hours stale on 2026-09-15; Scrip posts its own.
 - **Stack frames are 4 KiB.** Contexts with a dozen deserialized accounts overflowed one
   and produced garbage pointers on devnet; every heavy account is boxed.
 - **Anchor's Borsh coder encodes a zero for a field name it cannot find.** Every
@@ -182,7 +185,7 @@ nobody measured is excluded and reported, never counted as spent.
 ```
 /app/org/pay      one person: a handle or an address, an amount, a reason, an optional split
 /app/org/runs     a run: a CSV of handle, amount, reason; one signature; every line a receipt sharing a run id
-/app/org/grants   a grant: bought once into an escrow, vesting on a schedule, released by keepers
+/app/org/grants   a grant: bought once into an escrow, vesting on a schedule, released on its own every day
 /@org             the public page: pays in stock since, people paid, runs, grants vesting
 /run/<id>         every line of a run, with its reason
 /grant/<pda>      a grant and what has vested
@@ -199,7 +202,7 @@ standing instruction.
 ## The moat, before a judge says it
 
 A wallet could ship this. What it would not have: receipts anyone can open, a keep-rate
-measured on chain, permissionless keepers, correct corporate-action accounting, and real
+measured on chain, automatic saves the program verifies one by one, correct corporate-action accounting, and real
 wallets first. Zero fee in v1; then basis points on the slice.
 
 ## Where things are
@@ -214,7 +217,7 @@ wallets first. Zero fee in v1; then basis points on the slice.
 | `docs/decisions.md` | what was locked and why |
 | `anchor/programs/scrip/` | the program |
 | `src/lib/assets/registry.ts` | every asset, read off mainnet |
-| `src/keeper/` | the keeper |
+| `src/keeper/` | the saving service: watches arrivals, posts prices, submits saves and vests |
 | `src/styles/tokens.css` · `.claude/skills/scrip-ui/` | the design system |
 
 ## Open source
@@ -236,6 +239,6 @@ not a dependency in this repository.
 - **Dividends are reinvested, not paid.** There is no equity income on chain.
 - **Net, not gross.** The rule sees the net increase since the last sweep.
 - **Savings-grade, not stable.** Equities fall as well as rise.
-- **A keeper is held to a minimum, not to the whole slice** — see what a keeper can do,
-  above. The tolerance you set is also the most a keeper other than Scrip's could keep.
+- **A save is held to a minimum, not to the whole slice** — see what Scrip's servers can do,
+  above. The tolerance you set is also the most anyone submitting a save could keep.
 - **The program is upgradeable** by the deployer key until a multisig.
