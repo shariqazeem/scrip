@@ -23,8 +23,8 @@ export function HomeNav() {
         Proof
       </Link>
       <NavAccount />
-      <Link href="/#save" className="sp-home-nav-save is-wide">
-        Save
+      <Link href="/#start" className="sp-home-nav-save is-wide">
+        Start saving
       </Link>
       <NavMenu />
     </nav>

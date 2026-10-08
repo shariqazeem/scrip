@@ -11,7 +11,7 @@ export function SavedList({ rows }: { rows: ReadonlyArray<{ sig: string; mint: s
   if (rows.length === 0) {
     return (
       <p className="sp-fact-note">
-        Nothing saved by hand yet. <Link href="/#save">Save part of what you were paid</Link>, and its receipt appears here.
+        Nothing saved by hand yet. <Link href="/app/save">Save part of what you were paid</Link>, and its receipt appears here.
       </p>
     );
   }

@@ -125,8 +125,8 @@ export default async function ProofPage() {
           <Link href="/app" className="sp-nav-link">
             Your savings
           </Link>
-          <Link href="/#save" className="sp-btn is-primary">
-            Save
+          <Link href="/#start" className="sp-btn is-primary">
+            Start saving
           </Link>
         </nav>
 
@@ -153,11 +153,11 @@ export default async function ProofPage() {
               the program checks, and a receipt anyone can open, measured at 7 and 30 days.
             </p>
             <div className="sp-hero-cta">
-              <Link href="/#save" className="sp-btn is-primary">
-                Save now
+              <Link href="/#start" className="sp-btn is-primary">
+                Start saving
               </Link>
-              <Link href="/app/rule" className="sp-btn is-ghost">
-                Save every payment
+              <Link href="/app/save" className="sp-btn is-ghost">
+                Save once
               </Link>
             </div>
             <p className="sp-hero-note">
@@ -424,10 +424,10 @@ export default async function ProofPage() {
       <div className="sp-dark sp-close">
         <div className="sp-sec">
           <Reveal className="sp-reveal is-line">
-            <p className="sp-line">Save once now. Then save every payment.</p>
+            <p className="sp-line">Say yes once. Every payment saves itself.</p>
             <div className="sp-hero-cta">
-              <Link href="/#save" className="sp-btn is-primary">
-                Save now
+              <Link href="/#start" className="sp-btn is-primary">
+                Start saving
               </Link>
               <Link href={payHref} className="sp-btn is-ghost">
                 Pay someone in stock
