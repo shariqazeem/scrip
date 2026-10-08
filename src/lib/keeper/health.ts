@@ -31,6 +31,8 @@ export type KeeperHealth = {
   /** Saves still being sent, and when the last round finished. */
   readonly inFlight?: number;
   readonly lastRoundAt?: number;
+  /** Saves whose Plan match had to wait, and will be tried again. */
+  readonly matchesWaiting?: number;
 };
 
 /**

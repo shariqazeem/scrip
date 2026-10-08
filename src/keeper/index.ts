@@ -44,6 +44,7 @@ import type { KeeperBookReport, KeeperHealth } from "@/lib/keeper/health";
 import { type Outcome, held, ok } from "@/lib/outcome";
 import { type HermesLatest, hermesKey, latest as hermesLatest } from "@/lib/pyth/hermes";
 import { eachAtMost, finishesWithin, standingBy as standingByFor } from "@/lib/keeper/pool";
+import { matchRefusedForGood } from "@/lib/plan/refusal";
 import { readPriceAccount } from "@/lib/pyth/read";
 import { settleable } from "@/lib/pyth/price";
 import { decimalToE12, minOutRaw } from "@/lib/rule/min-out";
@@ -206,55 +207,110 @@ type PriceSource = { account: PublicKey; posted: boolean; feed: PriceFeed; adjus
 /**
  * THE MATCH, AFTER A SWEEP. Every Plan that counts this owner as an active member adds its
  * share of the slice, priced by Pyth, capped by the member's month and the Plan's escrow; the
- * program checks all of it, this only asks. Nothing here can fail a sweep: errors are logged and
- * reported, and a match that cannot be paid now (an empty escrow, a spent month, a stale price)
- * is simply not paid. Before the Plans upgrade is deployed there are no Member accounts and
- * this finds nothing.
+ * program checks all of it, this only asks. Nothing here can fail a sweep.
+ *
+ * A match is its own transaction, so a refused read or a dropped transaction used to lose it
+ * for good: a sponsor's promise not kept, with nothing anywhere to say so. Now a save waits here
+ * until every Plan has paid it or refused it for a reason that will not change, and is tried
+ * again each round. An owner's saves go oldest first, because the program refuses a save older
+ * than the last one it matched. Six tries, then the operator is told.
  */
+type PendingMatch = { receipt: PublicKey; sweptAsset: Asset; tries: number };
+const pendingMatches = new Map<string, PendingMatch[]>();
+const draining = new Set<string>();
+const MATCH_TRIES = 6;
+
 async function matchAfterSweep(owner: PublicKey, receipt: PublicKey, sweptAsset: Asset, sweptPrice: PriceSource): Promise<void> {
+  const key = owner.toBase58();
+  const queue = pendingMatches.get(key) ?? [];
+  queue.push({ receipt, sweptAsset, tries: 0 });
+  pendingMatches.set(key, queue);
+  await drainMatches(owner, sweptPrice);
+}
+
+/** Every waiting match of one owner, oldest first, stopping at the first that has to wait. */
+async function drainMatches(owner: PublicKey, sweptPrice: PriceSource | null): Promise<void> {
+  const key = owner.toBase58();
+  if (draining.has(key)) return;
+  draining.add(key);
   try {
-    const members = await conn.getProgramAccounts(SCRIP_PROGRAM_ID, {
-      commitment: "confirmed",
-      filters: [discriminatorFilter("Member"), { memcmp: { offset: 8 + 32, bytes: owner.toBase58() } }],
-    });
-    for (const { account } of members) {
-      const m = decodeMember(account.data);
-      if (!m.ok || m.value.status !== "active") continue;
-      const planKey = new PublicKey(m.value.plan);
-      const planInfo = await conn.getAccountInfo(planKey, "confirmed");
-      const plan = planInfo ? decodePlan(planInfo.data) : null;
-      if (!plan || !plan.ok) continue;
-      const planAsset = assetByMint(plan.value.asset);
-      if (!planAsset) continue;
-      // The sweep's own fresh price when the Plan pays in the same stock; otherwise the Plan's.
-      let source: PriceSource | null = planAsset.mint === sweptAsset.mint ? sweptPrice : null;
-      let opened: PriceSource | null = null;
-      if (!source) {
-        const p = await priceFor({ feedRaw: planAsset.feedRaw?.feedId ?? "", feedAdjusted: planAsset.feedAdjusted?.feedId ?? "" } as Book, planAsset);
-        if (!p.ok) {
-          log(`match for ${owner.toBase58().slice(0, 8)}… in plan ${planKey.toBase58().slice(0, 8)}… waits: ${p.why}`);
-          continue;
-        }
-        source = opened = p.value;
+    const queue = pendingMatches.get(key) ?? [];
+    while (queue.length > 0) {
+      const next = queue[0]!;
+      if ((await matchOnce(owner, next.receipt, next.sweptAsset, sweptPrice)) === "done") {
+        queue.shift();
+        continue;
       }
-      try {
-        const ix = matchReceiptIx({ caller: keeper.publicKey, plan: planKey, owner, receipt, priceUpdate: source.account, asset: planAsset });
-        if (!ix.ok) throw new Error(ix.why);
-        const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: PRIORITY_MICRO_LAMPORTS }), ix.value);
-        const sig = await sendAndConfirm(conn, tx, [keeper]);
-        log(`matched ${owner.toBase58().slice(0, 8)}…'s save from plan ${planKey.toBase58().slice(0, 8)}… (${sig})`);
-      } catch (err) {
-        const why = err instanceof Error ? err.message : String(err);
-        log(`match for ${owner.toBase58().slice(0, 8)}… in plan ${planKey.toBase58().slice(0, 8)}… not paid: ${why.slice(0, 200)}`);
-      } finally {
-        if (opened) await opened.close();
-      }
+      next.tries += 1;
+      if (next.tries < MATCH_TRIES) break;
+      queue.shift();
+      void alert(`match:${next.receipt.toBase58()}`, `a Plan match for ${key.slice(0, 4)}…${key.slice(-4)}'s save ${next.receipt.toBase58().slice(0, 8)}… was not paid after ${MATCH_TRIES} tries`, DAY_MS);
     }
-  } catch (err) {
-    log(`looking for plans of ${owner.toBase58().slice(0, 8)}…: ${err instanceof Error ? err.message : String(err)}`);
+    if (queue.length === 0) pendingMatches.delete(key);
+  } finally {
+    draining.delete(key);
   }
 }
 
+/** One try at every Plan counting this owner: "done" once each has paid it or refused it for good. */
+async function matchOnce(owner: PublicKey, receipt: PublicKey, sweptAsset: Asset, sweptPrice: PriceSource | null): Promise<"done" | "wait"> {
+  const who = owner.toBase58().slice(0, 8);
+  let members;
+  try {
+    members = await conn.getProgramAccounts(SCRIP_PROGRAM_ID, {
+      commitment: "confirmed",
+      filters: [discriminatorFilter("Member"), { memcmp: { offset: 8 + 32, bytes: owner.toBase58() } }],
+    });
+  } catch (err) {
+    log(`looking for plans of ${who}…: ${err instanceof Error ? err.message : String(err)}`);
+    return "wait";
+  }
+  let waiting = false;
+  for (const { account } of members) {
+    const m = decodeMember(account.data);
+    if (!m.ok || m.value.status !== "active") continue;
+    const planKey = new PublicKey(m.value.plan);
+    const planInfo = await conn.getAccountInfo(planKey, "confirmed").catch(() => undefined);
+    if (planInfo === undefined) {
+      waiting = true;
+      continue;
+    }
+    const plan = planInfo ? decodePlan(planInfo.data) : null;
+    if (!plan || !plan.ok) continue;
+    const planAsset = assetByMint(plan.value.asset);
+    if (!planAsset) continue;
+    // The sweep's own fresh price when the Plan pays in the same stock; otherwise the Plan's.
+    let source: PriceSource | null = sweptPrice && planAsset.mint === sweptAsset.mint ? sweptPrice : null;
+    let opened: PriceSource | null = null;
+    if (!source) {
+      const p = await priceFor({ feedRaw: planAsset.feedRaw?.feedId ?? "", feedAdjusted: planAsset.feedAdjusted?.feedId ?? "" } as Book, planAsset);
+      if (!p.ok) {
+        log(`match for ${who}… in plan ${planKey.toBase58().slice(0, 8)}… waits: ${p.why}`);
+        waiting = true;
+        continue;
+      }
+      source = opened = p.value;
+    }
+    try {
+      const ix = matchReceiptIx({ caller: keeper.publicKey, plan: planKey, owner, receipt, priceUpdate: source.account, asset: planAsset });
+      if (!ix.ok) throw new Error(ix.why);
+      const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: PRIORITY_MICRO_LAMPORTS }), ix.value);
+      const sig = await sendAndConfirm(conn, tx, [keeper]);
+      log(`matched ${who}…'s save from plan ${planKey.toBase58().slice(0, 8)}… (${sig})`);
+    } catch (err) {
+      const why = err instanceof Error ? err.message : String(err);
+      if (matchRefusedForGood(why)) {
+        log(`match for ${who}… in plan ${planKey.toBase58().slice(0, 8)}… refused for good: ${why.slice(0, 160)}`);
+      } else {
+        log(`match for ${who}… in plan ${planKey.toBase58().slice(0, 8)}… not paid yet: ${why.slice(0, 200)}`);
+        waiting = true;
+      }
+    } finally {
+      if (opened) await opened.close();
+    }
+  }
+  return waiting ? "wait" : "done";
+}
 
 /**
  * A fresh, fully verified price account for EITHER of the book's two feeds.
@@ -817,6 +873,10 @@ async function tick(): Promise<void> {
         log(`the save for ${key.slice(0, 8)}… is still running after ${EVALUATE_DEADLINE_MS / 1000} s; the round goes on without it`);
       }
     });
+    // Matches that had to wait, tried again: oldest first for each owner.
+    for (const owner of [...pendingMatches.keys()]) {
+      await drainMatches(new PublicKey(owner), null).catch((err) => log("matching again failed:", err instanceof Error ? err.message : err));
+    }
   } catch (err) {
     log("tick failed:", err instanceof Error ? err.message : err);
   } finally {
@@ -844,6 +904,7 @@ function health(): KeeperHealth {
     backupAfterSeconds: BACKUP_AFTER_SECONDS,
     inFlight: evaluating.size,
     lastRoundAt: Math.floor(lastRoundAt / 1000),
+    matchesWaiting: [...pendingMatches.values()].reduce((n, q) => n + q.length, 0),
   };
 }
 
