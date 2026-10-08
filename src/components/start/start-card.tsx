@@ -47,7 +47,7 @@ type WalletView = {
 type Connected = { wallet: Sendable; account: WalletAccount };
 type Done = { sig: string; settled: boolean; rateBps: number; stockName: string; first: { usd: number; units: string | null } | null; joined: Invite[] };
 
-export function StartCard({ stocks, defaultMint, solUsd, cluster, compact = false }: StartCardProps & { compact?: boolean }) {
+export function StartCard({ stocks, defaultMint, solUsd, cluster, firstQuote, compact = false }: StartCardProps & { compact?: boolean }) {
   const wallets = useWallets();
   const [rateBps, setRateBps] = useState(1000);
   const [rateTouched, setRateTouched] = useState(false);
@@ -61,15 +61,22 @@ export function StartCard({ stocks, defaultMint, solUsd, cluster, compact = fals
   const [why, setWhy] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
-  const [firstUnits, setFirstUnits] = useState<{ key: string; units: string } | null>(null);
+  const [firstUnits, setFirstUnits] = useState<{ key: string; units: string } | null>(() => {
+    const def = stocks.find((x) => x.mint === firstQuote?.mint);
+    return firstQuote && def ? { key: `${firstQuote.mint}:${firstQuote.usd}`, units: unitsText(firstQuote.outRaw, def.decimals) } : null;
+  });
   const sheetRef = useRef<HTMLDialogElement>(null);
 
   const stock = stocks.find((s) => s.mint === mint) ?? stocks[0]!;
   const chips = useMemo(() => {
-    const ready = stocks.filter((s) => s.ready !== false);
-    const list = [stocks.find((s) => s.mint === defaultMint)!, ...ready.filter((s) => s.mint !== defaultMint)];
-    if (!list.some((s) => s.mint === mint)) list.push(stock);
-    return list.filter(Boolean).slice(0, MAX_STOCK_CHIPS);
+    // The default, then the S&P 500 (the index people ask for by name, shown even while it waits
+    // for a price, with the note that says so), then whatever can settle now.
+    const def = stocks.find((s) => s.mint === defaultMint);
+    const spy = stocks.find((s) => s.ticker === "SPY" && s.mint !== defaultMint);
+    const ready = stocks.filter((s) => s.ready !== false && s.mint !== defaultMint && s.mint !== spy?.mint);
+    const list = [def, spy, ...ready].filter((s): s is StartStock => Boolean(s)).slice(0, MAX_STOCK_CHIPS);
+    if (!list.some((s) => s.mint === mint)) list[list.length - 1] = stock;
+    return list;
   }, [stocks, defaultMint, mint, stock]);
   const pct = rateBps / 100;
   const usdcHeld = view ? BigInt(view.usdc) : null;
@@ -450,7 +457,8 @@ function NeedSol({ address, have, need, solUsd }: { address: string; have: bigin
       <p className="title">First, a little SOL for the network</p>
       <p>
         Send at least <strong>{(short / 1e9).toFixed(3)} SOL</strong>
-        {money ? ` (${money})` : ""} to this wallet. Most of it is a deposit that comes back if you stop; the rest prepays the fees of your next automatic saves.
+        {money ? ` (${money})` : ""} to this wallet. Solana charges its own network fees in SOL, and Scrip does not pay them for you; none of it goes
+        to Scrip. Most of it is a deposit that comes back if you stop; the rest prepays the fees of your next automatic saves.
       </p>
       <div className="addr">
         <QrClient text={`solana:${address}`} size={112} label="This wallet's address" />

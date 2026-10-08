@@ -5,6 +5,7 @@
  *     npx tsx scripts/book.ts start   --key anchor/.keys/front.json --slug scrip --rate 1000 [--kind org]
  *     npx tsx scripts/book.ts status  --key anchor/.keys/front.json
  *     npx tsx scripts/book.ts publish --slug scrip [--off]
+ *     npx tsx scripts/book.ts set-asset --key anchor/.keys/front.json --asset QQQx [--send]
  *
  * `start` is the same one-signature transaction the rule page signs: open the book, approve
  * the Book as delegate for the allowance, deposit the float, turn the rule on. On mainnet the
@@ -14,6 +15,10 @@
  *
  * `publish` flips the off-chain flag that makes /book/<slug> public. The book row must be in
  * the cache first: open /ledger once, or POST /api/maintenance, after `start`.
+ *
+ * `set-asset` changes the stock a book saves into (one signature, the owner's). Without `--send` it
+ * only simulates and prints what would change; nothing is signed. The rule stays on; payments that
+ * land afterwards save into the new stock.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -24,7 +29,7 @@ import { ed25519 } from "@noble/curves/ed25519";
 import { USDC_MINT, assetBySymbol } from "../src/lib/assets/registry";
 import { signInMessage } from "../src/lib/session/message";
 import { decodeBook } from "../src/lib/book/decode";
-import { enableRuleIxs, openBookIx, usdcAta } from "../src/lib/rule/instructions";
+import { enableRuleIxs, openBookIx, setAssetIx, usdcAta } from "../src/lib/rule/instructions";
 import { bookPda } from "../src/lib/solana/program";
 import { sendAndConfirm } from "@/lib/solana/confirm";
 import { makeConnection } from "@/lib/solana/make-connection";
@@ -99,6 +104,34 @@ async function status() {
   console.log(`@${b.value.slug}: rule ${b.value.rule.enabled ? `on at ${b.value.rule.rateBps / 100}%` : "off"}, asset ${b.value.asset}, sweeps ${b.value.rule.sweeps}, watermark $${Number(b.value.rule.watermark) / 1e6}`);
 }
 
+async function setAsset() {
+  const owner = keypair();
+  const asset = assetBySymbol(arg("asset", "QQQx")!);
+  if (!asset) throw new Error("unknown asset symbol (QQQx, SPYx, TSLAx, GOLD, …)");
+  const info = await conn.getAccountInfo(bookPda(owner.publicKey), "confirmed");
+  if (!info) throw new Error(`${owner.publicKey.toBase58()} has no book on ${CLUSTER}`);
+  const b = decodeBook(info.data);
+  if (!b.ok) throw new Error(b.why);
+  console.log(`@${b.value.slug} saves into ${b.value.asset} today; asked to save into ${asset.symbol} (${asset.mint})`);
+  if (b.value.asset === asset.mint) {
+    console.log("already that stock; nothing to do");
+    return;
+  }
+  const ix = setAssetIx({ owner: owner.publicKey, asset, usdcMint: new PublicKey(b.value.usdcMint), termsVersion: asset.issuer.name.includes("xStocks") ? 1 : 0 });
+  if (!ix.ok) throw new Error(ix.why);
+  const tx = new Transaction().add(ix.value);
+  tx.feePayer = owner.publicKey;
+  if (!flag("send")) {
+    const { blockhash } = await conn.getLatestBlockhash("confirmed");
+    tx.recentBlockhash = blockhash;
+    const sim = await conn.simulateTransaction(tx);
+    console.log(sim.value.err ? `simulation FAILED: ${JSON.stringify(sim.value.err)}\n${(sim.value.logs ?? []).slice(-6).join("\n")}` : `simulation ok (${sim.value.unitsConsumed} units). Add --send to sign it with this key.`);
+    return;
+  }
+  const sig = await sendAndConfirm(conn, tx, [owner]);
+  console.log(`@${b.value.slug} now saves into ${asset.symbol}. ${sig}`);
+}
+
 function publish() {
   const slug = arg("slug");
   if (!slug) throw new Error("--slug <handle> is required");
@@ -125,8 +158,9 @@ const cmd = process.argv[2];
   else if (cmd === "sign") sign();
   else if (cmd === "status") await status();
   else if (cmd === "publish") publish();
+  else if (cmd === "set-asset") await setAsset();
   else {
-    console.log("usage: book.ts start --key <path> --slug <handle> [--kind person|org] [--rate 1000] [--asset SPYx] [--allowance 1000] [--float 0.05] | status --key <path> | publish --slug <handle> [--off]");
+    console.log("usage: book.ts start --key <path> --slug <handle> [--kind person|org] [--rate 1000] [--asset SPYx] [--allowance 1000] [--float 0.05] | status --key <path> | publish --slug <handle> [--off] | set-asset --key <path> --asset QQQx [--send]");
     process.exit(2);
   }
 })().catch((err) => {

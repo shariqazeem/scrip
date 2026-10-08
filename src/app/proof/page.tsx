@@ -20,7 +20,9 @@ import { validateSlug } from "@/lib/handle";
 import { type ReceiptRow, keepRate } from "@/lib/keep-rate";
 import { floorView } from "@/lib/floor";
 import { allReceiptRows, ledgerTotals, recentReceipts } from "@/lib/ledger/indexer";
-import { settleableNow } from "@/lib/pyth/ready";
+import { priceState } from "@/lib/pyth/ready";
+import { waitedFor } from "@/lib/pyth/price";
+import { nameOf } from "@/lib/save/names";
 import { MIN_SLICE } from "@/lib/rule/slice";
 import { cluster, mainnetDay } from "@/lib/solana/cluster";
 import { siteUrl } from "@/lib/site";
@@ -49,7 +51,12 @@ export default async function ProofPage() {
   const [totals, recent, rows, floor, front] = await Promise.all([ledgerTotals(), recentReceipts(24), allReceiptRows(), floorView(), frontBook()]);
   // "Within seconds" is true while a price the program would accept exists, and false on a
   // Saturday. Read it, rather than promise it: null (unknown) promises no timing at all.
-  const priceReady = front?.asset ? await settleableNow(assetByMint(front.asset.mint)) : null;
+  // Whether an arrival on the front book would become stock now: on chain, or from a price Scrip's
+  // servers can post. Only then does the page invite anyone to send it money.
+  const frontPrice = front?.asset ? await priceState(assetByMint(front.asset.mint)) : null;
+  const priceReady = frontPrice?.ready ?? null;
+  const frontWaited = frontPrice?.ready === false ? (waitedFor(frontPrice.lastAt) ?? "days") : null;
+  const frontStock = front?.asset ? nameOf(front.asset.symbol) : "stock";
   const mkt = floor.market;
   const labels = await resolveAssets(recent.map((r) => r.asset));
   const known = recent.filter((r) => labels.has(r.asset));
@@ -173,30 +180,15 @@ export default async function ProofPage() {
             {front ? (
               <LiveBook initial={front} mode="front" site={site} limit={2}>
                 <div className="sp-front-try">
-                  {payQr ? (
+                  {payQr && priceReady === true ? (
                     <>
                       <QrSvg text={payQr} size={112} label={`Send @${front.handle} $${sendUsd} with a phone wallet`} />
                       <div>
                         <p className="sp-front-try-h">Try it on @{front.handle}, for ${sendUsd}.</p>
                         <p className="sp-front-try-p">
                           This is <strong>@{front.handle}&rsquo;s own wallet</strong> on Solana mainnet. Scan with any wallet and send USDC —
-                          nothing to install, nothing to sign up for, no page to come back to —{" "}
-                          {priceReady === false ? (
-                            <>
-                              and {bps(front.rateNowBps)} of it becomes {front.asset?.symbol ?? "stock"} in that wallet as soon as there is a price
-                              the program can verify. There is none right now, so it waits there, in the open, and this page says so.
-                            </>
-                          ) : priceReady === true ? (
-                            <>
-                              and within seconds {bps(front.rateNowBps)} of it is {front.asset?.symbol ?? "stock"} in that wallet, with a receipt
-                              anyone can open.
-                            </>
-                          ) : (
-                            <>
-                              and {bps(front.rateNowBps)} of it becomes {front.asset?.symbol ?? "stock"} in that wallet as soon as there is a
-                              price the program can verify, with a receipt anyone can open.
-                            </>
-                          )}
+                          nothing to install, nothing to sign up for, no page to come back to — and within seconds {bps(front.rateNowBps)} of it
+                          is {frontStock} in that wallet, with a receipt anyone can open.
                         </p>
                         {/*
                           "Send this wallet $5 and watch" did not say whose wallet, or where
@@ -207,16 +199,22 @@ export default async function ProofPage() {
                         */}
                         <p className="sp-front-try-p is-fine">
                           The ${sendUsd} stays with @{front.handle} — it is our wallet, not yours. To watch it happen in your own,{" "}
-                          <Link href="/app/rule">save every payment</Link>. <Link href={`/@${front.handle}`}>Open the page.</Link>
+                          <Link href="/#start">start saving</Link>. <Link href={`/@${front.handle}`}>Open the page.</Link>
                         </p>
                       </div>
                     </>
                   ) : (
+                    // No invitation to send money that could only wait. Until 8 October this asked
+                    // a judge for $5 that could not become stock: honest about it, and still a trap.
                     <div>
-                      <p className="sp-front-try-h">A real book on {cluster()}, watched live.</p>
+                      <p className="sp-front-try-h">@{front.handle}, watched live.</p>
                       <p className="sp-front-try-p">
-                        {bps(front.rateNowBps)} of every arrival at <span className="mono">{front.owner.slice(0, 8)}…</span> becomes {front.asset?.symbol ?? "stock"}, with a
-                        receipt. <Link href={`/@${front.handle}`}>Open the page.</Link>
+                        {bps(front.rateNowBps)} of every arrival at <span className="mono">{front.owner.slice(0, 8)}…</span> becomes {frontStock}, with a receipt.
+                        {priceReady === false
+                          ? ` Right now there is no ${frontStock} price the program can verify (the newest is ${frontWaited} old), so arrivals wait there as USDC until one returns.`
+                          : ""}{" "}
+                        To see a save happen now, <Link href="/#start">start your own</Link>: a first save works at any hour.{" "}
+                        <Link href={`/@${front.handle}`}>Open the page.</Link>
                       </p>
                     </div>
                   )}

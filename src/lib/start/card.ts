@@ -6,6 +6,7 @@ import { solUsd } from "@/lib/market";
 import { waitedFor } from "@/lib/pyth/price";
 import { priceStates } from "@/lib/pyth/ready";
 import { powersSentence, stockByMint } from "@/lib/save/catalogue";
+import { cachedQuote } from "@/lib/save/quote-cache";
 import { cluster } from "@/lib/solana/cluster";
 
 /** A stock every payment can save into, as the start card shows it. */
@@ -29,6 +30,8 @@ export type StartCardProps = {
   readonly defaultMint: string;
   readonly solUsd: number | null;
   readonly cluster: string;
+  /** What a $5 first save into the default stock becomes, from the cached quote, so the card opens with it. */
+  readonly firstQuote: { readonly mint: string; readonly usd: number; readonly outRaw: string } | null;
 };
 
 /**
@@ -38,7 +41,13 @@ export type StartCardProps = {
 export async function startCardProps(): Promise<StartCardProps> {
   const def = defaultAsset();
   const assets = [...offeredAssets()].filter((a) => stockByMint(a.mint)).sort((a, b) => Number(b.mint === def.mint) - Number(a.mint === def.mint));
-  const [states, p, sol] = await Promise.all([priceStates(assets), jupPrices(assets.map((a) => a.mint)).catch(() => null), solUsd().catch(() => null)]);
+  const defStock = stockByMint(def.mint);
+  const [states, p, sol, q] = await Promise.all([
+    priceStates(assets),
+    jupPrices(assets.map((a) => a.mint)).catch(() => null),
+    solUsd().catch(() => null),
+    defStock ? cachedQuote(defStock, 5_000_000n, null).catch(() => null) : Promise.resolve(null),
+  ]);
   const priceOf = p && p.ok ? p.value : new Map<string, number>();
   return {
     stocks: assets.map((a, i) => {
@@ -58,5 +67,6 @@ export async function startCardProps(): Promise<StartCardProps> {
     defaultMint: def.mint,
     solUsd: sol,
     cluster: cluster(),
+    firstQuote: q && q.ok ? { mint: def.mint, usd: 5, outRaw: q.value.quote.outRaw } : null,
   };
 }

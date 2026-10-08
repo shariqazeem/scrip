@@ -56,7 +56,7 @@ export default async function FrontDoor() {
             <p className="sp-home-body">
               {receipt.kind === "save"
                 ? "The latest save on Scrip, read from Solana mainnet. Open it and every figure links to the transaction it came from."
-                : "The latest automatic save on Scrip: USDC arrived, the slice became stock in the same wallet, and the program wrote this receipt. Every figure links to the chain."}
+                : "An automatic save on Scrip, read from Solana mainnet: USDC arrived, the slice became stock in the same wallet, and the program wrote this receipt. Every figure links to the chain."}
             </p>
             <p className="sp-home-body">
               <Link href={`/receipt/${receipt.sig}`} className="sp-home-link">

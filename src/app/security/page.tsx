@@ -33,7 +33,7 @@ export default async function SecurityPage() {
           <li><strong>Cannot skip the check.</strong> <span className="mono">begin_sweep</span> refuses unless a <span className="mono">finish_sweep</span> for the same register and release follows in the same transaction.</li>
           <li><strong>Must deliver the minimum.</strong> The owner&rsquo;s own token account must gain at least the slice&rsquo;s worth at Pyth&rsquo;s price net of confidence, less the owner&rsquo;s tolerance (1% by default), or the whole sweep reverts.</li>
           <li><strong>Are trusted for the rest of the slice, for now.</strong> The program checks that minimum, not the whole slice, so a submitter that delivered only the minimum could keep the rest: about the owner&rsquo;s tolerance plus Pyth&rsquo;s band, plus any move in the ten minutes a price stays valid. Scrip&rsquo;s servers swap the whole slice into the owner&rsquo;s account. Requiring that on chain is the first change in the next program upgrade.</li>
-          <li><strong>Are paid 0.0005 SOL a save,</strong> plus the receipt&rsquo;s rent, from the saver&rsquo;s prepaid saves. The same for a vest, from the grant&rsquo;s float.</li>
+          <li><strong>Are paid a fixed fee for submitting each save,</strong> plus the receipt&rsquo;s rent, from the saver&rsquo;s prepaid saves. The same for a vest, from the grant&rsquo;s float.</li>
         </ul>
       </SiteSection>
       <SiteSection label="The team's own wallets" aside="marked on every stub">
