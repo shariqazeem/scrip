@@ -43,6 +43,7 @@ import { lookupTables, quote as jupQuote, swapInstructions } from "@/lib/jupiter
 import type { KeeperBookReport, KeeperHealth } from "@/lib/keeper/health";
 import { type Outcome, held, ok } from "@/lib/outcome";
 import { type HermesLatest, hermesKey, latest as hermesLatest } from "@/lib/pyth/hermes";
+import { eachAtMost, finishesWithin, standingBy as standingByFor } from "@/lib/keeper/pool";
 import { readPriceAccount } from "@/lib/pyth/read";
 import { settleable } from "@/lib/pyth/price";
 import { decimalToE12, minOutRaw } from "@/lib/rule/min-out";
@@ -164,13 +165,8 @@ function stuck(key: string, owner: string, usdc: bigint, reason: string, everyMs
   void alert(`stuck:${key}:${everyMs}`, `$${(Number(usdc) / 1e6).toFixed(2)} has waited ${Math.round(waited / 60)} min to be saved for ${owner.slice(0, 4)}…${owner.slice(-4)}: ${reason.slice(0, 220)}`, everyMs);
 }
 
-/**
- * Whether a backup may act on something first seen at `since`. The first service acts at once
- * and the backup only on what it left alone; `standingBy` says so on the health page.
- */
-function standingBy(since: number, now: number): boolean {
-  return BACKUP_AFTER_SECONDS > 0 && now - since < BACKUP_AFTER_SECONDS;
-}
+/** Whether this service, if it is a backup, still leaves something first seen at `since` alone. */
+const standingBy = (since: number, now: number) => standingByFor(BACKUP_AFTER_SECONDS, since, now);
 /** When a register's balance first fell below its watermark, for a backup's patience. */
 const lowSince = new Map<string, number>();
 
@@ -830,28 +826,6 @@ async function tick(): Promise<void> {
       wakeRequested = false;
       void tick();
     }
-  }
-}
-
-/** Run `fn` over `items`, at most `limit` at a time. `fn` must not throw. */
-async function eachAtMost<T>(limit: number, items: readonly T[], fn: (item: T) => Promise<void>): Promise<void> {
-  let next = 0;
-  const worker = async () => {
-    while (next < items.length) await fn(items[next++]!);
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-}
-
-/** Whether `p` settles within `ms`. It keeps running either way. */
-async function finishesWithin(p: Promise<unknown>, ms: number): Promise<boolean> {
-  let timer: NodeJS.Timeout | undefined;
-  const late = new Promise<boolean>((resolve) => {
-    timer = setTimeout(() => resolve(false), ms);
-  });
-  try {
-    return await Promise.race([p.then(() => true), late]);
-  } finally {
-    clearTimeout(timer);
   }
 }
 
