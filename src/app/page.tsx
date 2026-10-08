@@ -62,7 +62,9 @@ export default async function FrontDoor() {
             <p className="sp-home-body">
               {receipt.kind === "save"
                 ? "The latest save on Scrip, read from Solana mainnet. Open it and every figure links to the transaction it came from."
-                : "An automatic save on Scrip, read from Solana mainnet: USDC arrived, the slice became stock in the same wallet, and the program wrote this receipt. Every figure links to the chain."}
+                : receipt.match
+                  ? "An automatic save on Scrip, read from Solana mainnet: USDC arrived, the slice became stock in the same wallet, and seconds later a sponsor’s Plan added its share. Every figure links to the chain."
+                  : "An automatic save on Scrip, read from Solana mainnet: USDC arrived, the slice became stock in the same wallet, and the program wrote this receipt. Every figure links to the chain."}
             </p>
             {strangers > 0 ? (
               <p className="sp-home-body">
@@ -84,7 +86,7 @@ export default async function FrontDoor() {
             compact
             href={`/receipt/${receipt.sig}`}
             kicker={receipt.kind === "save" ? "Saved on Solana" : "Saved automatically"}
-            tag={receipt.team ? "team" : undefined}
+            tag={receipt.tag}
             landed={
               receipt.kind === "save" ? (
                 <>
@@ -100,6 +102,21 @@ export default async function FrontDoor() {
             units={unitsFromRaw(receipt.amountRaw, receipt.decimals)}
             symbol={receipt.name}
             when={stampUTC(receipt.settledUnix)}
+            sections={
+              receipt.match
+                ? [
+                    {
+                      rows: [
+                        {
+                          k: `Added by ${receipt.match.by}`,
+                          v: `${usdc(receipt.match.usdc)} → ${unitsFromRaw(receipt.match.amountRaw, receipt.decimals)} ${receipt.name}`,
+                          tone: "ok" as const,
+                        },
+                      ],
+                    },
+                  ]
+                : undefined
+            }
           />
         </section>
       ) : null}
