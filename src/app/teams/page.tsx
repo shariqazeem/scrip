@@ -24,6 +24,9 @@ function cleanFrom(raw: string | undefined): string | null {
  * enforces, pay part of a payment in stock to the person's own wallet, pay a whole team in one
  * run, or grant stock that vests. A hand-paid amount is never called a match.
  */
+/** The save the first Plan match on mainnet was paid against (8 Oct 2026); a receipt is permanent. */
+const FIRST_MATCH_RECEIPT = "5YrDMN5kMJmew3gAffLNCLiqEHeYzMH7zdsvqgxoUBvdkKXH9iaYXVZbxXfwcWnbKSigs3xrqQrYXjCBDc1ULPa9";
+
 export default async function TeamsPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const from = cleanFrom((await searchParams).from);
   const summary = await plansSummary();
@@ -56,6 +59,12 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
               {live.plans} Plan{live.plans === 1 ? "" : "s"}, {live.members} member{live.members === 1 ? "" : "s"}, {live.matches} match{live.matches === 1 ? "" : "es"} paid,{" "}
               {usdc(live.matchedUsdc)} added in stock. <Link href="/ledger">Every receipt</Link>
             </Row>
+            {live.matches > 0 ? (
+              <Row k="What a match looks like">
+                The first one on mainnet, in green on the save&rsquo;s own receipt, linked to its own transaction. It was Scrip&rsquo;s own test wallet,
+                matched by its founder&rsquo;s Plan. <Link href={`/receipt/${FIRST_MATCH_RECEIPT}`}>Open the receipt</Link>
+              </Row>
+            ) : null}
           </div>
         ) : null}
       </SiteSection>
