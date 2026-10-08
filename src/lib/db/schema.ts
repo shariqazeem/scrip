@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 /**
  * THE CACHE OF A CHAIN, NOT A LEDGER OF RECORD.
@@ -230,6 +230,23 @@ export const invites = sqliteTable("invites", {
   addedBy: text("added_by").notNull(),
   createdAt: createdAt(),
 });
+
+/**
+ * A REQUEST TO JOIN A PLAN — a saver asked, from their savings, to be invited into a Plan that
+ * Scrip's own team funds. Only the sponsor invites (`add_member`, with their own signature); this
+ * is the queue they read. One per wallet and Plan, the address taken from the signed-in session,
+ * never from the request. Like `invites`, it exists only here: losing it loses requests, never
+ * money, and never a membership, which is an account on the chain.
+ */
+export const planRequests = sqliteTable(
+  "plan_requests",
+  {
+    plan: text("plan").notNull(),
+    address: text("address").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.plan, t.address] })],
+);
 
 /** The indexer's cursor: the newest signature it has fully processed, per program. */
 export const cursors = sqliteTable("cursors", {

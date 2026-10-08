@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
 import { assetByMint, defaultAsset } from "@/lib/assets/registry";
 import { acceptMemberIx, closePlanIx, removeMemberIx, validateTerms } from "@/lib/plan/instructions";
-import { INVITES_PER_TX, buildInvites, buildOpenPlan, buildSingle } from "@/lib/plan/build";
+import { INVITES_PER_TX, buildInvites, buildOpenPlan, buildSingle, buildTopUp } from "@/lib/plan/build";
 import { planAt } from "@/lib/plan/read";
 import { resolveRecipient } from "@/lib/org/resolve";
 import { currentOwner } from "@/lib/session/server";
@@ -11,7 +11,7 @@ import { releaseIdFromHex } from "@/lib/solana/program";
 export const dynamic = "force-dynamic";
 
 /**
- * A PLAN, ONE ACTION AT A TIME — open, invite, join, remove, close. The signed-in wallet is the
+ * A PLAN, ONE ACTION AT A TIME — open, top up, invite, join, remove, close. The signed-in wallet is the
  * signer of every transaction built here: the sponsor for everything but joining, the member
  * for joining. Each comes back unsigned; the wallet signs and sends it.
  */
@@ -73,6 +73,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (plan.sponsor !== me) return fail("Only the wallet that opened this Plan can change it.", 403);
+
+  if (body.action === "topup") {
+    const amount = Number(body.budgetUsd);
+    if (!Number.isFinite(amount) || amount < 1) return fail("Add at least $1.");
+    const id = releaseIdFromHex(plan.planId);
+    if (!id.ok) return fail(id.why);
+    const built = await buildTopUp({ sponsor: signer, planId: id.value, asset, amountUsdc: BigInt(Math.round(amount * 1e6)), name: plan.name });
+    return built.ok ? NextResponse.json(built.value) : fail(built.why);
+  }
 
   if (body.action === "invite") {
     const parts = String(body.to ?? "").split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);

@@ -350,7 +350,7 @@ function Story({ view, showWorth = true }: { view: LiveView; showWorth?: boolean
           {asset && asset.decimals !== null ? <Fact k={`${nameOf(asset.symbol)} from receipts`} v={unitsFromRaw(units, asset.decimals)} big /> : null}
           {worth !== null && showWorth ? <Fact k="Worth today, on Jupiter" v={usd(worth)} note={worth >= Number(paid) / 1e6 ? "above what went in" : "below what went in"} tone={worth >= Number(paid) / 1e6 ? "ok" : "err"} /> : null}
         </div>
-        {asset && asset.decimals !== null && mine.length > 0 ? <Staircase arrivals={mine} decimals={asset.decimals} symbol={asset.symbol} /> : null}
+        {asset && asset.decimals !== null && mine.length > 0 ? <Staircase arrivals={mine} decimals={asset.decimals} symbol={asset.symbol} now={view.at} /> : null}
       </div>
     </section>
   );
@@ -414,13 +414,13 @@ function Fact({ k, v, note, big, tone }: { k: string; v: string; note?: string; 
 }
 
 /** Cumulative units over time, one step per receipt. Server-free SVG from real points. */
-function Staircase({ arrivals, decimals, symbol }: { arrivals: readonly LiveArrival[]; decimals: number; symbol: string }) {
+/** `now` is the view's own read time, so the server and the browser draw the same picture. */
+function Staircase({ arrivals, decimals, symbol, now }: { arrivals: readonly LiveArrival[]; decimals: number; symbol: string; now: number }) {
   const pts = [...arrivals].sort((a, b) => a.settledUnix - b.settledUnix);
   const W = 320;
   const H = 120;
   const t0 = pts[0]!.settledUnix;
   const t1 = Math.max(pts[pts.length - 1]!.settledUnix, t0 + 1);
-  const now = Math.floor(Date.now() / 1000);
   const tEnd = Math.max(t1, now);
   const span = Math.max(tEnd - t0, 1);
   let acc = 0n;
@@ -434,7 +434,7 @@ function Staircase({ arrivals, decimals, symbol }: { arrivals: readonly LiveArri
     d += ` L ${px.toFixed(1)} ${y(acc).toFixed(1)}`;
     acc += BigInt(p.amountRaw);
     d += ` L ${px.toFixed(1)} ${y(acc).toFixed(1)}`;
-    ticks.push({ x: px, y: y(acc) });
+    ticks.push({ x: Math.round(px * 10) / 10, y: Math.round(y(acc) * 10) / 10 });
   }
   d += ` L ${x(tEnd).toFixed(1)} ${y(acc).toFixed(1)}`;
   return (

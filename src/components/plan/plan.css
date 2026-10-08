@@ -226,3 +226,46 @@
     justify-content: center;
   }
 }
+
+/* ── ask to join Scrip's own Plan ───────────────────────────────────── */
+.sp-planask.is-compact {
+  margin: 0;
+  padding: var(--s-4);
+  box-shadow: none;
+}
+.sp-planask-done {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin: var(--s-3) 0 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink);
+}
+.sp-planask-done svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent);
+}
+.sp-plan-asks {
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+}
+.sp-plan-asks ul {
+  margin: var(--s-2) 0 var(--s-3);
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--s-1);
+}
+.sp-plan-asks li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-plan-asks li .mono {
+  color: var(--ink);
+}

@@ -267,6 +267,22 @@
 .sp-start-secondary:hover {
   border-color: var(--accent);
 }
+button.sp-start-secondary {
+  width: 100%;
+  padding: 0 var(--s-4);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.sp-start-next {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.sp-start-next strong {
+  color: var(--ink);
+  font-weight: 600;
+}
 
 /* ── inside the app: the card on its own sheet ──────────────────────── */
 .sp-start-panel {

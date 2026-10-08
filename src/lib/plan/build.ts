@@ -11,6 +11,7 @@ import { type Outcome, held, ok } from "@/lib/outcome";
 import { connection } from "@/lib/solana/connection";
 import { newReleaseId, toHex } from "@/lib/solana/program";
 import { type PlanTerms, addMemberIx, openPlanIx, planEscrow, planPda, validateTerms } from "./instructions";
+import { INVITES_PER_TX } from "./requests";
 
 /**
  * OPENING A PLAN — one transaction the sponsor signs:
@@ -22,8 +23,7 @@ import { type PlanTerms, addMemberIx, openPlanIx, planEscrow, planPda, validateT
  * so a long list never crowds the route out of the size limit.
  */
 const OPEN_COMPUTE_UNITS = 600_000;
-/** Each `add_member` is five accounts and an account's rent; ten fit comfortably in one transaction. */
-export const INVITES_PER_TX = 10;
+export { INVITES_PER_TX } from "./requests";
 
 export type BuiltPlan = {
   readonly transactionBase64: string;
@@ -88,6 +88,58 @@ export async function buildOpenPlan(input: { sponsor: PublicKey; asset: Asset; b
     escrow: escrow.toBase58(),
     quote: { outAmountRaw: fresh.value.outAmount, minOutRaw: fresh.value.otherAmountThreshold, route: q.value.route },
     lastValidBlockHeight,
+  });
+}
+
+/**
+ * TOPPING UP A PLAN — one transaction the sponsor signs: USDC routed by Jupiter into the Plan's
+ * own escrow, the same way the opening transaction funds it. There is no instruction for it,
+ * because the escrow is a token account the Plan owns: whatever lands there can only leave as a
+ * match to a member or, when the Plan closes, back to the sponsor.
+ *
+ *     [compute, memo, jupiter… (USDC → the plan's stock, into the escrow)]
+ */
+export async function buildTopUp(input: { sponsor: PublicKey; planId: Uint8Array; asset: Asset; amountUsdc: bigint; name: string | null }): Promise<Outcome<{ transactionBase64: string; lastValidBlockHeight: number; quote: { outAmountRaw: string; minOutRaw: string } }>> {
+  const q = await quoteIntake(input.asset, input.amountUsdc);
+  if (!q.ok) return q;
+  const escrow = planEscrow(input.sponsor, input.planId, input.asset);
+  const fresh = await jupQuote({ inputMint: USDC_MINT, outputMint: input.asset.mint, amount: input.amountUsdc, slippageBps: INTAKE_SLIPPAGE_BPS, maxAccounts: 30 });
+  if (!fresh.ok) return fresh;
+  const swap = await swapInstructions({ quote: fresh.value, userPublicKey: input.sponsor, destinationTokenAccount: escrow });
+  if (!swap.ok) return swap;
+  const conn = connection();
+  const alts = await lookupTables(conn, swap.value.lookupTableAddresses);
+  if (!alts.ok) return alts;
+  const memo = validateReason(`Top-up${input.name ? `: ${input.name}` : ""}`);
+  let blockhash: string;
+  let lastValidBlockHeight: number;
+  try {
+    ({ blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed"));
+  } catch (err) {
+    return held(`Could not reach Solana (${err instanceof Error ? err.message : String(err)}).`);
+  }
+  const ixs: TransactionInstruction[] = [
+    ComputeBudgetProgram.setComputeUnitLimit({ units: OPEN_COMPUTE_UNITS }),
+    ComputeBudgetProgram.setComputeUnitPrice({ microLamports: INTAKE_MICRO_LAMPORTS }),
+    ...(memo.ok && memo.value ? [memoIx(input.sponsor, memo.value)] : []),
+    ...swap.value.setup,
+    swap.value.swap,
+    ...(swap.value.cleanup ? [swap.value.cleanup] : []),
+  ];
+  let tx: VersionedTransaction;
+  try {
+    tx = new VersionedTransaction(new TransactionMessage({ payerKey: input.sponsor, recentBlockhash: blockhash, instructions: ixs }).compileToV0Message(alts.value));
+  } catch (err) {
+    return held(`The top-up could not be assembled (${err instanceof Error ? err.message : String(err)}).`);
+  }
+  const bytes = tx.serialize();
+  if (bytes.length > 1232) return held("The route is too long for one transaction right now. Try again in a moment.");
+  const refusal = await simulateFirst(conn as never, tx);
+  if (refusal) return held(refusal.kind === "usdc" ? "This wallet holds less USDC than that. Nothing was signed." : `The top-up would fail right now (${refusal.detail}). Nothing was signed.`);
+  return ok({
+    transactionBase64: Buffer.from(bytes).toString("base64"),
+    lastValidBlockHeight,
+    quote: { outAmountRaw: fresh.value.outAmount, minOutRaw: fresh.value.otherAmountThreshold },
   });
 }
 

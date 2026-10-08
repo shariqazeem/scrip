@@ -16,7 +16,9 @@ export function readSimulation(err: unknown, logs: readonly string[] | null | un
   if (/insufficient lamports|insufficient funds for rent|InsufficientFundsForRent|Attempt to debit an account but found no record of a prior credit/i.test(all + JSON.stringify(err))) {
     return { kind: "sol", detail: all.match(/insufficient lamports \d+, need \d+/i)?.[0] ?? "insufficient SOL" };
   }
-  if (/Error: insufficient funds|custom program error: 0x1\b[\s\S]*Tokenkeg|TokenzQd[\s\S]*custom program error: 0x1\b/i.test(all)) {
+  // Jupiter checks the input balance before it routes: 6024 (0x1788) is its InsufficientFunds,
+  // logged with no Anchor line, so it is matched by the program and the code together.
+  if (/Error: insufficient funds|custom program error: 0x1\b[\s\S]*Tokenkeg|TokenzQd[\s\S]*custom program error: 0x1\b|JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 failed: custom program error: 0x1788/i.test(all)) {
     return { kind: "usdc", detail: "insufficient USDC" };
   }
   if (/SlippageToleranceExceeded|custom program error: 0x1771|ReceivedBelowMinimum|below the minimum/i.test(all)) {

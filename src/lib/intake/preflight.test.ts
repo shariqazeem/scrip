@@ -21,6 +21,14 @@ describe("reading a simulated payment", () => {
   it("names a USDC shortfall", () => {
     expect(readSimulation({ InstructionError: [4, { Custom: 1 }] }, ["Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]", "Program log: Error: insufficient funds"])?.kind).toBe("usdc");
   });
+  it("names a USDC shortfall Jupiter refused before routing, as it read on mainnet on 8 October", () => {
+    const logs = [
+      "Program JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 invoke [1]",
+      "Program JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 consumed 961 of 570550 compute units",
+      "Program JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4 failed: custom program error: 0x1788",
+    ];
+    expect(readSimulation({ InstructionError: [3, { Custom: 6024 }] }, logs)?.kind).toBe("usdc");
+  });
   it("names a route that moved past the minimum", () => {
     expect(readSimulation({ InstructionError: [5, { Custom: 6001 }] }, ["Program log: AnchorError occurred. Error Code: SlippageToleranceExceeded."])?.kind).toBe("price");
   });

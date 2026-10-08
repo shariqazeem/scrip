@@ -10,6 +10,9 @@ import { type Sendable, fromBase64, signAll, signAndSend, toBase64 } from "@/lib
 import { type FormPhase, useTxToast } from "@/components/toast/use-tx-toast";
 import { QrClient } from "@/components/pay/qr-client";
 import { CopyText } from "@/components/app/copy-text";
+import { AskForMatch } from "@/components/receipt/share";
+import { RequestToJoin } from "@/components/plan/request-to-join";
+import { short } from "@/lib/format";
 import { isPhone, rememberWallet, rememberedWallet, silentConnect, useWallets, walletBrowseLinks } from "@/components/save/wallets";
 import { dayMonth, dollars, solInMoney, unitsText } from "@/components/save/types";
 import "@/components/save/save.css";
@@ -45,9 +48,9 @@ type WalletView = {
   invites: Invite[];
 };
 type Connected = { wallet: Sendable; account: WalletAccount };
-type Done = { sig: string; settled: boolean; rateBps: number; stockName: string; first: { usd: number; units: string | null } | null; joined: Invite[] };
+type Done = { sig: string; owner: string; settled: boolean; rateBps: number; stockName: string; first: { usd: number; units: string | null } | null; joined: Invite[] };
 
-export function StartCard({ stocks, defaultMint, solUsd, cluster, firstQuote, compact = false }: StartCardProps & { compact?: boolean }) {
+export function StartCard({ stocks, defaultMint, solUsd, cluster, firstQuote, openPlan, compact = false }: StartCardProps & { compact?: boolean }) {
   const wallets = useWallets();
   const [rateBps, setRateBps] = useState(1000);
   const [rateTouched, setRateTouched] = useState(false);
@@ -250,6 +253,7 @@ export function StartCard({ stocks, defaultMint, solUsd, cluster, firstQuote, co
     }
     setDone({
       sig,
+      owner: c.account.address,
       settled,
       rateBps,
       stockName: stock.name,
@@ -267,7 +271,7 @@ export function StartCard({ stocks, defaultMint, solUsd, cluster, firstQuote, co
   const busy = phase === "connecting" || phase === "building" || phase === "signing" || phase === "confirming";
 
   // ── what the card says, in order of what is true ─────────────────────────────────────
-  if (done) return <Started done={done} compact={compact} />;
+  if (done) return <Started done={done} compact={compact} openPlan={openPlan} />;
   if (view?.saving && connected) return <AlreadySaving saving={view.saving} />;
 
   return (
@@ -502,7 +506,9 @@ function AlreadySaving({ saving }: { saving: NonNullable<WalletView["saving"]> }
   );
 }
 
-function Started({ done, compact }: { done: Done; compact: boolean }) {
+function Started({ done, compact, openPlan }: { done: Done; compact: boolean; openPlan: StartCardProps["openPlan"] }) {
+  // Scrip's own Plan, for somebody who did not just join one and is not its sponsor.
+  const offer = openPlan && done.joined.length === 0 && done.owner !== openPlan.sponsor ? openPlan : null;
   return (
     <div className={`sp-start sp-start-done${compact ? " is-compact" : ""}`} role="status">
       <p className="sp-start-done-title">
@@ -526,11 +532,19 @@ function Started({ done, compact }: { done: Done; compact: boolean }) {
           <strong>{j.sponsorName ?? "Your sponsor"}</strong> adds {j.matchBps / 100}% of every automatic save, up to {dollars(Number(j.monthlyCapUsdc) / 1e6)} a month. You joined their Plan.
         </p>
       ))}
+      {offer ? <RequestToJoin plan={offer} compact /> : null}
+      {done.joined.length === 0 && !offer ? (
+        <p className="sp-start-next">
+          <strong>One more thing, while it is fresh.</strong> Whoever pays you can add to every automatic save, in stock, with a Plan the program
+          enforces. Ask them: the message carries a link that shows them how.
+        </p>
+      ) : null}
       <div className="sp-start-done-actions">
         {/* A full load, so the page reads the new session and the new record for certain. */}
         <button type="button" className="sp-save-go" onClick={() => window.location.assign("/app")}>
           Open your savings
         </button>
+        {done.joined.length === 0 ? <AskForMatch from={short(done.owner)} className="sp-start-secondary" label="Ask whoever pays you to match it" /> : null}
       </div>
     </div>
   );

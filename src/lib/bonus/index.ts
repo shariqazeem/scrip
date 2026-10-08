@@ -21,11 +21,17 @@ export function bonusBudgetUsd(): number {
   return Number.isFinite(n) && n >= 0 ? n : 50;
 }
 
-/** Who may run the operator page: the addresses named in SCRIP_OPERATORS, or the founder. */
+/** Scrip's operators: the addresses named in SCRIP_OPERATORS, or the founder. */
+export function operatorAddresses(): string[] {
+  return (process.env.SCRIP_OPERATORS ?? "EsWeMEvuLDV2Q4CXigZbETzqXfEQwZntQjwD4Cy8AgY5")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** Who may run the operator page. */
 export function isOperator(address: string | null | undefined): boolean {
-  if (!address) return false;
-  const list = (process.env.SCRIP_OPERATORS ?? "EsWeMEvuLDV2Q4CXigZbETzqXfEQwZntQjwD4Cy8AgY5").split(",").map((s) => s.trim());
-  return list.includes(address);
+  return !!address && operatorAddresses().includes(address);
 }
 
 export type InviteRow = {

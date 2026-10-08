@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TriangleAlert } from "lucide-react";
+import { INVITES_PER_TX } from "@/lib/plan/requests";
 import { usePlanAction } from "./use-plan-action";
 
 /** INVITE — names or addresses, up to ten a signature. Each person joins with their own. */
@@ -33,6 +34,61 @@ export function InviteToPlan({ owner, cluster, plan }: { owner: string; cluster:
         <p className="sp-hint">Nothing is matched until they join, with their own signature, and only saves made after that.</p>
       )}
     </form>
+  );
+}
+
+/** TOP UP — USDC routed into the escrow in one signature; it can only leave as a match, or back at close. */
+export function TopUpPlan({ owner, cluster, plan, stockName }: { owner: string; cluster: string; plan: string; stockName: string }) {
+  const [usd, setUsd] = useState("25");
+  const action = usePlanAction(owner, cluster, "Top up");
+  const amount = Number(usd);
+  const valid = Number.isFinite(amount) && amount >= 1;
+  return (
+    <form
+      className="sp-plan-invite"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (valid) void action.run({ action: "topup", plan, budgetUsd: amount });
+      }}
+    >
+      <label className="sp-label" htmlFor={`top-${plan}`}>
+        Add to the escrow
+      </label>
+      <div className="sp-plan-invite-row">
+        <input id={`top-${plan}`} className="sp-input mono" inputMode="decimal" value={usd} onChange={(e) => setUsd(e.target.value.replace(/[^0-9.]/g, ""))} aria-describedby={`top-${plan}-hint`} />
+        <button type="submit" className="sp-action is-primary" disabled={!valid || action.busy}>
+          {action.phase === "signing" ? "Waiting for your wallet…" : action.phase === "done" ? "Added" : `Add $${valid ? amount : 0} in ${stockName}`}
+        </button>
+      </div>
+      {action.why ? (
+        <p className="sp-why">
+          <TriangleAlert size={14} strokeWidth={2} aria-hidden /> {action.why}
+        </p>
+      ) : (
+        <p className="sp-hint" id={`top-${plan}-hint`}>
+          Your USDC becomes {stockName} in the escrow, in one signature. It can only leave as a match to a member, or back to you when the Plan closes.
+        </p>
+      )}
+    </form>
+  );
+}
+
+/** INVITE WHO ASKED — the oldest requests, as many as one signature carries. */
+export function InviteRequests({ owner, cluster, plan, addresses }: { owner: string; cluster: string; plan: string; addresses: readonly string[] }) {
+  const action = usePlanAction(owner, cluster, "Invite");
+  const batch = addresses.slice(0, INVITES_PER_TX);
+  const label = batch.length === addresses.length ? (batch.length === 1 ? "Invite them" : `Invite all ${batch.length}`) : `Invite the first ${batch.length}`;
+  return (
+    <div className="sp-plan-join-act">
+      <button type="button" className="sp-action is-primary" disabled={action.busy || batch.length === 0} onClick={() => void action.run({ action: "invite", plan, to: batch.join(" ") })}>
+        {action.phase === "signing" ? "Waiting for your wallet…" : action.phase === "done" ? "Invited" : label}
+      </button>
+      {action.why ? (
+        <p className="sp-why">
+          <TriangleAlert size={14} strokeWidth={2} aria-hidden /> {action.why}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

@@ -6,9 +6,11 @@ import { PageFrame } from "@/components/app/page-frame";
 import { FirstSteps, SavingsHead, SignInPanel } from "@/components/app/savings-home";
 import { SignOut } from "@/components/auth/connect";
 import { PlanMemberships } from "@/components/plan/memberships";
+import { RequestToJoin } from "@/components/plan/request-to-join";
 import { SavedList } from "@/components/save/saved-list";
 import { StartCard } from "@/components/start/start-card";
 import { liveView } from "@/lib/book/live";
+import { askedAt } from "@/lib/plan/open";
 import { membershipsOf } from "@/lib/plan/read";
 import { automaticToday, listOf } from "@/lib/save/card";
 import { readStockHoldings } from "@/lib/save/holdings";
@@ -69,6 +71,9 @@ export default async function HomePage() {
   const live = view.ok ? view.value : null;
   const hasRecord = live?.handle != null;
   const holdings = stocks.ok ? stocks.value : [];
+  // Scrip's own Plan, for a saver in no Plan: matches follow automatic saves, so only with a record.
+  const offer = start.openPlan && hasRecord && memberships.length === 0 && owner !== start.openPlan.sponsor ? start.openPlan : null;
+  const asked = offer ? await askedAt(offer.pda, owner).catch(() => null) : null;
   // Said only while it is true: an automatic save settles against a price the program can
   // verify, and today that is a short list.
   const automaticNote =
@@ -82,6 +87,7 @@ export default async function HomePage() {
     <PageFrame eyebrow={live?.handle ? `@${live.handle}` : "Scrip"} title="Your savings" actions={<SignOut />}>
       <SavingsHead holdings={holdings} totals={totals} why={stocks.ok ? null : stocks.why} />
       <PlanMemberships owner={owner} cluster={cluster()} rows={memberships} hasRecord={hasRecord} />
+      {offer ? <RequestToJoin plan={offer} askedAt={asked} /> : null}
       {hasRecord ? (
         <FirstSteps owner={owner} totals={totals} hasRecord={hasRecord} automaticNote={automaticNote} inPlan={inPlan} />
       ) : (

@@ -3,12 +3,13 @@ import { PublicKey } from "@solana/web3.js";
 import { PageFrame } from "@/components/app/page-frame";
 import { SignInPanel } from "@/components/app/savings-home";
 import { SignOut } from "@/components/auth/connect";
-import { ClosePlan, InviteToPlan, RemoveFromPlan } from "@/components/plan/plan-actions";
+import { ClosePlan, InviteRequests, InviteToPlan, RemoveFromPlan, TopUpPlan } from "@/components/plan/plan-actions";
 import { type PlanAssetOpt, PlanForm } from "@/components/plan/plan-form";
 import { assetByMint, defaultAsset, offeredAssets } from "@/lib/assets/registry";
 import { dateUTC, short, unitsFromRaw, usd, usdc } from "@/lib/format";
 import { prices as jupPrices } from "@/lib/jupiter/client";
 import { planEscrow } from "@/lib/plan/instructions";
+import { type WaitingRequest, waitingRequests } from "@/lib/plan/open";
 import { type MemberView, type PlanView, membersOf, plansOf } from "@/lib/plan/read";
 import { waitedFor } from "@/lib/pyth/price";
 import { priceStates } from "@/lib/pyth/ready";
@@ -48,6 +49,8 @@ export default async function PlansPage() {
     list.length > 0 ? jupPrices([...new Set(list.map((p) => p.asset))]).catch(() => null) : Promise.resolve(null),
   ]);
   const priceOf = quoted && quoted.ok ? quoted.value : new Map<string, number>();
+  // Who asked to join, from the savings page: still waiting, with whether each one saves.
+  const asks = await Promise.all(list.map((p, i) => waitingRequests(p.pda, members[i]?.ok ? members[i].value.map((m) => m.owner) : [], p.sponsor).catch(() => [])));
   const opts: PlanAssetOpt[] = assets.map((a, i) => ({ mint: a.mint, name: nameOf(a.symbol), symbol: a.symbol, waits: states[i]!.ready === false ? (waitedFor(states[i]!.lastAt) ?? "days") : null }));
   const net = cluster();
 
@@ -61,7 +64,7 @@ export default async function PlansPage() {
       <div className="sp-plan">
         {!plans.ok ? <p className="sp-register-empty">{plans.why}</p> : null}
         {list.map((p, i) => (
-          <PlanCard key={p.pda} plan={p} members={members[i]?.ok ? members[i].value : []} owner={owner} net={net} priceUsd={priceOf.get(p.asset) ?? null} />
+          <PlanCard key={p.pda} plan={p} members={members[i]?.ok ? members[i].value : []} asks={asks[i] ?? []} owner={owner} net={net} priceUsd={priceOf.get(p.asset) ?? null} />
         ))}
         <section className="sp-plan-new" aria-labelledby="new-plan">
           <h2 id="new-plan" className="sp-plan-h2">
@@ -74,7 +77,7 @@ export default async function PlansPage() {
   );
 }
 
-function PlanCard({ plan: p, members, owner, net, priceUsd }: { plan: PlanView; members: MemberView[]; owner: string; net: string; priceUsd: number | null }) {
+function PlanCard({ plan: p, members, asks, owner, net, priceUsd }: { plan: PlanView; members: MemberView[]; asks: WaitingRequest[]; owner: string; net: string; priceUsd: number | null }) {
   const name = nameOf(p.symbol);
   const id = releaseIdFromHex(p.planId);
   const asset = assetByMint(p.asset);
@@ -116,7 +119,28 @@ function PlanCard({ plan: p, members, owner, net, priceUsd }: { plan: PlanView; 
           <dd>{p.members}</dd>
         </div>
       </dl>
+      <TopUpPlan owner={owner} cluster={net} plan={p.pda} stockName={name} />
       <InviteToPlan owner={owner} cluster={net} plan={p.pda} />
+      {asks.length > 0 ? (
+        <section className="sp-plan-asks" aria-label="Asked to join">
+          <p className="sp-label">
+            Asked to join, from their savings page ({asks.length})
+          </p>
+          <ul>
+            {asks.map((a) => (
+              <li key={a.address}>
+                <a className="mono" href={explorerUrl("address", a.address)}>
+                  {short(a.address)}
+                </a>
+                <span>
+                  {a.ruleOn ? `saves every payment, ${a.saves} automatic save${a.saves === 1 ? "" : "s"}` : "not saving every payment"}, asked {dateUTC(a.createdAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <InviteRequests owner={owner} cluster={net} plan={p.pda} addresses={asks.map((a) => a.address)} />
+        </section>
+      ) : null}
       {members.length > 0 ? (
         <ul className="sp-plan-members" aria-label="People in this Plan">
           {members.map((m) => {
@@ -141,11 +165,11 @@ function PlanCard({ plan: p, members, owner, net, priceUsd }: { plan: PlanView; 
         <ClosePlan owner={owner} cluster={net} plan={p.pda} members={p.members} />
         {escrow ? (
           <p className="sp-hint">
-            Top it up any time by sending {name} to the escrow,{" "}
+            Or send {name} straight to the escrow,{" "}
             <a className="mono" href={explorerUrl("address", escrow.toBase58())}>
               {short(escrow.toBase58())}
             </a>
-            .
+            , from any wallet.
           </p>
         ) : null}
       </footer>
