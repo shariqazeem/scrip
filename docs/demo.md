@@ -13,8 +13,9 @@ rule on from `/app/rule`, an S&P 500 arrival) described the product of 24 Septem
 ## Before you start (10 minutes)
 
 1. **A weekday, while the Nasdaq 100 has a price** (Take 2 only; Take 1 works any day). Open
-   `scrip.work`: on the start card, the Nasdaq 100 chip carries no "waits for a price" note.
-   Pre-market prices start around 13:00 Lahore time; the US session runs 18:30–01:00.
+   `scrip.work`: on the start card, the Nasdaq 100 chip carries no "waits for a price" note. On
+   weekdays it is usually there day and night (the first match settled at 01:25 New York time);
+   it stops for the weekend at Friday 20:00 New York, Saturday 05:00 Lahore.
 2. **Hide balances** in Phantom on the phone (tap your total balance) and in the extension.
 3. **The browser.** Chrome, one window, zoom 125%, bookmarks bar hidden, other tabs closed,
    Do Not Disturb on.
