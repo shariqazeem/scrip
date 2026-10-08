@@ -76,6 +76,17 @@ const PRIORITY_MICRO_LAMPORTS = Number(process.env.KEEPER_PRIORITY_MICRO_LAMPORT
  * update's (both returned at close), and the fees of the five or so transactions it takes.
  */
 const MIN_POST_LAMPORTS = Number(process.env.KEEPER_MIN_POST_LAMPORTS ?? "8000000");
+/**
+ * ONE POSTED PRICE PER FEED, SHARED BY EVERY SAVE FOR EIGHT MINUTES. The program accepts a price
+ * up to ten minutes old, so a price this keeper posted serves every book on that stock until then:
+ * hundreds of saves need one post, not hundreds, and every save after the first skips the five
+ * transactions a post takes. 0 turns sharing off.
+ */
+const SHARE_PRICE_SECONDS = Number(process.env.KEEPER_SHARE_PRICE_SECONDS ?? "480");
+/** Below this the operator is told, so a keeper never runs dry unnoticed again. */
+const ALERT_MIN_LAMPORTS = Number(process.env.KEEPER_ALERT_MIN_LAMPORTS ?? "20000000");
+/** Money that has waited this long to be saved is worth a message to the operator. */
+const STUCK_AFTER_SECONDS = Number(process.env.KEEPER_STUCK_AFTER_SECONDS ?? "600");
 /** The tip + receipt rent the program will take from the float. Mirrors the program. */
 const KEEPER_TIP = 500_000n;
 /** The smallest save Scrip's keepers submit; below it the receipt's cost is too large a share. */
@@ -95,6 +106,43 @@ const conn = makeConnection(RPC, { wsEndpoint: process.env.NEXT_PUBLIC_SOLANA_WS
 const pyth = new PythSolanaReceiver({ connection: conn, wallet: new Wallet(keeper) });
 
 const startedAt = Math.floor(Date.now() / 1000);
+/**
+ * TELLING THE OPERATOR, NEVER THE USER. A stuck save or a keeper running low is Scrip's problem
+ * to fix, so it goes to the operator's Telegram (TELEGRAM_BOT_TOKEN and SCRIP_ALERT_CHAT_ID) and
+ * the log, at most once per key per interval; nothing about it is shown to the person saving.
+ */
+const alerted = new Map<string, number>();
+async function alert(key: string, text: string, everyMs: number): Promise<void> {
+  const last = alerted.get(key) ?? 0;
+  if (Date.now() - last < everyMs) return;
+  alerted.set(key, Date.now());
+  log(`ALERT ${text}`);
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chat = process.env.SCRIP_ALERT_CHAT_ID?.trim();
+  if (!token || !chat) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: chat, text: `Scrip saving service ${keeper.publicKey.toBase58().slice(0, 4)}: ${text}`, disable_web_page_preview: true }),
+    });
+  } catch {
+    // The log has it.
+  }
+}
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** When a book's money first became saveable and was not yet saved. */
+const waitingSince = new Map<string, number>();
+function stuck(key: string, owner: string, usdc: bigint, reason: string, everyMs: number): void {
+  const since = waitingSince.get(key);
+  if (since === undefined) return;
+  const waited = Math.floor(Date.now() / 1000) - since;
+  if (waited < STUCK_AFTER_SECONDS) return;
+  void alert(`stuck:${key}:${everyMs}`, `$${(Number(usdc) / 1e6).toFixed(2)} has waited ${Math.round(waited / 60)} min to be saved for ${owner.slice(0, 4)}…${owner.slice(-4)}: ${reason.slice(0, 220)}`, everyMs);
+}
+
 const reports = new Map<string, KeeperBookReport>();
 let sweeps = 0;
 let ticking = false;
@@ -208,6 +256,14 @@ async function priceFor(book: Book, asset: Asset): Promise<Outcome<PriceSource>>
     }
   }
 
+  // A price this keeper already posted, still young enough for the program: shared, free.
+  for (const c of candidates) {
+    const hit = sharedPrices.get(c.feed.feedId);
+    if (hit && now - hit.publishTime < SHARE_PRICE_SECONDS) {
+      return ok({ account: hit.account, posted: true, feed: c.feed, adjusted: c.adjusted, close: async () => {} });
+    }
+  }
+
   // Nothing on chain is usable. Post one, trying each feed: an API plan that refuses one
   // asset class may still carry the other, and a 403 for one feed is not a 403 for both.
   let feed = candidates[0]!.feed;
@@ -281,7 +337,39 @@ async function priceFor(book: Book, asset: Asset): Promise<Outcome<PriceSource>>
     await closeAll();
     return posted;
   }
-  return ok({ account, posted: true, feed, adjusted, close: closeAll });
+  if (SHARE_PRICE_SECONDS <= 0) return ok({ account, posted: true, feed, adjusted, close: closeAll });
+  // Shared from here: the encoded VAA has done its job and closes now; the price update stays
+  // open for every save on this feed until it is too old, then closes (expireSharedPrices).
+  const vaaCloses = closeIxs.filter((ix) => ix.instruction.programId.equals(pyth.wormhole.programId));
+  const updateCloses = closeIxs.filter((ix) => !ix.instruction.programId.equals(pyth.wormhole.programId));
+  await closeSome(vaaCloses);
+  sharedPrices.set(feed.feedId, { account, publishTime: posted.value.publishedAt, closes: updateCloses });
+  return ok({ account, posted: true, feed, adjusted, close: async () => {} });
+}
+
+type CloseIx = Awaited<ReturnType<typeof pyth.buildClosePriceUpdateInstruction>>;
+/** Posted prices this keeper shares, by feed id, until they are too old for the program. */
+const sharedPrices = new Map<string, { account: PublicKey; publishTime: number; closes: CloseIx[] }>();
+
+async function closeSome(ixs: CloseIx[]): Promise<void> {
+  if (ixs.length === 0) return;
+  try {
+    const txs = await TransactionBuilder.batchIntoVersionedTransactions(keeper.publicKey, conn, ixs, { computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS });
+    await pyth.provider.sendAll(txs, { skipPreflight: true, commitment: "confirmed" });
+  } catch (err) {
+    // Left for reclaimLeftovers, which finds any account of this keeper's and closes it.
+    log("could not close posted price accounts now:", err instanceof Error ? err.message : err);
+  }
+}
+
+/** Close every shared price that is too old for the program, returning its rent. Between rounds. */
+async function expireSharedPrices(): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  for (const [feedId, entry] of sharedPrices) {
+    if (now - entry.publishTime < SHARE_PRICE_SECONDS) continue;
+    sharedPrices.delete(feedId);
+    await closeSome(entry.closes);
+  }
 }
 
 // ── one book, one look ────────────────────────────────────────────────────────────────────
@@ -309,6 +397,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
   }
   const usdc = unpackAccount(usdcAddr, usdcInfo, usdcInfo.owner);
   if (!usdc.delegate || !usdc.delegate.equals(pda) || usdc.delegatedAmount === 0n) {
+    waitingSince.delete(key);
     report(key, book.owner, { lastReason: usdc.delegate && !usdc.delegate.equals(pda) ? "paused: another delegate replaced the Book" : "paused: the delegate is revoked" });
     return;
   }
@@ -324,6 +413,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
         log("sync_watermark failed:", err instanceof Error ? err.message : err);
       }
     }
+    waitingSince.delete(key);
     report(key, book.owner, { lastReason: "balance fell below the watermark; synced, nothing to sweep" });
     return;
   }
@@ -338,6 +428,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     rateBps: rate,
   });
   if (!slice.ok) {
+    waitingSince.delete(key);
     report(key, book.owner, { lastReason: slice.why });
     return;
   }
@@ -346,11 +437,15 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
   // keeper waits until the unswept slice reaches the policy minimum, which batches small
   // payments into one save. Another keeper may sweep sooner: keepers are permissionless.
   if (slice.value.slice < KEEPER_MIN_SLICE) {
+    waitingSince.delete(key);
     report(key, book.owner, { lastReason: `waiting for $${Number(KEEPER_MIN_SLICE) / 1e6} to save: the slice is ${slice.value.slice} USDC base units` });
     return;
   }
+  // From here the money is saveable; how long it waits is the operator's business.
+  if (!waitingSince.has(key)) waitingSince.set(key, now);
   if (usdc.delegatedAmount < slice.value.slice) {
     report(key, book.owner, { lastReason: `allowance exhausted: ${usdc.delegatedAmount} left, slice needs ${slice.value.slice}` });
+    stuck(key, book.owner, slice.value.slice, "the saver's limit is used up", DAY_MS);
     return;
   }
 
@@ -373,6 +468,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
   const float = BigInt(entry.lamports - rent);
   if (float < KEEPER_TIP + BigInt(receiptRent) + ataRent) {
     report(key, book.owner, { lastReason: `float empty: ${float} lamports, a sweep needs ${KEEPER_TIP + BigInt(receiptRent) + ataRent}` });
+    stuck(key, book.owner, slice.value.slice, "the saver's prepaid saves are used up", DAY_MS);
     return;
   }
 
@@ -380,6 +476,9 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
   const price = await priceFor(book, asset);
   if (!price.ok) {
     report(key, book.owner, { lastReason: `waiting for a fresh price: ${price.why}` });
+    // A closed market is expected and said on the page; a keeper that cannot post is not.
+    const ours = /keeper holds|posting the|could not be found/.test(price.why);
+    stuck(key, book.owner, slice.value.slice, `no price: ${price.why}`, ours ? HOUR_MS : DAY_MS);
     return;
   }
   try {
@@ -470,6 +569,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     );
     if (!landed.ok) throw new Error(landed.why);
     sweeps += 1;
+    waitingSince.delete(key);
     report(key, book.owner, { lastSweepAt: Math.floor(Date.now() / 1000), lastSweepSig: sig, lastReason: null });
     log(`swept ${slice.value.slice} USDC → ${asset.symbol} for ${book.owner.slice(0, 8)}… (${sig})`);
     // The match, if a sponsor's Plan counts this owner as a member: its own transaction, after
@@ -480,6 +580,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     const prev = reports.get(key);
     report(key, book.owner, { lastReason: `sweep failed: ${why.slice(0, 200)}`, failures: (prev?.failures ?? 0) + 1 });
     log(`sweep failed for ${key.slice(0, 8)}…: ${why}`);
+    stuck(key, book.owner, slice.value.slice, `the save keeps failing: ${why}`, HOUR_MS);
   } finally {
     await price.value.close();
   }
@@ -583,9 +684,15 @@ async function reclaimLeftovers(): Promise<void> {
     conn.getProgramAccounts(pyth.receiver.programId, { commitment: "confirmed", dataSlice: { offset: 0, length: 0 }, filters: [{ memcmp: { offset: 8, bytes: me } }] }),
     conn.getProgramAccounts(pyth.wormhole.programId, { commitment: "confirmed", dataSlice: { offset: 0, length: 0 }, filters: [{ memcmp: { offset: 9, bytes: me } }] }),
   ]);
-  if (updates.length + vaas.length === 0) return;
+  const lamports = await conn.getBalance(keeper.publicKey, "confirmed").catch(() => null);
+  if (lamports !== null && lamports < ALERT_MIN_LAMPORTS) {
+    void alert("low-balance", `holds ${(lamports / 1e9).toFixed(4)} SOL. Send 0.03 SOL to ${me} so saves that need a fresh price keep working.`, HOUR_MS);
+  }
+  const inUse = new Set([...sharedPrices.values()].map((e) => e.account.toBase58()));
+  const leftovers = updates.filter((u) => !inUse.has(u.pubkey.toBase58()));
+  if (leftovers.length + vaas.length === 0) return;
   const ixs = [
-    ...(await Promise.all(updates.map((u) => pyth.buildClosePriceUpdateInstruction(u.pubkey)))),
+    ...(await Promise.all(leftovers.map((u) => pyth.buildClosePriceUpdateInstruction(u.pubkey)))),
     ...(await Promise.all(vaas.map((v) => pyth.buildCloseEncodedVaaInstruction(v.pubkey)))),
   ];
   const txs = await TransactionBuilder.batchIntoVersionedTransactions(keeper.publicKey, conn, ixs, { computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS });
@@ -601,6 +708,7 @@ async function tick(): Promise<void> {
   ticking = true;
   try {
     try {
+      await expireSharedPrices();
       await reclaimLeftovers();
     } catch (err) {
       log("closing leftover price accounts failed:", err instanceof Error ? err.message : err);
