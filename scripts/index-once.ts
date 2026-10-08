@@ -15,7 +15,7 @@ for (const line of readFileSync(join(process.cwd(), ".env.local"), "utf8").split
 
 async function main() {
   const { connection, mainnetConnection } = await import("@/lib/solana/connection");
-  const { healReasons, indexBooks, indexGrants, indexReceipts, refreshMeasurements } = await import("@/lib/ledger/indexer");
+  const { healAnchors, healReasons, indexBooks, indexGrants, indexReceipts, refreshMeasurements } = await import("@/lib/ledger/indexer");
   const { chainReader, runWatcher } = await import("@/lib/corporate-actions/watcher");
   const { measureDue } = await import("@/lib/ledger/crank");
   const conn = connection();
@@ -28,6 +28,7 @@ async function main() {
   };
   if (!process.argv.includes("--skip-watcher")) await step("multipliers", async () => (await runWatcher(chainReader(mainnetConnection()), now)).anyHeld);
   await step("receipts", () => indexReceipts(conn));
+  await step("anchors", () => healAnchors(conn));
   const { indexSaves } = await import("@/lib/save/index-saves");
   await step("saves", () => indexSaves(conn));
   await step("books", () => indexBooks(conn, now));

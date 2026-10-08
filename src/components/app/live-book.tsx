@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { LiveArrival, LiveView } from "@/lib/book/live-types";
 import { milestonesFor, nextWholeShare } from "@/lib/book/milestones";
@@ -59,9 +60,11 @@ export function LiveBook({
   const [printing, setPrinting] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
   const seen = useRef<Set<string>>(new Set(initial.arrivals.map((a) => a.id)));
+  const router = useRouter();
 
   useEffect(() => {
     let alive = true;
+    const later: ReturnType<typeof setTimeout>[] = [];
     const tick = async () => {
       try {
         const res = await fetch(`/api/book/live/${initial.owner}`, { cache: "no-store" });
@@ -73,6 +76,13 @@ export function LiveBook({
         if (fresh) {
           setPrinting(fresh.id);
           setTimeout(() => setPrinting(null), 2_000);
+          // Everything else on the owner's page — what the savings are worth, what was saved
+          // and matched, the first steps — was read when it opened. A new receipt changes all
+          // of it, and a sponsor's match lands a few seconds after the save it matches.
+          if (mode === "owner") {
+            router.refresh();
+            for (const ms of [20_000, 60_000]) later.push(setTimeout(() => alive && router.refresh(), ms));
+          }
         }
       } catch {
         // A missed poll is not worth a word; the next one comes in four seconds.
@@ -82,8 +92,9 @@ export function LiveBook({
     return () => {
       alive = false;
       clearInterval(t);
+      for (const l of later) clearTimeout(l);
     };
-  }, [initial.owner]);
+  }, [initial.owner, mode, router]);
 
   const asset = view.asset;
   const unswept = BigInt(view.unswept);

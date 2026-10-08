@@ -93,6 +93,27 @@ const KEEPER_TIP = 500_000n;
 const KEEPER_MIN_SLICE = BigInt(process.env.KEEPER_MIN_SLICE_USDC ?? "2000000");
 /** How often a linear schedule is vested. Every vest costs the payer's float a receipt's rent. */
 const VEST_EVERY_SECONDS = Number(process.env.KEEPER_VEST_HOURS ?? "24") * 3600;
+/**
+ * MANY SAVES AT ONCE. A round used to save one register after another, so when fifty people
+ * were paid in the same minute the fiftieth waited for forty-nine sends and confirmations. Now
+ * this many go out together; each is its own transaction, paid back inside itself, so they
+ * share nothing but the price, which is posted once per stock however many are waiting on it.
+ */
+const CONCURRENCY = Math.max(1, Number(process.env.KEEPER_CONCURRENCY ?? "6"));
+/**
+ * NO ONE SAVE HOLDS UP THE REST. A save that has not finished in this long stops holding the
+ * round: the others go on, and that register is not tried again until its first try returns.
+ */
+const EVALUATE_DEADLINE_MS = Number(process.env.KEEPER_DEADLINE_SECONDS ?? "150") * 1000;
+/** A round that has not finished in this long is stuck; the process exits and pm2 restarts it. */
+const WATCHDOG_MS = Number(process.env.KEEPER_WATCHDOG_SECONDS ?? "600") * 1000;
+/**
+ * A SECOND SERVICE THAT WAITS ITS TURN. Two services racing for the same save both pay to send
+ * it, and one always loses. With this set, this service acts only on money that has already
+ * waited this long — which never happens while the first is up — so it costs nothing until the
+ * day it is needed. 0, the default, acts at once.
+ */
+const BACKUP_AFTER_SECONDS = Number(process.env.KEEPER_BACKUP_AFTER_SECONDS ?? "0");
 
 function loadKeypair(): Keypair {
   const raw = process.env.SCRIP_KEEPER_KEYPAIR?.trim();
@@ -143,10 +164,23 @@ function stuck(key: string, owner: string, usdc: bigint, reason: string, everyMs
   void alert(`stuck:${key}:${everyMs}`, `$${(Number(usdc) / 1e6).toFixed(2)} has waited ${Math.round(waited / 60)} min to be saved for ${owner.slice(0, 4)}…${owner.slice(-4)}: ${reason.slice(0, 220)}`, everyMs);
 }
 
+/**
+ * Whether a backup may act on something first seen at `since`. The first service acts at once
+ * and the backup only on what it left alone; `standingBy` says so on the health page.
+ */
+function standingBy(since: number, now: number): boolean {
+  return BACKUP_AFTER_SECONDS > 0 && now - since < BACKUP_AFTER_SECONDS;
+}
+/** When a register's balance first fell below its watermark, for a backup's patience. */
+const lowSince = new Map<string, number>();
+
 const reports = new Map<string, KeeperBookReport>();
 let sweeps = 0;
 let ticking = false;
 let wakeRequested = false;
+/** Registers with a save still in flight, so a slow one is never started twice. */
+const evaluating = new Set<string>();
+let lastRoundAt = Date.now();
 
 function log(...parts: unknown[]): void {
   console.log(new Date().toISOString(), ...parts);
@@ -264,8 +298,25 @@ async function priceFor(book: Book, asset: Asset): Promise<Outcome<PriceSource>>
     }
   }
 
-  // Nothing on chain is usable. Post one, trying each feed: an API plan that refuses one
-  // asset class may still carry the other, and a 403 for one feed is not a 403 for both.
+  // Nothing on chain is usable: post one. Saves waiting on the same stock wait on the same post.
+  if (SHARE_PRICE_SECONDS <= 0) return postPrice(candidates);
+  const postKey = candidates.map((c) => c.feed.feedId).join(",");
+  const inflight = posting.get(postKey);
+  if (inflight) return inflight;
+  const p = postPrice(candidates).finally(() => posting.delete(postKey));
+  posting.set(postKey, p);
+  return p;
+}
+
+/** Posts in flight, by the feeds they were asked for, so concurrent saves share one. */
+const posting = new Map<string, Promise<Outcome<PriceSource>>>();
+
+/**
+ * Post a fresh, fully verified price for the first of `candidates` Hermes will give, trying
+ * each feed: an API plan that refuses one asset class may still carry the other, and a 403 for
+ * one feed is not a 403 for both.
+ */
+async function postPrice(candidates: ReadonlyArray<{ feed: PriceFeed; adjusted: boolean }>): Promise<Outcome<PriceSource>> {
   let feed = candidates[0]!.feed;
   let adjusted = candidates[0]!.adjusted;
   let update: HermesLatest | undefined;
@@ -404,6 +455,13 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
 
   // Spending is not income: lower the watermark so the next arrival counts.
   if (usdc.amount < book.rule.watermark) {
+    const low = lowSince.get(key) ?? now;
+    lowSince.set(key, low);
+    if (standingBy(low, now)) {
+      report(key, book.owner, { lastReason: "the balance fell below the watermark; standing by while the first service syncs it" });
+      return;
+    }
+    lowSince.delete(key);
     const ix = syncWatermarkIx(owner, usdcMint);
     if (ix.ok) {
       try {
@@ -417,6 +475,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     report(key, book.owner, { lastReason: "balance fell below the watermark; synced, nothing to sweep" });
     return;
   }
+  lowSince.delete(key);
 
   const rate = effectiveRate(book.rule.rateBps, book.rule.escalateBps, book.rule.enabledUnix, now);
   const slice = computeSlice({
@@ -443,6 +502,10 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
   }
   // From here the money is saveable; how long it waits is the operator's business.
   if (!waitingSince.has(key)) waitingSince.set(key, now);
+  if (standingBy(waitingSince.get(key)!, now)) {
+    report(key, book.owner, { lastReason: `standing by: the first service saves this; this one steps in after ${BACKUP_AFTER_SECONDS} s` });
+    return;
+  }
   if (usdc.delegatedAmount < slice.value.slice) {
     report(key, book.owner, { lastReason: `allowance exhausted: ${usdc.delegatedAmount} left, slice needs ${slice.value.slice}` });
     stuck(key, book.owner, slice.value.slice, "the saver's limit is used up", DAY_MS);
@@ -593,6 +656,8 @@ const subscribed = new Set<string>();
 // ── grants ────────────────────────────────────────────────────────────────────────────────
 
 const lastVestAt = new Map<string, number>();
+/** For a backup: each grant's released amount, what kind of vest is due, and since when. */
+const vestSeen = new Map<string, { released: bigint; kind: "first" | "final" | "linear"; since: number }>();
 let vests = 0;
 let grantsWatched = 0;
 const mintProgram = new Map<string, "spl-token" | "token-2022">();
@@ -641,7 +706,18 @@ async function vestDue(): Promise<void> {
     const first = grant.releasedRaw === 0n;
     const key = address.toBase58();
     const last = lastVestAt.get(key) ?? 0;
-    if (!final && !first && now - last < VEST_EVERY_SECONDS) continue;
+    if (BACKUP_AFTER_SECONDS > 0) {
+      // A backup vests only what the first service has left alone: a cliff or an end not
+      // vested within its patience, or a schedule that has not moved for a whole cadence more.
+      const kind = first ? "first" : final ? "final" : "linear";
+      const seen = vestSeen.get(key);
+      if (!seen || seen.released !== grant.releasedRaw || seen.kind !== kind) {
+        vestSeen.set(key, { released: grant.releasedRaw, kind, since: now });
+        continue;
+      }
+      const patience = kind === "linear" ? VEST_EVERY_SECONDS + BACKUP_AFTER_SECONDS : BACKUP_AFTER_SECONDS;
+      if (now - seen.since < patience) continue;
+    } else if (!final && !first && now - last < VEST_EVERY_SECONDS) continue;
     const rent = Number(await rentFor(conn, dataLen));
     const receiptRent = Number(await rentFor(conn, 8 + 360));
     if (BigInt(lamports - rent) < KEEPER_TIP + BigInt(receiptRent)) {
@@ -726,27 +802,56 @@ async function tick(): Promise<void> {
     for (let i = 0; i < addresses.length; i += 100) {
       infos.push(...(await conn.getMultipleAccountsInfo(addresses.slice(i, i + 100), "confirmed")));
     }
-    for (const [n, entry] of live.entries()) {
+    for (const address of addresses) {
       // Wake on the owner's USDC account changing, so a sweep follows an arrival in seconds.
-      const ata = addresses[n]!.toBase58();
+      const ata = address.toBase58();
       if (!subscribed.has(ata)) {
         subscribed.add(ata);
-        conn.onAccountChange(new PublicKey(ata), () => void tick(), "confirmed");
-      }
-      try {
-        await evaluate(entry, infos[n] ?? null);
-      } catch (err) {
-        log(`evaluate failed for ${entry.pda.toBase58().slice(0, 8)}…:`, err instanceof Error ? err.message : err);
+        conn.onAccountChange(address, () => void tick(), "confirmed");
       }
     }
+    await eachAtMost(CONCURRENCY, live.map((entry, n) => ({ entry, info: infos[n] ?? null })), async ({ entry, info }) => {
+      const key = entry.pda.toBase58();
+      if (evaluating.has(key)) return;
+      evaluating.add(key);
+      const run = evaluate(entry, info)
+        .catch((err) => log(`evaluate failed for ${key.slice(0, 8)}…:`, err instanceof Error ? err.message : err))
+        .finally(() => evaluating.delete(key));
+      if (!(await finishesWithin(run, EVALUATE_DEADLINE_MS))) {
+        log(`the save for ${key.slice(0, 8)}… is still running after ${EVALUATE_DEADLINE_MS / 1000} s; the round goes on without it`);
+      }
+    });
   } catch (err) {
     log("tick failed:", err instanceof Error ? err.message : err);
   } finally {
+    lastRoundAt = Date.now();
     ticking = false;
     if (wakeRequested) {
       wakeRequested = false;
       void tick();
     }
+  }
+}
+
+/** Run `fn` over `items`, at most `limit` at a time. `fn` must not throw. */
+async function eachAtMost<T>(limit: number, items: readonly T[], fn: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) await fn(items[next++]!);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
+/** Whether `p` settles within `ms`. It keeps running either way. */
+async function finishesWithin(p: Promise<unknown>, ms: number): Promise<boolean> {
+  let timer: NodeJS.Timeout | undefined;
+  const late = new Promise<boolean>((resolve) => {
+    timer = setTimeout(() => resolve(false), ms);
+  });
+  try {
+    return await Promise.race([p.then(() => true), late]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -761,6 +866,10 @@ function health(): KeeperHealth {
     vests,
     grantsWatched,
     startedAt,
+    concurrency: CONCURRENCY,
+    backupAfterSeconds: BACKUP_AFTER_SECONDS,
+    inFlight: evaluating.size,
+    lastRoundAt: Math.floor(lastRoundAt / 1000),
   };
 }
 
@@ -830,8 +939,23 @@ async function main(): Promise<void> {
     res.end();
   }).listen(HEALTH_PORT, () => log(`health on :${HEALTH_PORT}/health`));
 
+  log(
+    `${CONCURRENCY} saves at once, ${EVALUATE_DEADLINE_MS / 1000} s each before the round moves on; ${
+      BACKUP_AFTER_SECONDS > 0 ? `a backup: steps in after ${BACKUP_AFTER_SECONDS} s` : "acts at once"
+    }`,
+  );
   await tick();
   setInterval(() => void tick(), Math.max(5, POLL_SECONDS) * 1000);
+  // A round that never finishes is the one failure nothing else catches: every save would wait
+  // on it. pm2 restarts a process that exits, so a stuck one exits.
+  setInterval(() => {
+    const quiet = Date.now() - lastRoundAt;
+    if (quiet < WATCHDOG_MS) return;
+    log(`no round has finished in ${Math.round(quiet / 1000)} s; exiting so pm2 starts this service again`);
+    void Promise.race([alert("watchdog", `no round finished in ${Math.round(quiet / 60_000)} min; it restarted itself`, 0), new Promise((r) => setTimeout(r, 5_000))]).finally(() =>
+      process.exit(1),
+    );
+  }, 60_000);
 }
 
 void main().catch((err) => {

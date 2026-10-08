@@ -37,6 +37,7 @@ export async function latest(feedIds: readonly string[]): Promise<Outcome<Hermes
     res = await fetch(`${hermesUrl()}/v2/updates/price/latest?${q}&encoding=base64&parsed=true`, {
       headers: { accept: "application/json", ...(key ? { authorization: `Bearer ${key}` } : {}) },
       cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
     });
   } catch (err) {
     return held(`Hermes could not be reached (${err instanceof Error ? err.message : String(err)}).`);

@@ -24,7 +24,12 @@ export async function transactionsFor(
     try {
       got = await conn.getTransactions([...slice], { commitment: "confirmed", maxSupportedTransactionVersion: 0 });
     } catch {
-      got = slice.map(() => null);
+      // One transaction the batch cannot carry (a version this client refuses, say) fails the
+      // whole batch; asked one by one, only that one is missing.
+      got = [];
+      for (const sig of slice) {
+        got.push(await conn.getTransaction(sig, { commitment: "confirmed", maxSupportedTransactionVersion: 0 }).catch(() => null));
+      }
     }
     slice.forEach((sig, n) => out.set(sig, got[n] ?? null));
   }

@@ -1,8 +1,8 @@
 import "server-only";
 
 import { type Connection, PublicKey } from "@solana/web3.js";
-import { and, desc, eq, ne, sql } from "drizzle-orm";
-import { readReceiptAccount, receiptFromTransaction } from "@/lib/book/read-receipt";
+import { and, asc, desc, eq, gt, ne, sql } from "drizzle-orm";
+import { readReceiptAccount, receiptFromTransaction, receiptInTransaction, writerOf } from "@/lib/book/read-receipt";
 import { decodeBook, decodeGrant, decodeHandle } from "@/lib/book/decode";
 import { db } from "@/lib/db";
 import { newId } from "@/lib/db/keys";
@@ -22,12 +22,13 @@ import { transactionsFor } from "@/lib/solana/batch";
  * THE DATABASE IS A CACHE. THE CHAIN IS THE MEMORY. `/receipt/[sig]` never reads this table;
  * the page a stranger opens must not depend on our having indexed anything.
  *
- * INCREMENTAL, AND PROVEN SO. The cursor is the newest signature fully processed. A run asks
- * for everything newer than it, walking pages with `before` until the page is short, then
- * processes OLDEST FIRST so an interrupted run leaves the cursor where it can safely resume.
- * The predecessor passed `until` alone and stopped after one page; measured, its second run
- * added zero rows against a chain with forty-seven new signatures. `indexer.test.ts` holds
- * that a second run adds rows.
+ * INCREMENTAL, AND PROVEN SO. The cursor is the newest signature fully processed. A run lists
+ * everything newer than it, walking pages with `before` until the page is short, then reads
+ * the OLDEST FIRST, at most its budget, and moves the cursor behind exactly what it finished.
+ * Listing is cheap and reading is not, so a small run (the register's four-second poll reads
+ * 25) still never passes anything over: until 8 October it listed one page, read it, and
+ * moved the cursor to its newest signature, so in a busy minute everything older than that
+ * page was skipped for good. `indexer.test.ts` holds both halves.
  */
 
 const CURSOR_KEY = `receipts:${SCRIP_PROGRAM_ID.toBase58()}`;
@@ -41,7 +42,7 @@ export type IndexReport = {
 };
 
 export type SignatureSource = (opts: { before?: string; until?: string; limit: number }) => Promise<
-  Array<{ signature: string; slot: number; err: unknown }>
+  Array<{ signature: string; slot: number; err: unknown; blockTime?: number | null }>
 >;
 
 export async function indexReceipts(
@@ -50,39 +51,72 @@ export async function indexReceipts(
   maxPages = 20,
 ): Promise<Outcome<IndexReport>> {
   const source: SignatureSource = (opts) => conn.getSignaturesForAddress(SCRIP_PROGRAM_ID, opts, "confirmed");
-  return indexReceiptsFrom(conn, source, pageSize, maxPages);
+  return indexReceiptsFrom(conn, source, pageSize * maxPages);
 }
 
-export async function indexReceiptsFrom(
-  conn: Connection,
-  source: SignatureSource,
-  pageSize: number,
-  maxPages: number,
-): Promise<Outcome<IndexReport>> {
-  const cursor = (await db.select().from(cursors).where(eq(cursors.key, CURSOR_KEY)).limit(1))[0];
+type Listed = { signature: string; slot: number; err: unknown; blockTime?: number | null };
 
-  // ── gather every signature newer than the cursor, newest first ──────────────────────
-  const fresh: Array<{ signature: string; slot: number; err: unknown }> = [];
+/**
+ * How long a transaction that cannot be read may hold the cursor. A refused or timed-out read
+ * passes within minutes; one that has failed for half an hour will not, and it must never stop
+ * every receipt after it from reaching the cache. It is reported, and the cursor moves on.
+ */
+const GIVE_UP_AFTER_SECONDS = 1800;
+
+/**
+ * Every signature newer than the cursor, newest first, listed to the end. Stopping early would
+ * leave a gap between the cursor and the oldest signature listed, and whatever sat in the gap
+ * would never be read; so a listing that cannot reach the cursor holds instead.
+ */
+export async function signaturesSince(source: SignatureSource, cursor: string | undefined, pageSize = 1000, maxPages = 100): Promise<Outcome<Listed[]>> {
+  const out: Listed[] = [];
   let before: string | undefined;
   for (let page = 0; page < maxPages; page += 1) {
     let batch;
     try {
-      batch = await source({ before, until: cursor?.signature, limit: pageSize });
+      batch = await source({ before, until: cursor, limit: pageSize });
     } catch (err) {
       return held(`Could not list the program's transactions (${err instanceof Error ? err.message : String(err)}).`);
     }
-    fresh.push(...batch);
-    if (batch.length < pageSize) break;
+    out.push(...batch);
+    if (batch.length < pageSize) return ok(out);
     before = batch[batch.length - 1]!.signature;
   }
+  return held(`More than ${pageSize * maxPages} transactions since the last index; nothing was read, so nothing is skipped.`);
+}
+
+/** Where the cursor may move after a run: the newest entry with nothing unfinished at or before it. */
+export function cursorAfter<T>(oldestFirst: readonly T[], finished: ReadonlySet<T>): T | null {
+  let last: T | null = null;
+  for (const entry of oldestFirst) {
+    if (!finished.has(entry)) break;
+    last = entry;
+  }
+  return last;
+}
+
+export async function indexReceiptsFrom(conn: Connection, source: SignatureSource, budget: number): Promise<Outcome<IndexReport>> {
+  const cursor = (await db.select().from(cursors).where(eq(cursors.key, CURSOR_KEY)).limit(1))[0];
+
+  // ── list every signature newer than the cursor, newest first ────────────────────────
+  const listed = await signaturesSince(source, cursor?.signature);
+  if (!listed.ok) return listed;
+  const fresh = listed.value;
 
   const holds: string[] = [];
   let added = 0;
   let updated = 0;
   let skipped = 0;
 
-  // ── oldest first, so the cursor can advance behind what is done ─────────────────────
-  const ordered = [...fresh].reverse();
+  // ── oldest first, within the budget, so the cursor advances behind what is done ─────
+  const ordered = [...fresh].reverse().slice(0, Math.max(1, budget));
+  const finished = new Set<Listed>();
+  const now = Math.floor(Date.now() / 1000);
+  const hold = (entry: Listed, why: string) => {
+    const stale = typeof entry.blockTime === "number" && now - entry.blockTime > GIVE_UP_AFTER_SECONDS;
+    holds.push(`${entry.signature.slice(0, 8)}…: ${why}${stale ? " (given up after half an hour)" : ""}`);
+    if (stale) finished.add(entry);
+  };
   // One batch per 25 signatures, not one request per signature: see lib/solana/batch.ts.
   const bySignature = await transactionsFor(
     conn,
@@ -91,21 +125,41 @@ export async function indexReceiptsFrom(
   for (const entry of ordered) {
     if (entry.err) {
       skipped += 1;
+      finished.add(entry);
       continue;
     }
     const tx = bySignature.get(entry.signature) ?? null;
     if (!tx) {
-      holds.push(`${entry.signature.slice(0, 8)}…: the transaction could not be fetched.`);
+      hold(entry, "the transaction could not be fetched.");
       continue;
     }
-    const found = await receiptFromTransaction(conn, entry.signature, tx);
+    const found = await receiptInTransaction(conn, entry.signature, tx);
     if (!found.ok) {
-      // Most signatures are rule changes, book openings and sweeps' measurements: no receipt.
-      if (!/did not write a Scrip receipt/.test(found.why)) holds.push(`${entry.signature.slice(0, 8)}…: ${found.why}`);
+      // Most signatures are rule changes and book openings: no receipt.
+      if (!/did not write a Scrip receipt/.test(found.why)) hold(entry, found.why);
+      else finished.add(entry);
       skipped += 1;
       continue;
     }
-    const r = found.value;
+    if (!found.value.wrote) {
+      // A measurement or a match. The receipt stays filed under the transaction that wrote it;
+      // only what can change after that — the two measurements — is copied.
+      const t = found.value.receipt;
+      const m7 = toSafeNumber(t.measured7d?.balanceRaw ?? 0n, "measured");
+      const m30 = toSafeNumber(t.measured30d?.balanceRaw ?? 0n, "measured");
+      if (!m7.ok || !m30.ok) {
+        hold(entry, !m7.ok ? m7.why : !m30.ok ? m30.why : "");
+        continue;
+      }
+      await db
+        .update(receipts)
+        .set({ measured7dAt: t.measured7d?.at ?? 0, measured7dRaw: m7.value, measured30dAt: t.measured30d?.at ?? 0, measured30dRaw: m30.value })
+        .where(eq(receipts.pda, found.value.address));
+      updated += 1;
+      finished.add(entry);
+      continue;
+    }
+    const r = found.value.view;
     const nums = {
       basis: toSafeNumber(r.basisUsdc, "basis"),
       paid: toSafeNumber(r.paidUsdc, "paid"),
@@ -118,7 +172,7 @@ export async function indexReceiptsFrom(
     };
     const bad = Object.values(nums).find((n) => !n.ok);
     if (bad && !bad.ok) {
-      holds.push(`${entry.signature.slice(0, 8)}…: ${bad.why}`);
+      hold(entry, bad.why);
       continue;
     }
     const row = {
@@ -151,6 +205,8 @@ export async function indexReceiptsFrom(
       measured30dRaw: nums.m30.ok ? nums.m30.value : 0,
     };
     const existing = (await db.select({ id: receipts.id }).from(receipts).where(eq(receipts.pda, r.address)).limit(1))[0];
+    // An attribution that could not be read leaves the entry unfinished, so the cursor waits.
+    let attributionHeld = false;
     if (existing) {
       await db.update(receipts).set(row).where(eq(receipts.id, existing.id));
       updated += 1;
@@ -159,7 +215,10 @@ export async function indexReceiptsFrom(
       if (r.kind === "sweep") {
         const attributed = await attributeSweep(conn, r.recipient, r.settledSlot, r.basisUsdc);
         if (attributed.ok) attributedJson = JSON.stringify(attributed.value);
-        else holds.push(`${entry.signature.slice(0, 8)}…: attribution — ${attributed.why}`);
+        else {
+          hold(entry, `attribution — ${attributed.why}`);
+          attributionHeld = true;
+        }
       }
       const id = newId("rcp");
       await db.insert(receipts).values({ id, ...row, attributedJson });
@@ -171,20 +230,78 @@ export async function indexReceiptsFrom(
     if (r.kind === "grant" && r.reason) {
       await db.update(grants).set({ reason: r.reason }).where(eq(grants.pda, r.book));
     }
+    if (!attributionHeld) finished.add(entry);
   }
 
-  const newest = fresh[0];
-  if (newest && holds.length === 0) {
+  const done = cursorAfter(ordered, finished);
+  if (done) {
     await db
       .insert(cursors)
-      .values({ key: CURSOR_KEY, signature: newest.signature, slot: newest.slot, updatedAt: Math.floor(Date.now() / 1000) })
+      .values({ key: CURSOR_KEY, signature: done.signature, slot: done.slot, updatedAt: Math.floor(Date.now() / 1000) })
       .onConflictDoUpdate({
         target: cursors.key,
-        set: { signature: newest.signature, slot: newest.slot, updatedAt: Math.floor(Date.now() / 1000) },
+        set: { signature: done.signature, slot: done.slot, updatedAt: Math.floor(Date.now() / 1000) },
       });
   }
 
-  return ok({ scanned: fresh.length, added, updated, skipped, holds });
+  return ok({ scanned: ordered.length, added, updated, skipped, holds });
+}
+
+const ANCHOR_KEY = "receipts:anchors";
+
+/**
+ * RECEIPTS FILED UNDER THE WRONG TRANSACTION, MOVED. Until 8 October the indexer filed a receipt
+ * under whichever transaction touched it last — its 7-day measurement, or a sponsor's match — so
+ * every link to it opened the wrong transaction. Each row is checked once, oldest first: a
+ * signature that landed in the receipt's own slot is its writer; any other moves to the one
+ * that is. The pass remembers how far it got and, at the end of the table, stops for good: the
+ * indexer files a receipt nowhere but under its writer now.
+ */
+export async function healAnchors(conn: Connection = connection(), limit = 200): Promise<Outcome<number>> {
+  const mark = (await db.select().from(cursors).where(eq(cursors.key, ANCHOR_KEY)).limit(1))[0];
+  if (mark?.signature === "done") return ok(0);
+  const save = async (signature: string, slot: number) =>
+    db
+      .insert(cursors)
+      .values({ key: ANCHOR_KEY, signature, slot, updatedAt: Math.floor(Date.now() / 1000) })
+      .onConflictDoUpdate({ target: cursors.key, set: { signature, slot, updatedAt: Math.floor(Date.now() / 1000) } });
+  const rows = await db
+    .select({ id: receipts.id, pda: receipts.pda, sig: receipts.sig, slot: receipts.settledSlot })
+    .from(receipts)
+    .where(gt(receipts.settledSlot, mark?.slot ?? -1))
+    .orderBy(asc(receipts.settledSlot))
+    .limit(limit);
+  if (rows.length === 0) {
+    await save("done", mark?.slot ?? 0);
+    return ok(0);
+  }
+  let statuses: Array<{ slot: number } | null> = [];
+  try {
+    for (let i = 0; i < rows.length; i += 200) {
+      const got = await conn.getSignatureStatuses(
+        rows.slice(i, i + 200).map((r) => r.sig),
+        { searchTransactionHistory: true },
+      );
+      statuses = statuses.concat(got.value);
+    }
+  } catch (err) {
+    return held(`Could not check where receipts are filed (${err instanceof Error ? err.message : String(err)}).`);
+  }
+  let moved = 0;
+  for (const [i, row] of rows.entries()) {
+    if (statuses[i]?.slot === row.slot) continue;
+    const writer = await writerOf(conn, new PublicKey(row.pda), BigInt(row.slot));
+    if (!writer) return held(`Could not find the transaction that wrote receipt ${row.pda.slice(0, 8)}…; checking again next run.`);
+    if (writer === row.sig) continue;
+    try {
+      await db.update(receipts).set({ sig: writer }).where(eq(receipts.id, row.id));
+      moved += 1;
+    } catch (err) {
+      return held(`Could not move receipt ${row.pda.slice(0, 8)}… (${err instanceof Error ? err.message : String(err)}).`);
+    }
+  }
+  await save("checking", rows[rows.length - 1]!.slot);
+  return ok(moved);
 }
 
 /**

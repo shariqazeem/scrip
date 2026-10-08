@@ -55,7 +55,7 @@ export async function quote(input: {
   if (input.onlyDirectRoutes) p.set("onlyDirectRoutes", "true");
   let res: Response;
   try {
-    res = await fetch(`${BASE()}/swap/v1/quote?${p}`, { headers: headers(), cache: "no-store" });
+    res = await fetch(`${BASE()}/swap/v1/quote?${p}`, { headers: headers(), cache: "no-store", signal: AbortSignal.timeout(15_000) });
   } catch (err) {
     return held(`Jupiter could not be reached (${err instanceof Error ? err.message : String(err)}).`);
   }
@@ -127,6 +127,7 @@ export async function swapInstructions(input: {
         skipUserAccountsRpcCalls: true,
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
     });
   } catch (err) {
     return held(`Jupiter could not be reached (${err instanceof Error ? err.message : String(err)}).`);
@@ -176,7 +177,7 @@ export async function prices(mints: readonly string[]): Promise<Outcome<Map<stri
   if (mints.length === 0) return ok(new Map());
   let res: Response;
   try {
-    res = await fetch(`${BASE()}/price/v3?ids=${mints.join(",")}`, { headers: headers(), cache: "no-store" });
+    res = await fetch(`${BASE()}/price/v3?ids=${mints.join(",")}`, { headers: headers(), cache: "no-store", signal: AbortSignal.timeout(8_000) });
   } catch (err) {
     return held(`Jupiter's price API could not be reached (${err instanceof Error ? err.message : String(err)}).`);
   }

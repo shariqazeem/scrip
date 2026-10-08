@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { permanentRedirect } from "next/navigation";
 import { ScripMark } from "@/components/brand/scrip-mark";
 import { SaveReceipt } from "@/components/receipt/save-receipt";
 import { SettlingReceipt } from "@/components/receipt/settling";
@@ -11,7 +12,7 @@ import { pricedAsset } from "@/lib/save/catalogue";
 import { defaultAsset } from "@/lib/assets/registry";
 import { waitedFor } from "@/lib/pyth/price";
 import { priceState } from "@/lib/pyth/ready";
-import { readReceiptBySignature, NOT_YET_SETTLED } from "@/lib/book/read-receipt";
+import { readReceiptBySignature, NOT_YET_SETTLED, TOUCHED_NOT_WRITTEN, writerForSignature } from "@/lib/book/read-receipt";
 import { db } from "@/lib/db";
 import { receipts as receiptsTable } from "@/lib/db/schema";
 import { age, bps, dateUTC, measuresOn, pythToUsd, short, sol, stampUTC, unitsFromRaw, usd, usdc } from "@/lib/format";
@@ -67,7 +68,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       openGraph: { title, description: "Saved on Solana, into the saver's own wallet." },
     };
   }
-  const r = await readReceiptBySignature(sig);
+  let r = await readReceiptBySignature(sig);
+  if (!r.ok && r.why === TOUCHED_NOT_WRITTEN) {
+    const writer = await writerForSignature(sig);
+    if (writer) r = await readReceiptBySignature(writer);
+  }
   if (!r.ok) return { title: "Receipt" };
   const v = r.value;
   const units = v.asset_ ? `${unitsFromRaw(v.amountRaw, v.asset_.decimals)} ${v.asset_.symbol}` : `${v.amountRaw} units`;
@@ -115,6 +120,13 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
   }
 
   const receipt = await readReceiptBySignature(sig);
+
+  // A measurement or a match: the receipt lives at the transaction that wrote it. Links printed
+  // before 8 October point here, so they move, permanently, rather than break.
+  if (!receipt.ok && receipt.why === TOUCHED_NOT_WRITTEN) {
+    const writer = await writerForSignature(sig);
+    if (writer) permanentRedirect(`/receipt/${writer}`);
+  }
 
   if (!receipt.ok && receipt.why === NOT_YET_SETTLED) {
     return (

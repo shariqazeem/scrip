@@ -25,6 +25,12 @@ export type KeeperHealth = {
   readonly vests?: number;
   readonly grantsWatched?: number;
   readonly startedAt: number;
+  /** How many saves it sends at once, and whether it only steps in after the first service. */
+  readonly concurrency?: number;
+  readonly backupAfterSeconds?: number;
+  /** Saves still being sent, and when the last round finished. */
+  readonly inFlight?: number;
+  readonly lastRoundAt?: number;
 };
 
 /**

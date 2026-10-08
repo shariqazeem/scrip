@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { readReceiptBySignature } from "@/lib/book/read-receipt";
+import { TOUCHED_NOT_WRITTEN, readReceiptBySignature, writerForSignature } from "@/lib/book/read-receipt";
 import { readSaveTx } from "@/lib/save/read";
 import { stockByMint } from "@/lib/save/catalogue";
 import { bps, short, stampUTC, unitsFromRaw, usdc } from "@/lib/format";
@@ -44,7 +44,11 @@ export default async function Image({ params }: { params: Promise<{ sig: string 
       foot: ["Read from the transaction", stock ? `${stock.ticker} · ${stock.issuer.short}` : ""],
     });
   }
-  const r = await readReceiptBySignature(sig);
+  let r = await readReceiptBySignature(sig);
+  if (!r.ok && r.why === TOUCHED_NOT_WRITTEN) {
+    const writer = await writerForSignature(sig);
+    if (writer) r = await readReceiptBySignature(writer);
+  }
 
   if (!r.ok) {
     return new ImageResponse(
