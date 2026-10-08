@@ -10,6 +10,9 @@ import "./front.css";
 // Nothing here depends on who is asking (the nav reads the session after it mounts), so the page
 // is built once and refreshed every 30 seconds: a visitor gets it from the cache instead of
 // waiting on prices, a quote and the receipt cache, which cost 1.9 s on every request.
+// The reads below use uncached fetches (prices must never be stale inside a transaction), which would
+// make the page render per request; force-static keeps the 30-second cache for this page alone.
+export const dynamic = "force-static";
 export const revalidate = 30;
 
 /**
