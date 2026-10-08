@@ -26,7 +26,7 @@ export default async function Page() {
         delegate transfer and the swap with it — unless all four hold:
       </p>
       <ul>
-        <li>the feed is one of the two this register carries;</li>
+        <li>the feed is one of the two this rule carries;</li>
         <li>the update is <strong>fully verified</strong> — a full quorum of Wormhole guardian signatures checked by Pyth&rsquo;s receiver, not a partial check;</li>
         <li>it was published <strong>under 600 seconds</strong> before the sweep;</li>
         <li>its confidence band is <strong>under 1%</strong> of the price.</li>
@@ -38,11 +38,11 @@ export default async function Page() {
         <span className="mono">pyth.rs</span> (the account, parsed by offset) and <span className="mono">rule.rs</span> (<span className="mono">min_out_raw</span>).
       </p>
 
-      <h2>Two feeds on every register</h2>
+      <h2>Two feeds on every rule</h2>
       <p>
         A tokenized stock has two honest prices. <span className="mono">Crypto.SPYX/USD</span> prices the token itself, wherever it trades.{" "}
         <span className="mono">Equity.US.SPY/USD</span> prices one share of the underlying, published on weekdays — before the opening bell too. A
-        register carries both feed ids and the program accepts either. When it settles against the share price, it converts through the
+        rule carries both feed ids and the program accepts either. When it settles against the share price, it converts through the
         mint&rsquo;s <strong>live</strong> scaled-UI multiplier, because the token&rsquo;s raw units are not shares once dividends have been reinvested.
       </p>
 
@@ -93,7 +93,7 @@ export default async function Page() {
       <h2>When there is no price</h2>
       <p>
         At a weekend no fresh price for the S&amp;P 500 can be verified, and the program will not guess one. An arrival waits in the
-        owner&rsquo;s wallet — still theirs, still spendable — and the register says it is waiting. When a price returns, the rule settles it.
+        owner&rsquo;s wallet — still theirs, still spendable — and their savings page says it is waiting. When a price returns, the rule settles it.
         Nobody at Scrip can supply a price instead: an operator-supplied price is exactly what this design exists to rule out.
       </p>
     </DocFrame>
