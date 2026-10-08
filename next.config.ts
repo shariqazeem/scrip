@@ -29,7 +29,17 @@ const nextConfig: NextConfig = {
    * page that says what a save is.
    */
   async redirects() {
-    return [{ source: "/docs/keepers", destination: "/docs/how-the-rule-sees-money", permanent: true }];
+    return [
+      { source: "/docs/keepers", destination: "/docs/how-the-rule-sees-money", permanent: true },
+      // One host. A wallet's sign-in names the domain it was asked from, and a session cookie
+      // belongs to one host: www and the old sslip.io address would each be a second, broken one.
+      ...["www.scrip.work", "scrip.80.225.209.190.sslip.io"].map((host) => ({
+        source: "/:path*",
+        has: [{ type: "host" as const, value: host }],
+        destination: "https://scrip.work/:path*",
+        permanent: true,
+      })),
+    ];
   },
 };
 
