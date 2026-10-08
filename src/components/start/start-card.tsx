@@ -61,6 +61,7 @@ export function StartCard({ stocks, defaultMint, solUsd, cluster, firstQuote, co
   const [why, setWhy] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
+  const [quoteFailed, setQuoteFailed] = useState<string | null>(null);
   const [firstUnits, setFirstUnits] = useState<{ key: string; units: string } | null>(() => {
     const def = stocks.find((x) => x.mint === firstQuote?.mint);
     return firstQuote && def ? { key: `${firstQuote.mint}:${firstQuote.usd}`, units: unitsText(firstQuote.outRaw, def.decimals) } : null;
@@ -119,19 +120,26 @@ export function StartCard({ stocks, defaultMint, solUsd, cluster, firstQuote, co
     if (invite && !rateTouched && RATES.some((r) => r.bps === invite.suggestedRateBps)) setRateBps(invite.suggestedRateBps);
   }, [invite, rateTouched]);
 
-  // What the first save becomes, from Jupiter's quote for this amount.
+  // What the first save becomes, from Jupiter's quote for this amount. The page already carries
+  // the default's; asking again for the same one is a wasted request (and, on Jupiter's free
+  // tier, sometimes a refused one).
   useEffect(() => {
     if (!firstOn) return;
     const key = `${mint}:${firstUsd}`;
+    if (firstUnits?.key === key) return;
+    setQuoteFailed(null);
     const t = setTimeout(() => {
       void fetch(`/api/save/quote?mint=${mint}&usd=${firstUsd}`, { cache: "no-store" })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((q: { quote?: { outRaw: string } } | null) => {
-          if (q?.quote) setFirstUnits({ key, units: unitsText(q.quote.outRaw, stock.decimals) });
+        .then(async (r) => {
+          const q = (await r.json().catch(() => null)) as { quote?: { outRaw: string }; error?: string } | null;
+          if (r.ok && q?.quote) setFirstUnits({ key, units: unitsText(q.quote.outRaw, stock.decimals) });
+          else setQuoteFailed(key);
         })
-        .catch(() => undefined);
+        .catch(() => setQuoteFailed(key));
     }, 250);
     return () => clearTimeout(t);
+    // firstUnits is read, not watched: a new quote must not ask for itself again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mint, firstUsd, firstOn, stock.decimals]);
   const units = firstUnits && firstUnits.key === `${mint}:${firstUsd}` ? firstUnits.units : null;
 
@@ -331,6 +339,8 @@ export function StartCard({ stocks, defaultMint, solUsd, cluster, firstQuote, co
                 <>
                   {dollars(firstUsd)} becomes about <strong>{units}</strong> {stock.name} in your wallet, in seconds.
                 </>
+              ) : quoteFailed === `${mint}:${firstUsd}` ? (
+                <>Jupiter has no price for this right now. Try another amount, or again in a moment.</>
               ) : (
                 <>Asking Jupiter for a price…</>
               )}

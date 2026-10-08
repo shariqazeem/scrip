@@ -45,7 +45,8 @@
 }
 .sp-page-eyebrow {
   font-size: var(--fs-caption);
-  color: var(--ink-faint);
+  /* --ink-faint on paper is 3:1; small text needs 4.5:1 (Lighthouse, 8 Oct) */
+  color: var(--ink-muted);
   margin: 0 0 var(--s-2);
 }
 .sp-page-title:empty {
