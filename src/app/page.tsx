@@ -7,7 +7,10 @@ import { frontReceipt, strangersSaving } from "@/lib/save/latest";
 import { startCardProps } from "@/lib/start/card";
 import "./front.css";
 
-export const dynamic = "force-dynamic";
+// Nothing here depends on who is asking (the nav reads the session after it mounts), so the page
+// is built once and refreshed every 30 seconds: a visitor gets it from the cache instead of
+// waiting on prices, a quote and the receipt cache, which cost 1.9 s on every request.
+export const revalidate = 30;
 
 /**
  * THE FRONT DOOR HAS ONE JOB: START SAVING.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { AppShell } from "@/components/shell/app-shell";
 import { Jump } from "@/components/shell/jump";
 import { Toasts } from "@/components/toast/toasts";
@@ -13,10 +14,14 @@ const instrument = Instrument_Sans({
   variable: "--font-instrument",
   display: "swap",
 });
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  weight: "variable",
-  axes: ["opsz", "SOFT"],
+// Fraunces appears only in the wordmark (and a statement's title), always at optical size 144,
+// weight 700, softness 30. So it is pinned to that one style and cut to Latin text: 11 KB in place
+// of the 120 KB variable font that was preloaded on every page (Lighthouse, 8 Oct). Made with
+// fontTools' instancer and subsetter from Google Fonts' Fraunces; SIL OFL 1.1, ./fonts/OFL-Fraunces.txt.
+const fraunces = localFont({
+  src: "./fonts/fraunces-wordmark.woff2",
+  weight: "700",
+  style: "normal",
   variable: "--font-fraunces",
   display: "swap",
 });
