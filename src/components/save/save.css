@@ -201,6 +201,9 @@
 .sp-save-dialog {
   width: min(520px, calc(100vw - 2 * var(--s-4)));
   max-height: min(88vh, 760px);
+  /* Centred. Tailwind's preflight sets margin: 0 on every element, dialogs included, which
+     cancelled the browser's own centring and pinned the sheet to the top-left corner. */
+  margin: auto;
   padding: 0;
   color: var(--ink);
   background: var(--bg);
@@ -232,6 +235,19 @@
     margin: auto 0 0;
     border-radius: var(--r-lg) var(--r-lg) 0 0;
     border-bottom: 0;
+  }
+  .sp-save-dialog[open] {
+    animation-name: sp-save-up;
+  }
+}
+@keyframes sp-save-up {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
   }
 }
 .sp-save-dialog-head {
@@ -452,3 +468,73 @@
   color: var(--ink-faint);
   line-height: 1.5;
 }
+
+/* ── the sheet: the outcome first, the button pinned ─────────────────── */
+.sp-save-outcome {
+  display: grid;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.sp-save-outcome p {
+  display: grid;
+  gap: var(--s-1);
+  margin: 0;
+  padding: var(--s-4);
+}
+.sp-save-outcome .get {
+  border-top: 1px solid var(--border);
+}
+.sp-save-outcome .k {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-save-outcome .v {
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sp-save-outcome .local {
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+.sp-save-outcome .get .v {
+  font-size: 1.25rem;
+}
+.sp-save-outcome .get strong {
+  font-size: var(--fs-h2);
+  line-height: 1.1;
+  letter-spacing: var(--tracking-h2);
+}
+.sp-save-outcome .sub {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-save-more {
+  margin-top: var(--s-2);
+}
+.sp-save-more summary {
+  min-height: 32px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.sp-save-more span {
+  display: block;
+  margin-top: var(--s-1);
+  color: var(--ink-muted);
+}
+.sp-save-sheet-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5) calc(var(--s-4) + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.sp-save-sheet-foot .sp-save-trust {
+  margin: 0;
+}
+

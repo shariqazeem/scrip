@@ -35,12 +35,14 @@ type Props = {
   readonly cluster: string;
   /** Disclosures by mint, for the sheet: what the issuer is and can do. */
   readonly disclosures: Readonly<Record<string, string>>;
+  /** One line per stock: who issues it and what the mint lets them do. */
+  readonly issuerLines?: Readonly<Record<string, string>>;
 };
 
 type Amount = { readonly usd: number; readonly source: "chip" | "suggested" | "other" };
 type Phase = "idle" | "building" | "signing" | "confirming" | "failed";
 
-export function SaveNow({ stocks, featured, defaultMint, initialQuote, readAt, cluster, disclosures }: Props) {
+export function SaveNow({ stocks, featured, defaultMint, initialQuote, readAt, cluster, disclosures, issuerLines }: Props) {
   const router = useRouter();
   const wallets = useWallets();
   const money = useLocalMoney();
@@ -356,62 +358,91 @@ export function SaveNow({ stocks, featured, defaultMint, initialQuote, readAt, c
         {sheet === "wallets" ? (
           <WalletChoice wallets={wallets} why={why} onPick={async (w) => (await connectWith(w)) && setSheet("confirm")} />
         ) : sheet === "confirm" && account ? (
-          <div className="sp-save-sheet-body">
-            {suggestion && amount.source !== "suggested" ? (
-              <button type="button" className="sp-save-income is-compact" onClick={() => choose(Number(suggestion.saveUsdc) / 1e6, "suggested")}>
-                <span className="line">
-                  You received {dollars(Number(suggestion.usdc) / 1e6)} on {dayMonth(suggestion.at)}.
-                </span>
-                <span className="ask">
-                  Save {suggestion.rateBps / 100}% instead: {dollars(Number(suggestion.saveUsdc) / 1e6)}
-                </span>
+          <>
+            <div className="sp-save-sheet-body">
+              {suggestion && amount.source !== "suggested" ? (
+                <button type="button" className="sp-save-income is-compact" onClick={() => choose(Number(suggestion.saveUsdc) / 1e6, "suggested")}>
+                  <span className="line">
+                    You received {dollars(Number(suggestion.usdc) / 1e6)} on {dayMonth(suggestion.at)}.
+                  </span>
+                  <span className="ask">
+                    Save {suggestion.rateBps / 100}% instead: {dollars(Number(suggestion.saveUsdc) / 1e6)}
+                  </span>
+                </button>
+              ) : null}
+              {/* The outcome first, in the largest type on the sheet; the terms after it. */}
+              <div className="sp-save-outcome">
+                <p className="pay">
+                  <span className="k">From this wallet</span>
+                  <span className="v">
+                    {usdLabel} USDC{money ? <span className="local"> {money.format(amount.usd)}</span> : null}
+                  </span>
+                </p>
+                <p className="get">
+                  <span className="k">You get about</span>
+                  <span className="v">
+                    <strong>{units ?? "…"}</strong> {stock.name}
+                  </span>
+                  <span className="sub">
+                    {stock.ticker}, {stock.issuer}, into this same wallet
+                  </span>
+                </p>
+              </div>
+              {!fresh && quoteWhy ? <p className="sp-save-why">{quoteWhy}</p> : null}
+              <dl className="sp-save-facts">
+                {fresh ? (
+                  <div>
+                    <dt>At the least</dt>
+                    <dd>
+                      {unitsText(fresh.quote.minOutRaw, stock.decimals)} {stock.name}. If the price moves more than {fresh.quote.slippageBps / 100}% first, nothing
+                      happens and only the network fee is spent.
+                    </dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>Network fee</dt>
+                  <dd>{fresh ? (solInMoney(fresh.cost.feeLamports, fresh.solUsd) ?? "a fraction of a cent, in SOL") : "…"}</dd>
+                </div>
+                {fresh && fresh.cost.depositLamports > 0 ? (
+                  <div>
+                    <dt>First time only</dt>
+                    <dd>
+                      {(fresh.cost.depositLamports / 1e9).toFixed(4)} SOL{solInMoney(fresh.cost.depositLamports, fresh.solUsd) ? ` (${solInMoney(fresh.cost.depositLamports, fresh.solUsd)})` : ""} opens your {stock.name}{" "}
+                      account. A deposit, not a fee: it comes back if you close the account.
+                    </dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt>The issuer</dt>
+                  <dd>
+                    {issuerLines?.[mint] ?? disclosures[mint] ?? "Read the issuer's terms before saving."}
+                    {issuerLines?.[mint] && disclosures[mint] ? (
+                      <details className="sp-save-more">
+                        <summary>Everything about {stock.name}</summary>
+                        <span>{disclosures[mint]}</span>
+                      </details>
+                    ) : null}
+                  </dd>
+                </div>
+              </dl>
+              {why ? <p className="sp-save-why">{why}</p> : null}
+            </div>
+            {/* Pinned: the trust line directly above the one button, wherever the sheet is scrolled. */}
+            <div className="sp-save-sheet-foot">
+              {!fits && spendable !== null ? (
+                <p className="sp-save-why">
+                  This wallet holds {dollars(Number(spendable) / 1e6)} of USDC, less than {usdLabel}. Add USDC to it, or choose a smaller amount.
+                </p>
+              ) : null}
+              <p className="sp-save-trust">
+                <ShieldCheck size={16} strokeWidth={2} aria-hidden />
+                Your stock goes to this wallet, and only you can move it. Scrip never holds it. Not for US persons.
+              </p>
+              <button type="button" className="sp-save-go" onClick={() => void approve()} disabled={busy || !fresh || !fits}>
+                {phase === "building" ? "Preparing…" : phase === "signing" ? "Approve in your wallet…" : phase === "confirming" ? "Saving on Solana…" : phase === "failed" ? "Try again" : `Approve ${usdLabel} in wallet`}
               </button>
-            ) : null}
-            <p className="sp-save-sheet-say">
-              Saving <strong>{usdLabel}</strong>
-              {money ? ` (${money.format(amount.usd)})` : ""} of USDC from this wallet into <strong>{stock.name}</strong>, in this wallet.
-            </p>
-            <dl className="sp-save-facts">
-              <div>
-                <dt>You get</dt>
-                <dd>{units ? `about ${units} ${stock.name}` : quoteWhy ?? "asking for a price…"}</dd>
-              </div>
-              {fresh ? (
-                <div>
-                  <dt>At the least</dt>
-                  <dd>
-                    {unitsText(fresh.quote.minOutRaw, stock.decimals)}. If the price moves more than {fresh.quote.slippageBps / 100}% before it lands, the save does not happen and
-                    only the network fee is spent.
-                  </dd>
-                </div>
-              ) : null}
-              <div>
-                <dt>Network fee</dt>
-                <dd>{fresh ? (solInMoney(fresh.cost.feeLamports, fresh.solUsd) ?? "a fraction of a cent, in SOL") : "…"}</dd>
-              </div>
-              {fresh && fresh.cost.depositLamports > 0 ? (
-                <div>
-                  <dt>First time</dt>
-                  <dd>
-                    A deposit of {(fresh.cost.depositLamports / 1e9).toFixed(4)} SOL{solInMoney(fresh.cost.depositLamports, fresh.solUsd) ? ` (${solInMoney(fresh.cost.depositLamports, fresh.solUsd)})` : ""} opens
-                    your {stock.name} account in this wallet. It stays yours, and comes back if you ever close the account.
-                  </dd>
-                </div>
-              ) : null}
-              <div>
-                <dt>What it is</dt>
-                <dd className="fine">{disclosures[mint] ?? "Read the issuer's terms before saving."}</dd>
-              </div>
-            </dl>
-            <p className="sp-save-trust">
-              <ShieldCheck size={16} strokeWidth={2} aria-hidden />
-              Your stock goes to this wallet, and only you can move it. Scrip never holds it. Not for US persons.
-            </p>
-            {why ? <p className="sp-save-why">{why}</p> : null}
-            <button type="button" className="sp-save-go" onClick={() => void approve()} disabled={busy || !fresh || !fits}>
-              {phase === "building" ? "Preparing…" : phase === "signing" ? "Approve in your wallet…" : phase === "confirming" ? "Saving on Solana…" : phase === "failed" ? "Try again" : "Approve in wallet"}
-            </button>
-          </div>
+            </div>
+          </>
         ) : null}
       </dialog>
     </div>

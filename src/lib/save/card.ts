@@ -5,7 +5,7 @@ import { offeredAssets } from "@/lib/assets/registry";
 import { waitedFor } from "@/lib/pyth/price";
 import { priceStates } from "@/lib/pyth/ready";
 import { cluster } from "@/lib/solana/cluster";
-import { type PickerStock, CATALOGUE_READ_AT, catalogue, defaultStock, disclosure, featured, toPicker } from "./catalogue";
+import { type PickerStock, CATALOGUE_READ_AT, catalogue, defaultStock, disclosure, featured, powersSentence, toPicker } from "./catalogue";
 import { nameOf } from "./names";
 import { cachedQuote } from "./quote-cache";
 
@@ -22,6 +22,8 @@ export type SaveCardProps = {
   readonly readAt: string;
   readonly cluster: string;
   readonly disclosures: Readonly<Record<string, string>>;
+  /** One line per stock for the sheet: who issues it and what the mint lets them do. */
+  readonly issuerLines: Readonly<Record<string, string>>;
 };
 
 export async function saveCardProps(): Promise<SaveCardProps> {
@@ -36,6 +38,7 @@ export async function saveCardProps(): Promise<SaveCardProps> {
     readAt: CATALOGUE_READ_AT,
     cluster: cluster(),
     disclosures: Object.fromEntries(all.map((s) => [s.mint, disclosure(s)])),
+    issuerLines: Object.fromEntries(all.map((s) => [s.mint, `Issued by ${s.issuer.name}. ${powersSentence(s.powers)}`])),
   };
 }
 
