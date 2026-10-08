@@ -1,5 +1,18 @@
 # Upgrading mainnet with Plans — the founder's runbook
 
+## Done, 8 October 2026
+
+Upgraded at slot 454,396,444 (`4Fyi21ixHNd3etWzbWJSU5xC8jW9JXMwjBzczdkYMBMy6jpLqUwgESZThcV4WYof2AMtFq5VbFrGivWHKZqJTj5T`)
+with one command, `solana program deploy … --program-id Fbp8… --buffer <a buffer key kept on disk>
+--with-compute-unit-price 10000 --max-sign-attempts 60`, which extended the program and upgraded
+it in 19 seconds. The binary is 617,552 bytes (`fca62b79…6d76c`), 64 KB smaller than the first
+Plans build, so the extension cost 0.1634 SOL instead of 0.4871; the 3.138 SOL buffer came back
+in the same transaction. Rehearsed first on a local validator holding the old mainnet binary at
+the real program id. Steps 2, 3, 5 and 6 below (Squads, a verified build) were not done: the
+founder's key is still the only upgrade authority, and moving it to a multisig is one
+`set-upgrade-authority` away.
+
+
 Prepared 7 October 2026. **The founder signs every step; nothing here runs by itself.** The
 plan's freeze applies: if Plans are not rehearsed, on a multisig and verified by 9 October,
 they do not ship, and Save now, the rule, the Welcome bonus and Scrip Curve go without them.
