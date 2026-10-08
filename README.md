@@ -2,32 +2,52 @@
 
 # Scrip
 
-**Scrip is where income becomes ownership.**
+**Save part of every dollar you're paid into stocks you own. Whoever pays you can match it.**
 
 > **Live on Solana mainnet since 21 September 2026 — [scrip.work](https://scrip.work)**
->
-> **Watch it work: [the film, 1:36](https://youtu.be/snAm1xOh_Pk) and [how a sweep works, 1:52](https://youtu.be/YbZeUL4TZj4)**
 >
 > | | |
 > | --- | --- |
 > | Program | [`Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj`](https://solscan.io/account/Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj) |
 > | Build | 617,552 bytes, sha256 `fca62b7977b2af359cfee4544ed23dd6c293550ccd7f60b245da16cd4036d76c`, upgraded on 2026-10-08 at slot 454,396,444 to add Plans (was 585,384 bytes, `92f9cbda…`) |
 > | Verify it yourself | `solana program dump Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj out.so` reproduces that hash from the chain |
-> | Registers | [@scrip](https://scrip.work/@scrip) (an organisation), [@shariq](https://scrip.work/@shariq), [@yusih](https://scrip.work/@yusih) |
-> | Everything settled | [scrip.work/ledger](https://scrip.work/ledger) |
+> | Everything settled | [scrip.work/ledger](https://scrip.work/ledger) — every receipt, and how much of it is still held |
 >
-> A real receipt, openable by a stranger with no wallet and no account:
-> **[$5 landed · 20% became 0.0013 SPYx, 10 seconds later, filled 0.02% from Pyth](https://scrip.work/receipt/5NcgNf2SXzEQiwXEf6bzcLtirk4JmHE3vx2Qan2uh41LHJFvFXs8SLiRNkwUCAKEKV7bqhBfUDJ92rRj7i6koicG)**
+> Real receipts, openable by a stranger with no wallet and no account:
+>
+> - **Every payment:** [$5 landed · 20% became 0.0013 S&P 500, 10 seconds later, filled 0.02% from Pyth](https://scrip.work/receipt/5NcgNf2SXzEQiwXEf6bzcLtirk4JmHE3vx2Qan2uh41LHJFvFXs8SLiRNkwUCAKEKV7bqhBfUDJ92rRj7i6koicG)
+> - **The match:** [$20 landed · 20% became 0.0053 Nasdaq 100](https://scrip.work/receipt/5YrDMN5kMJmew3gAffLNCLiqEHeYzMH7zdsvqgxoUBvdkKXH9iaYXVZbxXfwcWnbKSigs3xrqQrYXjCBDc1ULPa9), and [ten seconds after it, the sponsor's Plan added $2 of Nasdaq 100](https://solscan.io/tx/33wcVSx4NiJxE2Ne9JuAki26zcqo1XAFoESygbmc9AQkygGFzBkaZqp272x3hAuhYH28Ucvwk4P31epXBt3ug5r4), paid by the program in its own transaction
+> - **Pay in stock:** [an organisation paid a person in stock, with the reason on the receipt](https://scrip.work/receipt/NFZucZvh5QJAeid7WNxZECeUxuMsJgRUbFxyn57gCxmBmym5C1cP4X3yvnERN4JShde9PxLodVcohYawq3gVcza)
+>
+> Every receipt so far is to the team's own wallets, and every surface says so; `/ledger` counts the people outside the team separately.
 
-<p align="center"><img src="docs/media/landed-and-receipt.png" alt="A register on scrip.work: $5 landed, 20% becoming SPYx — and the receipt it printed ten seconds later, filled 0.02% from Pyth" width="100%"></p>
-
-Since the first stock exchange, being paid in ownership was for employees of public
-companies with brokerage accounts. A stock was a certificate a company issued to insiders,
-then a line in a broker's database, and in both cases something you had to go somewhere to
-buy, in the hours somebody else kept. On Solana a stock is a token, and a token can be paid,
-ruled, given, vested and remembered like money. That is the whole idea.
+<p align="center"><img src="docs/media/landed-and-receipt.png" alt="On scrip.work: $5 landed and 20% became stock, and the receipt it printed ten seconds later, filled 0.02% from Pyth" width="100%"></p>
 
 **You're already getting paid. Investing shouldn't take another decision.**
+
+A person paid in stablecoins on Solana — a freelancer, a contractor, a grant recipient, a bounty
+earner — can receive USDC from anyone, anywhere, at any hour, and cannot own the Nasdaq 100 without
+a brokerage most of them cannot open and a decision they never make. USDC that arrives is spent or
+goes back into crypto. Every product around tokenized stocks is a venue for people who already
+decided to invest. Scrip is for the people who never will decide, so it asks once.
+
+## How it works, in one minute
+
+1. **Start saving.** Open [scrip.work](https://scrip.work) in your Solana wallet. One question —
+   how much of every payment becomes stock (10% by default) — one stock (the Nasdaq 100 by
+   default), and one approval. That approval makes a first save now, so stock lands in the wallet
+   the same minute, and turns on saving every payment. Scrip can move at most $200 of your USDC,
+   only into that stock; stopping is one token-program instruction the program cannot block.
+2. **Every payment.** Whoever pays you keeps sending USDC to the address you already use. Within
+   seconds of an arrival, the slice becomes stock in the same wallet, checked on chain against a
+   Pyth price, with a permanent receipt anyone can open. The rest stays USDC, untouched.
+3. **Get matched.** Whoever pays you can open a **Plan**: for every automatic save one of its
+   people makes, the program adds a share in stock, capped each month, in its own transaction,
+   never taken back. Live on mainnet since 8 October.
+
+Saving once, without the automatic part, is a plain Jupiter swap into any of 98 tokenized stocks
+(xStocks, Ondo, Backpack), with a receipt read from the transaction:
+[scrip.work/app/save](https://scrip.work/app/save). It works at any hour.
 
 ## The seven firsts
 
@@ -42,31 +62,18 @@ a surface in this repository, not a claim.
 | 04 | vest from anyone to anyone | `/grant/<pda>` — an escrow the payer cannot spend, released on its own every day | in the mainnet program; the first mainnet grant is not opened yet |
 | 05 | arrive before the opening bell | `/floor` — the share of arrivals that settled while the NYSE was shut | most have: [`5h9QtobT…`](https://solscan.io/tx/5h9QtobTeBzNhvVzpPdL6MNLVRco6DJUx95L2HSmy6XQnbjTwGexXSPn3Q6E6vSNt1us4FxGuMCACfghNPdT5VnY) settled at 06:04 ET; the floor counts them live |
 | 06 | be given | `/claim/<payer>/<id>` — the recipient claims it into their own wallet | [`3tbreDda…`](https://solscan.io/tx/3tbreDdapAgVF7XdXGzucBiSAFK75x1xgHsALj2NVLcVRscX19J1x4J9LxZijTsh2337FRoRvWgjtWLmcMBan9vL) |
-| 07 | prove it was kept | `/ledger` — keep-rate measured on chain at 7 and 30 days | first marks 28 Sep 2026 |
+| 07 | prove it was kept | `/ledger` — keep-rate measured on chain at 7 and 30 days | measured since 28 Sep 2026 |
 
 Every one is exercised by the on-chain battery (`npm run test:devnet`). The mainnet column is
-filled only where a real transaction exists: 04 waits for the first grant on mainnet, and 07
-for 28 September, when the first receipt's 7-day window closes. 06 is the one worth opening:
-a wallet that had never held a stock opened a register and took its first position in a single
-transaction. That first claim was sponsored; since 24 September every claim is the claimer's
+filled only where a real transaction exists: 04 waits for the first grant on mainnet; 07's first
+7-day marks were written on 28 September. 06 is the one worth opening: a wallet that had never
+held a stock opened its savings record and took its first position in a single transaction. That first claim was sponsored; since 24 September every claim is the claimer's
 own — one signature, under 0.009 SOL, most of it rent for accounts that stay theirs.
 
-A person paid in stablecoins on Solana — a freelancer, a contractor, a grant recipient, a
-bounty earner — can receive USDC from anyone, anywhere, at any hour, and cannot own the
-S&P 500 without a brokerage most of them cannot open and a decision they never make. USDC
-that arrives is spent or goes back into crypto. Every product around tokenized stocks is a
-venue for people who already decided to invest.
-
-**Scrip is a rule on your wallet.** Set a rate once on the Solana address you already use;
-a slice of every USDC that lands becomes S&P 500 in the same wallet, with a permanent
-receipt and a keep-rate measured on chain at 7 and 30 days. Non-custodial: pausing is a
-token-program `revoke`. Payers keep sending dollars.
-
-**And the other side of the same program: get paid in ownership.** An organisation pays one
-person, a whole team from a file, or a grant that vests, in stock, with one signature; every
-line is a receipt anyone can open, with its reason; a grant sits in an escrow the payer
-cannot spend and vests on its own. Scrip is the first organisation on it: its bounties are
-paid in stock through `@scrip`. The plan is `docs/SCRIP-COMPANY-PLAN.md`.
+**The other side of the same program: pay in ownership.** An organisation pays one person, a whole
+team from a file, or a grant that vests, in stock, with one signature; every line is a receipt
+anyone can open, with its reason; a grant sits in an escrow the payer cannot spend and vests on its
+own. And a team can match what its people save with a Plan.
 
 ```bash
 npm install && npm run dev
@@ -77,26 +84,32 @@ npm install && npm run dev
 | | |
 | --- | --- |
 | **Program** | `Fbp8fBdCnT8Pv1g5vJ8brPZm1U4yWLtUsEtoac8A16gj` on **Solana mainnet** since 21 September 2026 (and on devnet, for the test battery). Anchor 0.31.1, upgradeable by one key until a multisig |
-| **Instructions** | `open_book` · `set_asset` · `close_book` · `enable_rule` · `set_rule` · `disable_rule` · `sync_watermark` · `withdraw_float` · `begin_sweep` · `finish_sweep` · `fund_payout` · `release_payout` · `claim_payout` · `cancel_payout` · `open_grant` · `seal_grant` · `vest` · `revoke_grant` · `close_grant` · `measure_receipt` |
-| **Assets** | SPYx (default), QQQx, Oro GOLD, and eleven single-name xStocks — every mint read off mainnet, issuer powers on every row |
-| **Prices** | Pyth, on chain, fully verified, under ten minutes old, confidence under 1% — enforced by the program. SPYx settles against `Equity.US.SPY/USD`, which is published on weekdays, before the bell too; when no price can be verified, at a weekend, an arrival waits in the wallet and the page says so |
+| **Instructions** | `open_book` · `set_asset` · `close_book` · `enable_rule` · `set_rule` · `disable_rule` · `sync_watermark` · `withdraw_float` · `begin_sweep` · `finish_sweep` · `fund_payout` · `release_payout` · `claim_payout` · `cancel_payout` · `open_grant` · `seal_grant` · `vest` · `revoke_grant` · `close_grant` · `measure_receipt`, and since 8 October the Plans: `open_plan` · `add_member` · `accept_member` · `remove_member` · `match_receipt` · `close_plan` |
+| **Assets** | Every payment saves into one of the eleven stocks a price can be verified for on Solana: the Nasdaq 100 (QQQx, the default), the S&P 500 (SPYx), Oro GOLD and single-name xStocks. Saving once reaches 98 tokenized stocks from three issuers, each with a route Jupiter quotes. Every mint read off mainnet, issuer powers on every row |
+| **Prices** | Pyth, on chain, fully verified, under ten minutes old, confidence under 1% — enforced by the program. Pyth stopped pushing equity prices on chain around 28 September; Scrip's servers now post a fully verified update themselves when a save needs one, from a Pyth API key entitled today to the Nasdaq 100, Tesla, gold and USDC (a trial that runs to about 21 October). When no price can be verified — at a weekend, or for a stock the key does not cover — an arrival waits in the wallet as USDC and the page says so. Saving once needs no oracle |
 | **Routing** | Jupiter, as top-level instructions the program makes atomic without a CPI |
 | **Automatic saving** | Scrip saves within seconds of a payment; every save is one transaction the program verifies, or nothing moves |
 | **Tests** | the offline suite; 43 Rust unit tests; a live registry battery against mainnet; a 20-test on-chain battery, on devnet or a local validator with Pyth's accounts cloned |
 
 ## Try it in a minute
 
-1. **Open a receipt — no wallet, no account.** [$5 landed · 20% became 0.0013 SPYx](https://scrip.work/receipt/5NcgNf2SXzEQiwXEf6bzcLtirk4JmHE3vx2Qan2uh41LHJFvFXs8SLiRNkwUCAKEKV7bqhBfUDJ92rRj7i6koicG):
+1. **Open a receipt — no wallet, no account.** [$5 landed · 20% became 0.0013 S&P 500](https://scrip.work/receipt/5NcgNf2SXzEQiwXEf6bzcLtirk4JmHE3vx2Qan2uh41LHJFvFXs8SLiRNkwUCAKEKV7bqhBfUDJ92rRj7i6koicG):
    the stock arrived 10 seconds after the money, filled 0.02% from the Pyth price it was
    checked against. The price's age and band, the cost, and the 7- and 30-day checks are all
    read from the chain.
-2. **Watch money become stock.** The front door of [scrip.work](https://scrip.work) is `@scrip`'s
-   own register, live. Scan its Solana Pay code with any wallet and send $5 of USDC: when a
-   price can be verified, the stub prints within seconds; when none can, it says so and
-   waits. The $5 stays with `@scrip`.
-3. **Turn it on for your own wallet.** [scrip.work/app/rule](https://scrip.work/app/rule): one
-   question, one signature, about 0.024 SOL — most of it prepaid receipts you can withdraw.
-   Not offered to US persons.
+2. **Start saving in your own wallet.** Open [scrip.work](https://scrip.work) in Phantom,
+   Solflare or Backpack: one card, one approval, and a first save lands in seconds, at any hour.
+   Starting sets aside about 0.026 SOL, most of it deposits that come back and prepaid fees for
+   your next automatic saves. Not offered to US persons.
+3. **See the match.** [The sponsor's Plan adding $2 of Nasdaq 100](https://solscan.io/tx/33wcVSx4NiJxE2Ne9JuAki26zcqo1XAFoESygbmc9AQkygGFzBkaZqp272x3hAuhYH28Ucvwk4P31epXBt3ug5r4)
+   ten seconds after a member's automatic save: the escrow, the cap and the share are all the
+   program's.
+
+## Films
+
+[The film, 1:36](https://youtu.be/snAm1xOh_Pk) and [how a sweep works, 1:52](https://youtu.be/YbZeUL4TZj4),
+recorded on 24–25 September 2026, before the start card and Plans: they show the earlier screens
+("turn on the rule", the S&P 500 by default). The mechanism they show is unchanged.
 
 ## Run it yourself
 
@@ -140,7 +153,7 @@ they are trusted for very little:
 - cannot omit the check: `begin_sweep` refuses unless a `finish_sweep` for the same book and release follows in the same transaction
 - must deliver the minimum: the owner's own token account, read before and after, must gain at least the slice's worth at Pyth's price net of confidence, less the owner's tolerance (1% by default)
 - **are trusted for the rest of the slice, for now**: the program checks that minimum, not the whole slice, so a submitter that delivered only the minimum could keep the difference — about the tolerance plus Pyth's band, plus any move in the ten minutes a price stays valid. Scrip's servers swap the whole slice into the owner's account (the first two sweeps filled 0.04% above and 0.12% below Pyth). Requiring that on chain is the first change in the next program upgrade
-- are paid a fixed 0.0005 SOL a save plus the rent they advanced, from the owner's prepaid saves
+- are paid a fixed fee for submitting each save, plus the rent they advanced, from the owner's prepaid saves
 
 ## Atomic without a Jupiter CPI
 
@@ -183,6 +196,7 @@ nobody measured is excluded and reported, never counted as spent.
 ## The organisation side
 
 ```
+/app/org/plans    a Plan: match a share of every automatic save your people make, capped each month
 /app/org/pay      one person: a handle or an address, an amount, a reason, an optional split
 /app/org/runs     a run: a CSV of handle, amount, reason; one signature; every line a receipt sharing a run id
 /app/org/grants   a grant: bought once into an escrow, vesting on a schedule, released on its own every day
@@ -194,10 +208,10 @@ nobody measured is excluded and reported, never counted as spent.
 
 ## Not built
 
-Mixes (several assets per book), round-ups on outbound payments, the embedded-wallet door,
-Backpack mint-and-redeem as a second fill venue, cross-chain arrivals, yield, credit,
-milestones and share cards for a person's firsts. Each is one more destination for the same
-standing instruction.
+The whole slice enforced on chain (today the program enforces the Pyth-bounded minimum; see
+below), a second oracle for the hours and stocks Pyth's key does not cover, receipts that can be
+closed after their 30-day measurement, a multisig upgrade authority, network fees paid from USDC,
+mixes (several assets per rule), round-ups on outbound payments, and cross-chain arrivals.
 
 ## The moat, before a judge says it
 
