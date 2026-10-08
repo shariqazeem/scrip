@@ -458,3 +458,13 @@
   border: 1px solid var(--warn-border);
   border-radius: var(--r-md);
 }
+
+/* why the primary button waits: said beside it, never left to a greyed-out guess */
+.sp-q-hint {
+  flex-basis: 100%;
+  margin: var(--s-1) 0 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--warn);
+}
+

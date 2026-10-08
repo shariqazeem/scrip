@@ -145,9 +145,19 @@ export function RuleEditor({
   // A name is optional: an empty one is made from the address when the signature is built.
   const slugCheck = view.hasBook || slug === "" ? null : validateSlug(slug);
   const needsAttest = asset.xstocks && (!view.hasBook || view.assetMint !== asset.mint);
+  // What the person changed on a savings record that already exists, so only those buttons ask.
+  const assetChanged = view.hasBook && view.assetMint !== asset.mint;
   const allowanceUsdc = BigInt(Math.round(Number(allowance || 0) * 1e6));
   const floatLamports = BigInt(Math.round(Number(floatSol || 0) * 1e9));
   const termsBody = { rateBps: terms.rateBps, escalateBps: terms.escalateBps, floorUsdc: terms.floorUsdc.toString(), capUsdc: terms.capUsdc.toString(), toleranceBps: terms.toleranceBps };
+  const rateChanged = !view.rule || termsBody.rateBps !== view.rule.rateBps;
+  const termsChanged =
+    !view.rule ||
+    rateChanged ||
+    termsBody.escalateBps !== view.rule.escalateBps ||
+    termsBody.floorUsdc !== view.rule.floorUsdc ||
+    termsBody.capUsdc !== view.rule.capUsdc ||
+    termsBody.toleranceBps !== view.rule.toleranceBps;
 
   // CAN THIS WALLET AFFORD IT? The program moves the float with a system transfer, so a
   // wallet short by a lamport fails at simulation — and a wallet shows that as "Failed to
@@ -453,12 +463,15 @@ export function RuleEditor({
           </button>
         ) : (
           <div className="sp-actions">
-            <button type="button" className="sp-action is-primary is-big" disabled={busy !== null || !validity.ok} onClick={() => void run("change", { action: "change", terms: termsBody }, "Changed.", goHome)}>
-              {busy === "change" ? "Waiting for your wallet…" : `Change to ${fmtBps(rateBps)}`}
-            </button>
-            {view.assetMint !== asset.mint ? (
-              <button type="button" className="sp-action" disabled={busy !== null || (needsAttest && !attest)} onClick={() => void run("asset", { action: "asset", assetMint: asset.mint, termsVersion: asset.xstocks ? 1 : 0 }, `Now saving into ${label}.`)}>
-                {busy === "asset" ? "Waiting…" : `Save into ${label} instead`}
+            {/* The one primary button is the change the person just made: a new stock, else new terms. */}
+            {assetChanged ? (
+              <button type="button" className="sp-action is-primary is-big" disabled={busy !== null || (needsAttest && !attest)} onClick={() => void run("asset", { action: "asset", assetMint: asset.mint, termsVersion: asset.xstocks ? 1 : 0 }, `Now saving into ${label}.`)}>
+                {busy === "asset" ? "Waiting for your wallet…" : `Save into ${label} instead`}
+              </button>
+            ) : null}
+            {termsChanged ? (
+              <button type="button" className={`sp-action${assetChanged ? "" : " is-primary is-big"}`} disabled={busy !== null || !validity.ok} onClick={() => void run("change", { action: "change", terms: termsBody }, "Changed.", goHome)}>
+                {busy === "change" ? "Waiting for your wallet…" : rateChanged ? `Change to ${fmtBps(rateBps)}` : "Save these changes"}
               </button>
             ) : null}
             <button type="button" className="sp-action" disabled={busy !== null} onClick={() => void run("allowance", { action: "allowance", allowanceUsdc: allowanceUsdc.toString() }, "Limit set.")}>
@@ -470,6 +483,9 @@ export function RuleEditor({
             <button type="button" className="sp-action is-quiet" disabled={busy !== null} onClick={() => void run("disable", { action: "disable" }, "Stopped. Your stock stays in your wallet, and Scrip can no longer move your USDC.", goHome)}>
               {busy === "disable" ? "Waiting…" : "Stop saving"}
             </button>
+            {assetChanged && needsAttest && !attest ? (
+              <p className="sp-q-hint">Tick the box above first: {label} is a token issued by {asset.issuer}, and saving into it needs your yes to what the issuer can do.</p>
+            ) : null}
           </div>
         )}
         {/*
