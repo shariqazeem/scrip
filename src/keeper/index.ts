@@ -93,6 +93,12 @@ const STUCK_AFTER_SECONDS = Number(process.env.KEEPER_STUCK_AFTER_SECONDS ?? "60
 const KEEPER_TIP = 500_000n;
 /** The smallest save Scrip's keepers submit; below it the receipt's cost is too large a share. */
 const KEEPER_MIN_SLICE = BigInt(process.env.KEEPER_MIN_SLICE_USDC ?? "2000000");
+/**
+ * The front book — Scrip's own, the one /proof invites a stranger to try with $5 — saves from the
+ * program's own minimum instead: its prepaid saves are Scrip's money, and a $5 test at 10% is a
+ * $0.50 slice that the $2 batching would otherwise leave waiting, with no receipt, in front of a judge.
+ */
+const FRONT_BOOK = process.env.NEXT_PUBLIC_FRONT_BOOK?.trim() || null;
 /** How often a linear schedule is vested. Every vest costs the payer's float a receipt's rent. */
 const VEST_EVERY_SECONDS = Number(process.env.KEEPER_VEST_HOURS ?? "24") * 3600;
 /**
@@ -547,7 +553,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
   // 50-cent save would spend most of itself. The program allows a slice down to MIN_SLICE; this
   // keeper waits until the unswept slice reaches the policy minimum, which batches small
   // payments into one save. Another keeper may sweep sooner: keepers are permissionless.
-  if (slice.value.slice < KEEPER_MIN_SLICE) {
+  if (slice.value.slice < KEEPER_MIN_SLICE && book.slug !== FRONT_BOOK) {
     waitingSince.delete(key);
     report(key, book.owner, { lastReason: `waiting for $${Number(KEEPER_MIN_SLICE) / 1e6} to save: the slice is ${slice.value.slice} USDC base units` });
     return;
