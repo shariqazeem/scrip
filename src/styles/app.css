@@ -741,6 +741,23 @@
   justify-items: stretch;
   max-width: 340px;
 }
+/* With no wallet in this browser: a touch screen is told to open Scrip inside its wallet app, a
+   computer to install one. Chosen by CSS, so the server and the browser draw the same thing. */
+.sp-doors-phone,
+.sp-doors-desktop {
+  display: contents;
+}
+.sp-doors-phone {
+  display: none;
+}
+@media (hover: none) and (pointer: coarse) {
+  .sp-doors-phone {
+    display: contents;
+  }
+  .sp-doors-desktop {
+    display: none;
+  }
+}
 .sp-door {
   justify-content: center;
   height: 46px;

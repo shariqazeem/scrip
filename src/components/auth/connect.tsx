@@ -11,7 +11,7 @@ import {
 } from "@solana/wallet-standard-features";
 import { Wallet as WalletIcon } from "lucide-react";
 import { signInWith } from "@/lib/session/sign-in";
-import { isPhone, walletBrowseLinks } from "@/components/save/wallets";
+import { walletBrowseLinks } from "@/components/save/wallets";
 
 /**
  * THE WALLET DOOR — Wallet Standard directly, with no adapter UI package.
@@ -117,18 +117,16 @@ export function ConnectWallet({ compact = false }: { compact?: boolean }) {
  * server cannot know which device it is rendering for.
  */
 function NoWalletHere() {
-  const [phoneAt, setPhoneAt] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    setPhoneAt(isPhone() ? window.location.href : null);
-    setReady(true);
-  }, []);
-  if (!ready) return <div className="sp-doors" aria-busy="true" />;
-  if (phoneAt) {
-    return (
-      <div className="sp-doors">
+  // Both doors render on the server and CSS shows the one that fits the device (a touch screen
+  // gets "Open in your wallet app"), so nothing moves when the page wakes up. Until 8 October
+  // this rendered empty and filled in after mount: a layout shift of 0.16 on /app (Lighthouse).
+  const [here, setHere] = useState("https://scrip.work/app");
+  useEffect(() => setHere(window.location.href), []);
+  return (
+    <div className="sp-doors">
+      <div className="sp-doors-phone">
         <p className="sp-doors-lead">Open Scrip in your wallet app</p>
-        {walletBrowseLinks(phoneAt).map((l) => (
+        {walletBrowseLinks(here).map((l) => (
           <a key={l.name} href={l.href} className="sp-action sp-door">
             <WalletIcon size={16} strokeWidth={2} aria-hidden />
             Open in {l.name}
@@ -136,15 +134,13 @@ function NoWalletHere() {
         ))}
         <p className="sp-doors-note">This page opens inside the wallet, where signing in takes one tap. Nothing moves.</p>
       </div>
-    );
-  }
-  return (
-    <div className="sp-doors">
-      <p className="sp-doors-lead">No Solana wallet in this browser yet</p>
-      <p className="sp-doors-note">
-        Install <a href="https://phantom.app">Phantom</a>, <a href="https://solflare.com">Solflare</a> or <a href="https://backpack.app">Backpack</a>, then
-        come back to this page. Scrip never holds your money: it works with the wallet you already have.
-      </p>
+      <div className="sp-doors-desktop">
+        <p className="sp-doors-lead">No Solana wallet in this browser yet</p>
+        <p className="sp-doors-note">
+          Install <a href="https://phantom.app">Phantom</a>, <a href="https://solflare.com">Solflare</a> or <a href="https://backpack.app">Backpack</a>, then
+          come back to this page. Scrip never holds your money: it works with the wallet you already have.
+        </p>
+      </div>
     </div>
   );
 }

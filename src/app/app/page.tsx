@@ -19,7 +19,10 @@ import { siteUrl } from "@/lib/site";
 import { startCardProps } from "@/lib/start/card";
 import { cluster } from "@/lib/solana/cluster";
 
-export const metadata: Metadata = { title: "Your savings" };
+export const metadata: Metadata = {
+  title: "Your savings",
+  description: "Every stock you own, every save with its receipt, and saving every payment, in one place. Start saving with one approval, in your own Solana wallet.",
+};
 export const dynamic = "force-dynamic";
 
 /**
