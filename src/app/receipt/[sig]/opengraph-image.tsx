@@ -3,6 +3,7 @@ import { TOUCHED_NOT_WRITTEN, readReceiptBySignature, writerForSignature } from 
 import { readSaveTx } from "@/lib/save/read";
 import { stockByMint } from "@/lib/save/catalogue";
 import { bps, short, stampUTC, unitsFromRaw, usdc } from "@/lib/format";
+import { matchesFor } from "@/lib/plan/matches";
 
 export const runtime = "nodejs";
 export const alt = "A Scrip receipt";
@@ -67,6 +68,9 @@ export default async function Image({ params }: { params: Promise<{ sig: string 
   const landed = v.kind === "sweep" ? `${usdc(v.basisUsdc)} landed` : `${usdc(v.paidUsdc)} paid`;
   const became = v.kind === "sweep" ? `${bps(v.rateBps)} became` : v.kind === "gift" ? "A first position, claimed" : v.kind === "grant" ? "Granted, vesting" : v.kind === "vest" ? "Vested" : "It became";
 
+  // A sponsor's match, when the save has one: the line a shared link is most often about.
+  const m = v.kind === "sweep" ? ((await matchesFor(v.address, v.signature).catch(() => []))[0] ?? null) : null;
+
   return card({
     kicker: "Settled on Solana",
     landed,
@@ -75,11 +79,14 @@ export default async function Image({ params }: { params: Promise<{ sig: string 
     symbol,
     when: stampUTC(v.settledUnix),
     where: `in ${short(v.recipient)}'s wallet`,
-    foot: ["Still held", "measured at 7 and 30 days"],
+    foot: m
+      ? [`Added by ${m.sponsorHandle ? `@${m.sponsorHandle}` : short(m.sponsor)}`, `${usdc(m.usdc)} → ${decimals ? unitsFromRaw(m.amountRaw, decimals) : m.amountRaw.toString()} ${symbol}`]
+      : ["Still held", "measured at 7 and 30 days"],
+    footTone: m ? "ok" : undefined,
   });
 }
 
-function card(c: { kicker: string; landed: string; became: string; units: string; symbol: string; when: string; where: string; foot: [string, string] }) {
+function card(c: { kicker: string; landed: string; became: string; units: string; symbol: string; when: string; where: string; foot: [string, string]; footTone?: "ok" }) {
   return new ImageResponse(
     (
       <div style={{ ...flexRow, width: "100%", height: "100%", background: paper, alignItems: "center", justifyContent: "center", padding: 48 }}>
@@ -101,7 +108,7 @@ function card(c: { kicker: string; landed: string; became: string; units: string
           <div style={{ display: "flex", fontSize: 22, color: muted, marginTop: 6 }}>{c.where}</div>
           <div style={{ ...flexRow, borderTop: `2px solid ${line}`, marginTop: 28, paddingTop: 18, justifyContent: "space-between", fontSize: 20, color: muted }}>
             <div style={{ display: "flex" }}>{c.foot[0]}</div>
-            <div style={{ display: "flex" }}>{c.foot[1]}</div>
+            <div style={{ display: "flex", color: c.footTone === "ok" ? ok : muted }}>{c.foot[1]}</div>
           </div>
         </div>
       </div>
