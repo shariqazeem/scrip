@@ -71,6 +71,11 @@ const HEALTH_PORT = Number(process.env.KEEPER_HEALTH_PORT ?? "8787");
 // 100,000 microlamports on the 600,000 units a sweep reserves is 60,000 lamports: an eighth of
 // the tip the sweep repays, for a transaction that lands in the first slots instead of later.
 const PRIORITY_MICRO_LAMPORTS = Number(process.env.KEEPER_PRIORITY_MICRO_LAMPORTS ?? "100000");
+/**
+ * What a keeper must hold before it posts a price: the encoded VAA's rent and the price
+ * update's (both returned at close), and the fees of the five or so transactions it takes.
+ */
+const MIN_POST_LAMPORTS = Number(process.env.KEEPER_MIN_POST_LAMPORTS ?? "8000000");
 /** The tip + receipt rent the program will take from the float. Mirrors the program. */
 const KEEPER_TIP = 500_000n;
 /** The smallest save Scrip's keepers submit; below it the receipt's cost is too large a share. */
@@ -226,34 +231,57 @@ async function priceFor(book: Book, asset: Asset): Promise<Outcome<PriceSource>>
   }
   if (!update) return held(lastWhy);
 
+  // Posting rents two accounts (the encoded VAA and the price update) until they are closed.
+  // A keeper that cannot cover them would pay fees for a post that fails halfway, so it says
+  // what it needs instead of trying.
+  const lamports = await conn.getBalance(keeper.publicKey, "confirmed").catch(() => null);
+  if (lamports !== null && lamports < MIN_POST_LAMPORTS) {
+    return held(`this keeper holds ${(lamports / 1e9).toFixed(4)} SOL; posting a ${feed.label} price needs about ${(MIN_POST_LAMPORTS / 1e9).toFixed(3)} SOL, returned when the accounts close`);
+  }
+
   // Full verification: the encoded VAA is written and verified over several transactions,
   // then posted. Atomic posting would be one transaction but only partially verified, and
   // the program refuses partial.
   const builder = pyth.newTransactionBuilder({ closeUpdateAccounts: false });
   await builder.addPostPriceUpdates([update.binaryBase64]);
+  // Taken BEFORE anything is sent: every account the post creates has its close instruction
+  // here, so whatever happens after the first transaction lands, the rent comes back. On
+  // 8 October a lookup that threw after the post (below) skipped this and leaked the rent of
+  // every attempt until both keepers were empty.
+  const closeIxs = [...builder.closeInstructions];
+  const closeAll = async () => {
+    if (closeIxs.length === 0) return;
+    try {
+      const closeTxs = await TransactionBuilder.batchIntoVersionedTransactions(keeper.publicKey, conn, closeIxs, {
+        computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS,
+      });
+      await pyth.provider.sendAll(closeTxs, { skipPreflight: true, commitment: "confirmed" });
+    } catch (err) {
+      log("could not close the posted price accounts:", err instanceof Error ? err.message : err);
+    }
+  };
   const txs = await builder.buildVersionedTransactions({ computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS });
-  await pyth.provider.sendAll(txs, { skipPreflight: false, commitment: "confirmed" });
-  const account = builder.getPriceUpdateAccount(feed.feedId);
+  try {
+    await pyth.provider.sendAll(txs, { skipPreflight: false, commitment: "confirmed" });
+  } catch (err) {
+    await closeAll();
+    return held(`posting the ${feed.label} price failed: ${err instanceof Error ? err.message.slice(0, 160) : String(err)}`);
+  }
+  let account: PublicKey;
+  try {
+    // The library keys what it posted by the feed id WITH its 0x prefix; the registry stores
+    // the bare hex. Asking with the bare hex threw "No price update account found".
+    account = builder.getPriceUpdateAccount(`0x${feed.feedId.replace(/^0x/, "")}`);
+  } catch (err) {
+    await closeAll();
+    return held(`the posted ${feed.label} price could not be found: ${err instanceof Error ? err.message.slice(0, 160) : String(err)}`);
+  }
   const posted = await readPriceAccount(conn, account, feed.feedId, feed.label);
-  if (!posted.ok) return posted;
-  const closeIxs = builder.closeInstructions;
-  return ok({
-    account,
-    posted: true,
-    feed,
-    adjusted,
-    close: async () => {
-      if (closeIxs.length === 0) return;
-      try {
-        const closeTxs = await TransactionBuilder.batchIntoVersionedTransactions(keeper.publicKey, conn, closeIxs, {
-          computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS,
-        });
-        await pyth.provider.sendAll(closeTxs, { skipPreflight: true, commitment: "confirmed" });
-      } catch (err) {
-        log("could not close the price update account:", err instanceof Error ? err.message : err);
-      }
-    },
-  });
+  if (!posted.ok) {
+    await closeAll();
+    return posted;
+  }
+  return ok({ account, posted: true, feed, adjusted, close: closeAll });
 }
 
 // ── one book, one look ────────────────────────────────────────────────────────────────────
@@ -538,6 +566,33 @@ async function vestDue(): Promise<void> {
   }
 }
 
+let lastReclaimAt = 0;
+const RECLAIM_EVERY_MS = 10 * 60_000;
+
+/**
+ * EVERY PRICE ACCOUNT THIS KEEPER POSTED AND DID NOT CLOSE, CLOSED. A close that times out
+ * leaves its rent behind, and only this keeper can take it back. Run at the start of a round,
+ * never during one: rounds do not overlap and every account a round posts is closed inside it,
+ * so nothing closed here is in use. Once at start-up, then every ten minutes.
+ */
+async function reclaimLeftovers(): Promise<void> {
+  if (Date.now() - lastReclaimAt < RECLAIM_EVERY_MS) return;
+  lastReclaimAt = Date.now();
+  const me = keeper.publicKey.toBase58();
+  const [updates, vaas] = await Promise.all([
+    conn.getProgramAccounts(pyth.receiver.programId, { commitment: "confirmed", dataSlice: { offset: 0, length: 0 }, filters: [{ memcmp: { offset: 8, bytes: me } }] }),
+    conn.getProgramAccounts(pyth.wormhole.programId, { commitment: "confirmed", dataSlice: { offset: 0, length: 0 }, filters: [{ memcmp: { offset: 9, bytes: me } }] }),
+  ]);
+  if (updates.length + vaas.length === 0) return;
+  const ixs = [
+    ...(await Promise.all(updates.map((u) => pyth.buildClosePriceUpdateInstruction(u.pubkey)))),
+    ...(await Promise.all(vaas.map((v) => pyth.buildCloseEncodedVaaInstruction(v.pubkey)))),
+  ];
+  const txs = await TransactionBuilder.batchIntoVersionedTransactions(keeper.publicKey, conn, ixs, { computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS });
+  await pyth.provider.sendAll(txs, { skipPreflight: true, commitment: "confirmed" });
+  log(`closed ${ixs.length} leftover price account(s); their rent is back with this keeper`);
+}
+
 async function tick(): Promise<void> {
   if (ticking) {
     wakeRequested = true;
@@ -545,6 +600,11 @@ async function tick(): Promise<void> {
   }
   ticking = true;
   try {
+    try {
+      await reclaimLeftovers();
+    } catch (err) {
+      log("closing leftover price accounts failed:", err instanceof Error ? err.message : err);
+    }
     try {
       await vestDue();
     } catch (err) {
