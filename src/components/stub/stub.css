@@ -192,6 +192,10 @@ a.stub:hover,
 .stub-row .v.is-ok {
   color: var(--ok);
 }
+/* A match is money added: its amount stays green even as the link to its transaction. */
+.stub-row .v.is-ok a {
+  color: var(--ok);
+}
 .stub-row .v.is-warn {
   color: var(--warn);
 }

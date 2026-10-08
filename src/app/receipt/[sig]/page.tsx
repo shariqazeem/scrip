@@ -5,6 +5,7 @@ import { ScripMark } from "@/components/brand/scrip-mark";
 import { SaveReceipt } from "@/components/receipt/save-receipt";
 import { SettlingReceipt } from "@/components/receipt/settling";
 import { CopyLink } from "@/components/receipt/copy-link";
+import { MatchWatch } from "@/components/receipt/match-watch";
 import { type StubSection, Stub } from "@/components/stub/stub";
 import { readBookOf } from "@/lib/book/read-book";
 import { poolLabels, readSaveTx, viewSave } from "@/lib/save/read";
@@ -21,6 +22,8 @@ import { solUsd } from "@/lib/market";
 import { describeDeviation, describeSeconds, fillVsPyth, landedToStock, splitCost } from "@/lib/receipt/figures";
 import { multiplierAt } from "@/lib/receipt/multiplier";
 import { measuredReading } from "@/lib/keep-rate";
+import { matchesFor } from "@/lib/plan/matches";
+import { membershipsOf } from "@/lib/plan/read";
 import { assetByFeedId, assetByMint } from "@/lib/assets/registry";
 import { explorerUrl } from "@/lib/solana/cluster";
 import { connection } from "@/lib/solana/connection";
@@ -196,6 +199,13 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
   const cost = isSweep || r.kind === "vest" ? splitCost(r.floatSpentLamports, r.rentLamports) : null;
   const solPrice = cost ? await solUsd() : null;
 
+  // A sponsor's match, read from its own transaction's event. While a fresh save by a Plan
+  // member has none yet, the page keeps looking for three minutes: it lands within seconds.
+  const matches = isSweep ? await matchesFor(r.address, r.signature) : [];
+  const WATCH_SECONDS = 180;
+  const awaitingMatch = isSweep && matches.length === 0 && Date.now() / 1000 - r.settledUnix < WATCH_SECONDS;
+  const watch = awaitingMatch ? await membershipsOf(r.recipient).then((m) => m.ok && m.value.some((x) => x.member.status === "active")).catch(() => false) : false;
+
   const sections: StubSection[] = [];
   if (isSweep) {
     sections.push({
@@ -207,6 +217,20 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
     });
     if (seconds !== null) {
       sections.push({ rows: [{ k: "Became stock", v: `${describeSeconds(seconds)} after the money landed` }] });
+    }
+    if (matches.length > 0) {
+      sections.push({
+        title: "Matched by a sponsor’s Plan, in its own transaction",
+        rows: matches.map((m) => ({
+          k: `Added by ${m.sponsorHandle ? `@${m.sponsorHandle}` : short(m.sponsor)}`,
+          v: (
+            <a href={explorerUrl("tx", m.signature)}>
+              {usdc(m.usdc)} → {decimals ? unitsFromRaw(m.amountRaw, decimals) : m.amountRaw.toString()} {symbol} · {describeSeconds(Math.max(0, m.at - r.settledUnix))} after the save
+            </a>
+          ),
+          tone: "ok" as const,
+        })),
+      });
     }
   } else {
     sections.push({
@@ -287,6 +311,8 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
             sections={sections}
           />
         </div>
+
+        {watch ? <MatchWatch until={r.settledUnix + WATCH_SECONDS} /> : null}
 
         <div className="sp-receipt-actions">
           <CopyLink />

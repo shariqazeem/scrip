@@ -53,7 +53,7 @@ async function planName(plan: string): Promise<string | null> {
   }
 }
 
-async function handlesOf(owners: readonly string[]): Promise<Map<string, string>> {
+export async function handlesOf(owners: readonly string[]): Promise<Map<string, string>> {
   if (owners.length === 0) return new Map();
   const rows = await db.select({ owner: books.owner, slug: books.slug, kind: books.kind, published: books.published }).from(books).where(inArray(books.owner, [...owners]));
   // A person's name is shown only when they made their page public; an organisation's always.

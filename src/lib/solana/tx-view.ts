@@ -44,6 +44,8 @@ export type TxView = {
   readonly instructions: readonly Ix[];
   /** Every inner instruction, in execution order. */
   readonly inner: readonly Ix[];
+  /** The log lines, where Anchor writes its events (`Program data: …`). */
+  readonly logs: readonly string[];
 };
 
 type RawIx = { programId: string; accounts?: string[]; data?: string; parsed?: unknown };
@@ -58,6 +60,7 @@ type RawTx = {
     preTokenBalances?: TokenBalance[] | null;
     postTokenBalances?: TokenBalance[] | null;
     innerInstructions?: Array<{ index: number; instructions: RawIx[] }> | null;
+    logMessages?: string[] | null;
   } | null;
   transaction: {
     signatures: string[];
@@ -87,6 +90,7 @@ export function viewOf(sig: string, raw: RawTx | null): TxView | null {
     postTokenBalances: raw.meta.postTokenBalances ?? [],
     instructions: raw.transaction.message.instructions.map(ix),
     inner,
+    logs: raw.meta.logMessages ?? [],
   };
 }
 

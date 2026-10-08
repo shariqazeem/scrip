@@ -43,6 +43,7 @@ function view(over: Partial<TxView>): TxView {
     postTokenBalances: [],
     instructions: [],
     inner: [],
+    logs: [],
     ...over,
   };
 }
