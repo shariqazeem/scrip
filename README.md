@@ -16,7 +16,7 @@
 > Real receipts, openable by a stranger with no wallet and no account:
 >
 > - **Every payment:** [$5 landed · 20% became 0.0013 S&P 500, 10 seconds later, filled 0.02% from Pyth](https://scrip.work/receipt/5NcgNf2SXzEQiwXEf6bzcLtirk4JmHE3vx2Qan2uh41LHJFvFXs8SLiRNkwUCAKEKV7bqhBfUDJ92rRj7i6koicG)
-> - **The match:** [$20 landed · 20% became 0.0053 Nasdaq 100](https://scrip.work/receipt/5YrDMN5kMJmew3gAffLNCLiqEHeYzMH7zdsvqgxoUBvdkKXH9iaYXVZbxXfwcWnbKSigs3xrqQrYXjCBDc1ULPa9), and [ten seconds after it, the sponsor's Plan added $2 of Nasdaq 100](https://solscan.io/tx/33wcVSx4NiJxE2Ne9JuAki26zcqo1XAFoESygbmc9AQkygGFzBkaZqp272x3hAuhYH28Ucvwk4P31epXBt3ug5r4), paid by the program in its own transaction
+> - **The match:** [$20 landed · 20% became 0.0053 Nasdaq 100 · ten seconds later the sponsor's Plan added $2 of Nasdaq 100](https://scrip.work/receipt/5YrDMN5kMJmew3gAffLNCLiqEHeYzMH7zdsvqgxoUBvdkKXH9iaYXVZbxXfwcWnbKSigs3xrqQrYXjCBDc1ULPa9), in green on the same receipt, read from the match's own event; the program paid it [in its own transaction](https://solscan.io/tx/33wcVSx4NiJxE2Ne9JuAki26zcqo1XAFoESygbmc9AQkygGFzBkaZqp272x3hAuhYH28Ucvwk4P31epXBt3ug5r4)
 > - **Pay in stock:** [an organisation paid a person in stock, with the reason on the receipt](https://scrip.work/receipt/NFZucZvh5QJAeid7WNxZECeUxuMsJgRUbFxyn57gCxmBmym5C1cP4X3yvnERN4JShde9PxLodVcohYawq3gVcza)
 >
 > Every receipt so far is to the team's own wallets, and every surface says so; `/ledger` counts the people outside the team separately.
