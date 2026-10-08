@@ -8,7 +8,7 @@ import { SAVE_MARK, SAVE_MEMO } from "@/lib/save/mark";
 import { type SaveView, hopLabel } from "@/lib/save/read";
 import { describeDeviation } from "@/lib/receipt/figures";
 import { explorerUrl } from "@/lib/solana/cluster";
-import { isTeam } from "@/lib/team";
+import { isTeam, walletTag } from "@/lib/team";
 import { LocalAmount } from "@/components/save/local-amount";
 import { LocalTime } from "./local-time";
 import { AskForMatch, ShareReceipt } from "./share";
@@ -68,7 +68,7 @@ export function SaveReceipt({
         <Stub
           printing={fresh}
           kicker="Saved on Solana"
-          tag={isTeam(view.owner) ? "team" : undefined}
+          tag={walletTag(view.owner)}
           landed={
             <>
               <strong>{usdc(view.paidUsdc)}</strong> saved

@@ -7,7 +7,7 @@ import { cursors, saves } from "@/lib/db/schema";
 import { type Outcome, held, ok } from "@/lib/outcome";
 import { connection } from "@/lib/solana/connection";
 import { readTxViews } from "@/lib/solana/tx-view";
-import { isTeam } from "@/lib/team";
+import { isStranger } from "@/lib/team";
 import { SAVE_MARK } from "./mark";
 import { parseSave } from "./parse";
 import { recordSave, viewSave } from "./read";
@@ -81,7 +81,7 @@ export async function indexSaves(conn: Connection = connection(), pageSize = 100
 /** The saves, counted the way the ledger counts receipts: in all, and outside the team. */
 export async function saveTotals() {
   const rows = await db.select({ owner: saves.owner, paid: saves.paidUsdc }).from(saves);
-  const outside = rows.filter((r) => !isTeam(r.owner));
+  const outside = rows.filter((r) => isStranger(r.owner));
   return {
     saves: rows.length,
     savers: new Set(rows.map((r) => r.owner)).size,

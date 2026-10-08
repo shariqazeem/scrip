@@ -65,7 +65,7 @@ export default async function LedgerPage() {
             <Fact
               k="To wallets outside the team"
               v={outside.receipts.toLocaleString("en-US")}
-              note={`${outside.wallets} wallet${outside.wallets === 1 ? "" : "s"}. The team's own are named on /security and marked "team" on their stubs`}
+              note={`${outside.wallets} wallet${outside.wallets === 1 ? "" : "s"}. The team's own are named on /security and marked "team" on their stubs${outside.testers > 0 ? `; ${outside.testers} paid tester${outside.testers === 1 ? "" : "s"} (${outside.testerReceipts} receipt${outside.testerReceipts === 1 ? "" : "s"}) are counted apart and marked "paid tester"` : ""}`}
             />
             <Fact
               k="Saved now"

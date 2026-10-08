@@ -20,12 +20,46 @@ export const TEAM: ReadonlyMap<string, string> = new Map([
   ["6mCBiCNNpaN8roM3HDJazNtceKEkTbWQzep71ae9fKDE", "the demo wallet"],
 ]);
 
+/**
+ * PAID TESTERS — people paid to try Scrip and say what broke. Not the team, and not strangers:
+ * their stubs say "paid tester" and every count of people outside the team leaves them out, so a
+ * paid test is never passed off as a user. Add each with the date and what they were paid.
+ */
+export const TESTERS: ReadonlyMap<string, string> = new Map<string, string>([
+  // ["<address>", "paid tester, 9 Oct 2026, $10 USDC"],
+]);
+
 export function isTeam(address: string | null | undefined): boolean {
   return typeof address === "string" && TEAM.has(address);
 }
 
-/** Receipts whose recipient is not the team's: the people Scrip has actually reached. */
-export function outsideTeam(rows: ReadonlyArray<{ readonly recipient: string }>): { readonly receipts: number; readonly wallets: number } {
-  const outside = rows.filter((r) => !isTeam(r.recipient));
-  return { receipts: outside.length, wallets: new Set(outside.map((r) => r.recipient)).size };
+export function isTester(address: string | null | undefined): boolean {
+  return typeof address === "string" && TESTERS.has(address);
+}
+
+/** Neither the team nor a paid tester: someone Scrip actually reached. */
+export function isStranger(address: string | null | undefined): boolean {
+  return typeof address === "string" && !TEAM.has(address) && !TESTERS.has(address);
+}
+
+/** The word a stub wears beside the brand for a wallet that is not a stranger's, or nothing. */
+export function walletTag(address: string | null | undefined): "team" | "paid tester" | undefined {
+  return isTeam(address) ? "team" : isTester(address) ? "paid tester" : undefined;
+}
+
+/** Receipts to people outside the team, paid testers left out, and the paid testers' apart. */
+export function outsideTeam(rows: ReadonlyArray<{ readonly recipient: string }>): {
+  readonly receipts: number;
+  readonly wallets: number;
+  readonly testerReceipts: number;
+  readonly testers: number;
+} {
+  const outside = rows.filter((r) => isStranger(r.recipient));
+  const testers = rows.filter((r) => isTester(r.recipient));
+  return {
+    receipts: outside.length,
+    wallets: new Set(outside.map((r) => r.recipient)).size,
+    testerReceipts: testers.length,
+    testers: new Set(testers.map((r) => r.recipient)).size,
+  };
 }

@@ -3,7 +3,7 @@ import { HomeNav } from "@/components/site/home-nav";
 import { StartCard } from "@/components/start/start-card";
 import { Stub } from "@/components/stub/stub";
 import { bps, stampUTC, unitsFromRaw, usdc } from "@/lib/format";
-import { frontReceipt } from "@/lib/save/latest";
+import { frontReceipt, strangersSaving } from "@/lib/save/latest";
 import { startCardProps } from "@/lib/start/card";
 import "./front.css";
 
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
  * the evidence for defaults, the match, and what is true of the tokens.
  */
 export default async function FrontDoor() {
-  const [card, receipt] = await Promise.all([startCardProps(), frontReceipt()]);
+  const [card, receipt, strangers] = await Promise.all([startCardProps(), frontReceipt(), strangersSaving()]);
 
   return (
     <div className="sp-home">
@@ -58,6 +58,16 @@ export default async function FrontDoor() {
                 ? "The latest save on Scrip, read from Solana mainnet. Open it and every figure links to the transaction it came from."
                 : "An automatic save on Scrip, read from Solana mainnet: USDC arrived, the slice became stock in the same wallet, and the program wrote this receipt. Every figure links to the chain."}
             </p>
+            {strangers > 0 ? (
+              <p className="sp-home-body">
+                <strong>
+                  {strangers} {strangers === 1 ? "person" : "people"} outside the team {strangers === 1 ? "is" : "are"} saving with Scrip.
+                </strong>{" "}
+                <Link href="/ledger" className="sp-home-link">
+                  See every receipt
+                </Link>
+              </p>
+            ) : null}
             <p className="sp-home-body">
               <Link href={`/receipt/${receipt.sig}`} className="sp-home-link">
                 Open the receipt

@@ -5,7 +5,7 @@ import { assetByMint } from "@/lib/assets/registry";
 import { db } from "@/lib/db";
 import { receipts, saves } from "@/lib/db/schema";
 import { landedToStock } from "@/lib/receipt/figures";
-import { isTeam } from "@/lib/team";
+import { isStranger, isTeam } from "@/lib/team";
 import { stockByMint } from "./catalogue";
 
 /**
@@ -90,4 +90,14 @@ export async function frontReceipt(): Promise<FrontReceipt | null> {
     settledUnix: sweep.settledUnix,
     team: isTeam(sweep.recipient),
   };
+}
+
+/**
+ * How many people outside the team have saved: every wallet with a save or a receipt that is
+ * neither the team's nor a paid tester's. For the front door, which says it only once it is
+ * not zero.
+ */
+export async function strangersSaving(): Promise<number> {
+  const [owners, recipients] = await Promise.all([db.select({ a: saves.owner }).from(saves), db.select({ a: receipts.recipient }).from(receipts)]);
+  return new Set([...owners, ...recipients].map((r) => r.a).filter((a) => isStranger(a))).size;
 }
