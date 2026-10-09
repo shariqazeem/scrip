@@ -313,3 +313,305 @@ button.sp-start-secondary {
   color: var(--ink);
   font-weight: 600;
 }
+
+/* ══ the sentence: "Save [10%] of every payment, into [Nasdaq 100]" ══════════════════
+ * Since 9 October the start is one line a person reads as a sentence, its two choices inside
+ * it, and one button: no tall form. On the front door it sits on the paper itself, under the
+ * headline; in the app it sits in its panel. */
+.sp-go {
+  --save-fs: 1.0625rem;
+  display: grid;
+  gap: var(--s-4);
+  font-size: var(--save-fs);
+  min-width: 0;
+}
+.sp-go-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  font-size: 1.3125rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.sp-go.is-compact .sp-go-line {
+  font-size: 1.1875rem;
+}
+.sp-go-word {
+  white-space: nowrap;
+}
+.sp-go-rates {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+}
+.sp-go-rate {
+  min-width: 56px;
+  min-height: 44px;
+  padding: 0 var(--s-3);
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--r-md) - 3px);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.sp-go-rate:hover {
+  color: var(--ink);
+}
+.sp-go-rate.is-selected {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.sp-go-rate:focus-visible,
+.sp-go-pick:focus-visible,
+.sp-go-opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* the stock: a field that opens a short list, each row saying who issues it */
+.sp-go-pickbox {
+  position: relative;
+}
+.sp-go-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 50px;
+  padding: 0 var(--s-3) 0 var(--s-4);
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sp-go-pick svg {
+  flex: none;
+}
+.sp-go-menu {
+  position: absolute;
+  top: calc(100% + var(--s-2));
+  left: 0;
+  z-index: 30;
+  display: grid;
+  width: min(320px, calc(100vw - 2 * var(--s-4)));
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  padding: var(--s-2);
+  font-size: var(--fs-body);
+  font-weight: 400;
+  letter-spacing: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-float);
+}
+.sp-go-opt {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  min-height: 52px;
+  padding: var(--s-2) var(--s-3);
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.sp-go-opt:hover {
+  background: var(--bg);
+}
+.sp-go-opt.is-selected {
+  background: var(--accent-soft);
+}
+.sp-go-opt .name {
+  font-weight: 600;
+}
+.sp-go-opt .note {
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+}
+
+.sp-go-how {
+  margin: 0;
+  max-width: 46ch;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
+/* ── the first payment, drawn as the three steps it takes ─────────────── */
+.sp-go-first {
+  display: grid;
+  gap: var(--s-3);
+  justify-items: start;
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+}
+.sp-go-first.is-next {
+  background: var(--bg);
+  border-color: var(--border);
+}
+.sp-go-first-title {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.sp-go-first-say {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+.sp-go-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1.2fr);
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+}
+.sp-go-cell {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.sp-go-cell .v {
+  font-family: var(--font-mono);
+  font-size: 1.1875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.sp-go-cell .k {
+  font-size: var(--fs-caption);
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+.sp-go-cell.is-stock .v {
+  color: var(--accent-strong);
+}
+.sp-go-arrow {
+  color: var(--ink-faint);
+}
+@media (max-width: 420px) {
+  .sp-go-cell .v {
+    font-size: 1.0625rem;
+  }
+}
+
+.sp-go-fine {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.55;
+  color: var(--ink-faint);
+}
+.sp-go-fine .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+}
+.sp-go .sp-save-trust {
+  color: var(--ink-muted);
+}
+
+/* ══ watching the first save ═══════════════════════════════════════════════════════ */
+.sp-watch {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: var(--s-4);
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+}
+.sp-watch-step {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: start;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.sp-watch-step .dot {
+  width: 10px;
+  height: 10px;
+  margin: 0.42em 3px 0;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
+.sp-watch-step.is-done .dot {
+  background: var(--ok);
+}
+.sp-watch-step.is-wait {
+  color: var(--ink);
+}
+.sp-watch-step.is-wait .dot {
+  background: var(--warn);
+}
+.sp-watch-step.is-now {
+  font-weight: 500;
+}
+.sp-watch-step .spin {
+  margin-top: 0.2em;
+  color: var(--accent);
+  animation: sp-spin 1s linear infinite;
+}
+@keyframes sp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-watch-step .spin {
+    animation: none;
+  }
+}
+.sp-watch-stub {
+  display: grid;
+  gap: var(--s-3);
+}
+.sp-watch-addr {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: center;
+  padding: var(--s-3) var(--s-4);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.sp-watch-addr .mono {
+  margin: 0 0 var(--s-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  overflow-wrap: anywhere;
+}
+.sp-go-part {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+@media (max-width: 400px) {
+  .sp-go-part {
+    flex-wrap: wrap;
+    gap: var(--s-2) var(--s-3);
+  }
+}

@@ -22,6 +22,8 @@ export type LiveArrival = {
   readonly measured7dRaw: string;
   readonly measured30dAt: number;
   readonly measured30dRaw: string;
+  /** The rule's first payment, counted as it was turned on (`lib/start/first.ts`), not a payment that landed later. */
+  readonly atStart?: boolean;
   /** A sponsor's match on this save, read from its own transaction; only on the newest saves. */
   readonly match?: { readonly by: string; readonly usdc: string; readonly amountRaw: string } | null;
 };
@@ -48,6 +50,8 @@ export type LiveView = {
    */
   readonly sliceNext: string;
   readonly sweeps: number;
+  /** When the rule was turned on (or its rate last changed), from the chain's clock; 0 when off. */
+  readonly enabledUnix: number;
   readonly floatLamports: string;
   readonly sweepsCovered: number;
   readonly keeper: { readonly alive: boolean; readonly lastReason: string | null; readonly lastSweepAt: number | null };

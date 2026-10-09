@@ -184,6 +184,9 @@ let wakeRequested = false;
 /** Registers with a save still in flight, so a slow one is never started twice. */
 const evaluating = new Set<string>();
 let lastRoundAt = Date.now();
+/** The last time a start woke this service, so a burst of wakes costs one round, not many. */
+let lastWakeAt = 0;
+const WAKE_GAP_MS = 2_000;
 
 function log(...parts: unknown[]): void {
   console.log(new Date().toISOString(), ...parts);
@@ -553,7 +556,9 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
   // 50-cent save would spend most of itself. The program allows a slice down to MIN_SLICE; this
   // keeper waits until the unswept slice reaches the policy minimum, which batches small
   // payments into one save. Another keeper may sweep sooner: keepers are permissionless.
-  if (slice.value.slice < KEEPER_MIN_SLICE && book.slug !== FRONT_BOOK) {
+  // A register's FIRST save goes at the program's own minimum: it is the one a new saver
+  // watches happen, seconds after starting with their last payment (`lib/start/first.ts`).
+  if (slice.value.slice < KEEPER_MIN_SLICE && book.slug !== FRONT_BOOK && book.rule.sweeps > 0) {
     waitingSince.delete(key);
     report(key, book.owner, { lastReason: `waiting for $${Number(KEEPER_MIN_SLICE) / 1e6} to save: the slice is ${slice.value.slice} USDC base units` });
     return;
@@ -974,6 +979,29 @@ async function main(): Promise<void> {
     if (req.url === "/health") {
       res.writeHead(200, { "content-type": "application/json", "access-control-allow-origin": "*" });
       res.end(JSON.stringify(health()));
+      return;
+    }
+    // A START JUST LANDED: look now instead of at the next poll. A new register's USDC account is
+    // not watched until a round has listed it, so without this its first save waited up to a
+    // whole poll interval while the saver watched. It can only make this service look sooner,
+    // and looks are spaced at least WAKE_GAP_MS apart however often it is asked. Only the site on
+    // the same machine may ask: this port also answers /health to the world, and every look reads
+    // the chain on Scrip's endpoint.
+    if (req.url === "/wake" && req.method === "POST") {
+      const from = req.socket.remoteAddress ?? "";
+      if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(from)) {
+        res.writeHead(403);
+        res.end();
+        return;
+      }
+      const now = Date.now();
+      const woke = now - lastWakeAt >= WAKE_GAP_MS;
+      if (woke) {
+        lastWakeAt = now;
+        void tick();
+      }
+      res.writeHead(202, { "content-type": "application/json" });
+      res.end(JSON.stringify({ woke }));
       return;
     }
     res.writeHead(404);

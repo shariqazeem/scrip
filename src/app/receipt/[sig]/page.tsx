@@ -183,7 +183,12 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
 
   // Attribution comes from the cache and is labelled as such on the row.
   const cached = isSweep ? (await db.select({ attributedJson: receiptsTable.attributedJson }).from(receiptsTable).where(eq(receiptsTable.pda, r.address)).limit(1))[0] : undefined;
-  const attributed: Array<{ from: string; usdc: string; sig: string; at?: number | null }> = cached ? (JSON.parse(cached.attributedJson) as Array<{ from: string; usdc: string; sig: string; at?: number | null }>) : [];
+  const attributed: Array<{ from: string; usdc: string; sig: string; at?: number | null; start?: boolean }> = cached
+    ? (JSON.parse(cached.attributedJson) as Array<{ from: string; usdc: string; sig: string; at?: number | null; start?: boolean }>)
+    : [];
+  // The rule's first payment, counted as saving was turned on (`lib/start/first.ts`): the money was
+  // already in the wallet, so the stub says "at the start" and the clock runs from the start.
+  const atStart = attributed.some((a) => a.start === true);
 
   // What the receipt DID, in three figures a stranger can check: how fast the stock followed
   // the money, what it paid against the Pyth price it was bound by, and what it cost.
@@ -209,14 +214,18 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
   const sections: StubSection[] = [];
   if (isSweep) {
     sections.push({
-      title: "From (attributed from the account’s transfer history)",
+      title: atStart ? "From (the first payment, counted as saving was turned on)" : "From (attributed from the account’s transfer history)",
       rows:
         attributed.length > 0
-          ? attributed.map((a) => ({ k: a.from ? short(a.from) : "unknown sender", v: <a href={explorerUrl("tx", a.sig)}>{usdc(BigInt(a.usdc))}</a> }))
+          ? attributed.map((a) =>
+              a.start
+                ? { k: "Already in the wallet at the start", v: <a href={explorerUrl("tx", a.sig)}>{usdc(BigInt(a.usdc))}</a> }
+                : { k: a.from ? short(a.from) : "unknown sender", v: <a href={explorerUrl("tx", a.sig)}>{usdc(BigInt(a.usdc))}</a> },
+            )
           : [{ k: "not attributed yet", v: "the indexer reads senders after the sweep", tone: "muted" as const }],
     });
     if (seconds !== null) {
-      sections.push({ rows: [{ k: "Became stock", v: `${describeSeconds(seconds)} after the money landed` }] });
+      sections.push({ rows: [{ k: "Became stock", v: `${describeSeconds(seconds)} after ${atStart ? "saving was turned on" : "the money landed"}` }] });
     }
     if (matches.length > 0) {
       sections.push({
@@ -294,7 +303,7 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
             landed={
               isSweep ? (
                 <>
-                  <strong>{usdc(r.basisUsdc)}</strong> landed
+                  <strong>{usdc(r.basisUsdc)}</strong> {atStart ? "at the start" : "landed"}
                 </>
               ) : (
                 <>

@@ -35,7 +35,7 @@ export default function BountiesPage() {
       ) : null}
       <SiteSection label="How to claim one">
         <ul>
-          <li>Start saving at <Link href="/#start">scrip.work</Link> (one approval) so the payment lands in your own wallet; an address with no savings record gets a claim link instead.</li>
+          <li>Start saving at <Link href="/">scrip.work</Link> (one approval) so the payment lands in your own wallet; an address with no savings record gets a claim link instead.</li>
           <li>Do the work. Send the proof and your handle to the founder, whose address is on <Link href="/@scrip">@scrip</Link>.</li>
           <li>The payment is a normal Scrip payment in stock: one transaction, a receipt with the bounty&rsquo;s name as the reason, on the ledger for anyone to open.</li>
         </ul>

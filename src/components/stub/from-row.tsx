@@ -2,6 +2,7 @@ import { assetByMint } from "@/lib/assets/registry";
 import type { LiveArrival } from "@/lib/book/live-types";
 import type { receipts } from "@/lib/db/schema";
 import { bps, dateUTC, measuresOn, short, stampUTC, unitsFromRaw, usdc } from "@/lib/format";
+import { startedWith } from "@/lib/start/memo";
 import { walletTag } from "@/lib/team";
 import { measuredReading } from "@/lib/keep-rate";
 import { type StubSection, Stub } from "./stub";
@@ -31,6 +32,7 @@ export function rowToArrival(r: Row, resolve?: (mint: string) => AssetLabel | nu
     measured7dRaw: String(r.measured7dRaw),
     measured30dAt: r.measured30dAt,
     measured30dRaw: String(r.measured30dRaw),
+    atStart: r.kind === "sweep" && startedWith(r.attributedJson),
   };
 }
 
@@ -86,7 +88,7 @@ export function StubFromArrival({
       landed={
         isSweep ? (
           <>
-            <strong>{usdc(BigInt(a.basisUsdc))}</strong> landed
+            <strong>{usdc(BigInt(a.basisUsdc))}</strong> {a.atStart ? "at the start" : "landed"}
           </>
         ) : (
           <>

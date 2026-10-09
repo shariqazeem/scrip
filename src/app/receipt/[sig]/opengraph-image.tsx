@@ -4,6 +4,10 @@ import { readSaveTx } from "@/lib/save/read";
 import { stockByMint } from "@/lib/save/catalogue";
 import { bps, short, stampUTC, unitsFromRaw, usdc } from "@/lib/format";
 import { matchesFor } from "@/lib/plan/matches";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { receipts } from "@/lib/db/schema";
+import { startedWith } from "@/lib/start/memo";
 
 export const runtime = "nodejs";
 export const alt = "A Scrip receipt";
@@ -65,7 +69,11 @@ export default async function Image({ params }: { params: Promise<{ sig: string 
   const decimals = v.asset_?.decimals ?? 0;
   const symbol = v.asset_?.symbol ?? "units";
   const units = decimals ? unitsFromRaw(v.amountRaw, decimals) : v.amountRaw.toString();
-  const landed = v.kind === "sweep" ? `${usdc(v.basisUsdc)} landed` : `${usdc(v.paidUsdc)} paid`;
+  // The rule's first payment, counted as saving was turned on: "at the start", as on the page.
+  const atStart =
+    v.kind === "sweep" &&
+    startedWith((await db.select({ a: receipts.attributedJson }).from(receipts).where(eq(receipts.pda, v.address)).limit(1).catch(() => []))[0]?.a ?? "[]");
+  const landed = v.kind === "sweep" ? `${usdc(v.basisUsdc)} ${atStart ? "at the start" : "landed"}` : `${usdc(v.paidUsdc)} paid`;
   const became = v.kind === "sweep" ? `${bps(v.rateBps)} became` : v.kind === "gift" ? "A first position, claimed" : v.kind === "grant" ? "Granted, vesting" : v.kind === "vest" ? "Vested" : "It became";
 
   // A sponsor's match, when the save has one: the line a shared link is most often about.

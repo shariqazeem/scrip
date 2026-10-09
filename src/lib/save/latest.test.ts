@@ -36,17 +36,24 @@ describe("which receipt leads the front door, across saves and automatic saves",
     expect(pick([save(TEAM_WALLET, 2_000_000), fast])).toBe(fast);
   });
 
-  it("puts a stranger's save ahead of anything the team did", () => {
-    const theirs = save(STRANGER);
-    expect(pick([auto(TEAM_WALLET, 1_000_000 - 10), theirs])).toBe(theirs);
+  it("leads with an automatic save, the product, over any save made by hand", () => {
+    const fastTeam = auto(TEAM_WALLET, 1_000_000 - 10);
+    expect(pick([save(STRANGER, 2_000_000), fastTeam])).toBe(fastTeam);
+    const slowStranger = auto(STRANGER, 1_000_000 - 300);
+    expect(pick([save(STRANGER, 2_000_000), slowStranger])).toBe(slowStranger);
   });
 
-  it("puts a stranger's fast automatic save ahead of a stranger's save", () => {
+  it("puts a stranger's fast automatic save ahead of the team's", () => {
     const fast = auto(STRANGER, 1_000_000 - 12);
-    expect(pick([save(STRANGER, 2_000_000), fast])).toBe(fast);
+    expect(pick([auto(TEAM_WALLET, 1_000_000 - 9), fast])).toBe(fast);
   });
 
-  it("prefers the team's save to an automatic save that took an hour", () => {
+  it("puts a stranger's save ahead of the team's, when there is no automatic save to show", () => {
+    const theirs = save(STRANGER, 1_000_000);
+    expect(pick([save(TEAM_WALLET, 2_000_000), theirs])).toBe(theirs);
+  });
+
+  it("prefers a save to an automatic save that took an hour", () => {
     const theirs = save(TEAM_WALLET);
     expect(pick([auto(TEAM_WALLET, 1_000_000 - 5_269), theirs])).toBe(theirs);
   });

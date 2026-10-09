@@ -132,7 +132,7 @@ export default async function ProofPage() {
           <Link href="/app" className="sp-nav-link">
             Your savings
           </Link>
-          <Link href="/#start" className="sp-btn is-primary">
+          <Link href="/" className="sp-btn is-primary">
             Start saving
           </Link>
         </nav>
@@ -160,7 +160,7 @@ export default async function ProofPage() {
               the program checks, and a receipt anyone can open, measured at 7 and 30 days.
             </p>
             <div className="sp-hero-cta">
-              <Link href="/#start" className="sp-btn is-primary">
+              <Link href="/" className="sp-btn is-primary">
                 Start saving
               </Link>
               <Link href="/app/save" className="sp-btn is-ghost">
@@ -199,7 +199,7 @@ export default async function ProofPage() {
                         */}
                         <p className="sp-front-try-p is-fine">
                           The ${sendUsd} stays with @{front.handle} — it is our wallet, not yours. To watch it happen in your own,{" "}
-                          <Link href="/#start">start saving</Link>. <Link href={`/@${front.handle}`}>Open the page.</Link>
+                          <Link href="/">start saving</Link>. <Link href={`/@${front.handle}`}>Open the page.</Link>
                         </p>
                       </div>
                     </>
@@ -213,7 +213,7 @@ export default async function ProofPage() {
                         {priceReady === false
                           ? ` Right now there is no ${frontStock} price the program can verify (the newest is ${frontWaited} old), so arrivals wait there as USDC until one returns.`
                           : ""}{" "}
-                        To see a save happen now, <Link href="/#start">start your own</Link>: a first save works at any hour.{" "}
+                        To watch one happen in your own wallet, <Link href="/">start saving</Link>: your last payment saves itself seconds after you start, whenever a price can be verified.{" "}
                         <Link href={`/@${front.handle}`}>Open the page.</Link>
                       </p>
                     </div>
@@ -424,7 +424,7 @@ export default async function ProofPage() {
           <Reveal className="sp-reveal is-line">
             <p className="sp-line">Say yes once. Every payment saves itself.</p>
             <div className="sp-hero-cta">
-              <Link href="/#start" className="sp-btn is-primary">
+              <Link href="/" className="sp-btn is-primary">
                 Start saving
               </Link>
               <Link href={payHref} className="sp-btn is-ghost">

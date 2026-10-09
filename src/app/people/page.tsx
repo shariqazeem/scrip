@@ -43,7 +43,7 @@ export default function PeoplePage() {
         </div>
       </SiteSection>
       <div className="sp-hero-cta">
-        <Link href="/#start" className="sp-btn is-primary">
+        <Link href="/" className="sp-btn is-primary">
           Start saving
         </Link>
         <Link href="/docs/how-the-rule-sees-money" className="sp-btn">

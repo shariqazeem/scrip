@@ -2,7 +2,6 @@ import "server-only";
 
 import {
   ComputeBudgetProgram,
-  type AddressLookupTableAccount,
   PublicKey,
   TransactionMessage,
   VersionedTransaction,
@@ -16,32 +15,31 @@ import { readSimulation } from "@/lib/intake/preflight";
 import { type Outcome, held, ok } from "@/lib/outcome";
 import { acceptMemberIx } from "@/lib/plan/instructions";
 import { membershipsOf } from "@/lib/plan/read";
-import { enableRuleIxs, openBookIx, openUsdcIfMissing } from "@/lib/rule/instructions";
-import { DEFAULT_ALLOWANCE_USDC, DEFAULT_CAP_USDC, DEFAULT_TOLERANCE_BPS, SUGGESTED_FLOAT_LAMPORTS, validateRule } from "@/lib/rule/slice";
-import { type SaveQuote, SAVE_MICRO_LAMPORTS, buildSave, saveParts } from "@/lib/save/build";
-import type { SaveStock } from "@/lib/save/catalogue";
+import { USDC_ACCOUNT_BYTES, enableRuleIxs, openBookIx, openUsdcIfMissing } from "@/lib/rule/instructions";
+import { DEFAULT_ALLOWANCE_USDC, DEFAULT_CAP_USDC, DEFAULT_MIN_INBOUND, DEFAULT_TOLERANCE_BPS, MIN_SLICE, SUGGESTED_FLOAT_LAMPORTS, validateRule } from "@/lib/rule/slice";
 import { connection } from "@/lib/solana/connection";
+import { rentFor } from "@/lib/solana/rent";
+import { FIRST_SLICE_MAX_USDC, sliceOf } from "./first";
+import { type FirstHands, firstPaymentHands, holdingSeed, startInstructions } from "./instructions";
 
 /**
- * START — THE ONE FLOW. Every payment turned on, the first save made, and every Plan this
- * wallet was invited to joined, in ONE transaction the saver signs once:
+ * START — THE ONE FLOW. Every payment turned on, the first payment saved by the rule itself,
+ * and every Plan this wallet was invited to joined, in ONE transaction the saver signs once:
  *
- *     [compute, memo, open the stock account (+ the mark), jupiter…,
- *      open the USDC account if missing, open_book, approve, prepay, enable_rule, accept_member…]
+ *     [compute, memo, set the first payment aside,
+ *      open the USDC account if missing, open_book, approve, prepay, enable_rule,
+ *      hand the payment back, accept_member…]
  *
- * Until 8 October these were three journeys on three pages with five wallet prompts: save
- * now, then "every payment" behind its own sign-in, then a Plan's invitation accepted
- * somewhere else. The program never needed them apart.
+ * Until 9 October the start made a first save with a plain Jupiter swap, and the rule then
+ * waited for the next payment, so a new saver never saw the one thing Scrip does that a swap
+ * does not. Now the first payment goes through the rule (`./instructions.ts`, `./first.ts`):
+ * seconds after the approval, Scrip's servers save its slice through the delegate, at a
+ * Pyth-bounded price, onto a receipt the program writes — exactly as every payment after it.
  *
- * The save goes first, so the starting point `enable_rule` reads is the balance after it:
- * the first save is never mistaken for income. When the route is too long to sit beside the
- * rule in 1,232 bytes, the same two halves go out as two transactions under one approval.
- * Everything else is the defaults the rule page already used: a $200 limit, prepaid saves,
- * no floor, a $5,000 cap per payment, and a name made from the address.
+ * Everything else is the defaults the rule page already used: a $200 limit, prepaid saves, no
+ * floor, a $5,000 cap per payment, and a name made from the address.
  */
 
-/** A shorter route, so the save fits beside the rule. */
-const SHARED_MAX_ACCOUNTS = 20;
 const RULE_MICRO_LAMPORTS = 100_000;
 const SIMULATE_UNITS = 1_400_000;
 const BASE_FEE_LAMPORTS = 5_000;
@@ -49,11 +47,9 @@ const BASE_FEE_LAMPORTS = 5_000;
 const WALLET_FLOOR_LAMPORTS = 890_880;
 const MAX_TX_BYTES = 1232;
 /**
- * Room left for the wallet on the one combined transaction. Phantom adds its Lighthouse
- * assertions (its program key and a short instruction per account it guards) to a transaction
- * it receives unsigned, and a priority fee where there is none; a start built to the last byte
- * would leave it nothing. Typical starts are about 813 bytes, so only a long route is affected,
- * and it goes out as the two halves instead.
+ * Room left for the wallet. Phantom adds its Lighthouse assertions (its program key and a short
+ * instruction per account it guards) to a transaction it receives unsigned, and a priority fee
+ * where there is none; a start built to the last byte would leave it nothing.
  */
 const WALLET_HEADROOM_BYTES = 200;
 
@@ -61,34 +57,34 @@ export type StartInput = {
   readonly owner: PublicKey;
   /** The stock every payment saves into: one the chain can price for an automatic save. */
   readonly asset: Asset;
-  /** The same stock in the save catalogue, for the first save. Null when there is none. */
-  readonly stock: SaveStock | null;
   readonly rateBps: number;
-  /** The first save, in USDC base units. 0 starts every payment alone. */
-  readonly saveUsdc: bigint;
+  /**
+   * What the rule counts as arriving when it turns on (`./first.ts`), USDC base units, as the
+   * card showed it before the saver signed. 0 starts with the next payment.
+   */
+  readonly firstUsdc: bigint;
   /** 1 when the saver attested what an xStocks token is and that they are not a US person. */
   readonly termsVersion: number;
 };
 
 export type BuiltStart = {
-  /** One transaction when everything fits; otherwise the save, then the rule. */
   readonly transactions: readonly string[];
   readonly lastValidBlockHeight: number;
-  readonly quote: SaveQuote | null;
   readonly slug: string;
   /** Plans this wallet was invited to, joined in the same approval. */
   readonly joins: number;
+  /** The first payment the rule saves, and its slice; null when it starts with the next one. */
+  readonly first: { readonly basisUsdc: string; readonly sliceUsdc: string } | null;
   /** What starting sets aside: deposits that come back, the prepaid saves, the network fee. */
   readonly cost: { readonly depositLamports: number; readonly prepaidLamports: number; readonly feeLamports: number };
 };
 
 export async function buildStart(input: StartInput): Promise<Outcome<BuiltStart>> {
-  const { owner, asset, stock, saveUsdc } = input;
+  const { owner, asset, firstUsdc } = input;
   const conn = connection();
   const book = await loadBook(owner.toBase58());
   if (!book.ok) return book;
   if (book.value.book) return held("This wallet already saves every payment. Change it under Every payment.");
-  if (saveUsdc > 0n && (!stock || stock.mint !== asset.mint)) return held("The first save goes into the same stock as every payment.");
 
   const usdcMint = usdcMintFor(null);
   const terms = validateRule({ rateBps: input.rateBps, escalateBps: 0, floorUsdc: 0n, capUsdc: DEFAULT_CAP_USDC, toleranceBps: DEFAULT_TOLERANCE_BPS });
@@ -99,6 +95,20 @@ export async function buildStart(input: StartInput): Promise<Outcome<BuiltStart>
   const rule = enableRuleIxs({ owner, usdcMint, terms: terms.value, allowanceUsdc: DEFAULT_ALLOWANCE_USDC, floatLamports: SUGGESTED_FLOAT_LAMPORTS });
   if (!rule.ok) return rule;
 
+  // The first payment: checked against what the wallet holds and what the program will accept.
+  let hands: FirstHands | null = null;
+  let first: BuiltStart["first"] = null;
+  let holdingRent = 0;
+  if (firstUsdc > 0n) {
+    const slice = sliceOf(firstUsdc, input.rateBps);
+    if (firstUsdc < DEFAULT_MIN_INBOUND || slice < MIN_SLICE) return held("That first payment is too small for the rule to save; start with the next one instead.");
+    if (slice > FIRST_SLICE_MAX_USDC) return held("A first save takes at most $50. Nothing was signed.");
+    if (!book.value.usdc.exists || book.value.usdc.balance < firstUsdc) return held("This wallet holds less USDC than that payment now. Nothing was signed.");
+    holdingRent = Number(await rentFor(conn, USDC_ACCOUNT_BYTES));
+    hands = await firstPaymentHands({ owner, usdcMint, basisUsdc: firstUsdc, seed: holdingSeed(), rentLamports: holdingRent });
+    first = { basisUsdc: firstUsdc.toString(), sliceUsdc: slice.toString() };
+  }
+
   // A sponsor's invitation, accepted in the same approval: the match needs no second visit.
   const memberships = await membershipsOf(owner.toBase58());
   const joins: TransactionInstruction[] = [];
@@ -107,7 +117,13 @@ export async function buildStart(input: StartInput): Promise<Outcome<BuiltStart>
     const ix = acceptMemberIx({ owner, plan: new PublicKey(m.plan.pda) });
     if (ix.ok) joins.push(ix.value);
   }
-  const ruleIxs = [...openUsdcIfMissing(owner, usdcMint, book.value.usdc.exists), open.value, ...rule.value, ...joins];
+  const ixs = startInstructions({
+    owner,
+    open: [...openUsdcIfMissing(owner, usdcMint, book.value.usdc.exists), open.value],
+    rule: rule.value,
+    joins,
+    hands,
+  });
 
   const depositLamports = Number(book.value.openCostLamports + book.value.usdcAccountRentLamports);
   const prepaidLamports = Number(SUGGESTED_FLOAT_LAMPORTS);
@@ -121,72 +137,26 @@ export async function buildStart(input: StartInput): Promise<Outcome<BuiltStart>
     return held(`Could not reach Solana (${err instanceof Error ? err.message : String(err)}).`);
   }
 
-  const shortOfSol = (extraDeposit: number, fee: number) => {
-    const need = depositLamports + extraDeposit + prepaidLamports + fee + WALLET_FLOOR_LAMPORTS;
-    return held(
-      `Starting needs about ${sol(need)} of SOL in this wallet: ${sol(depositLamports + extraDeposit)} of deposits that come back if you ever stop and close, and ${sol(prepaidLamports)} that prepays your next automatic saves. It has ${sol(haveLamports)}. Nothing was signed.`,
-    );
-  };
-
-  // ── every payment alone ──────────────────────────────────────────────────────────────
-  if (saveUsdc === 0n || !stock) {
-    const built = await assembleMeasured(conn, owner, blockhash, ruleIxs, [], RULE_MICRO_LAMPORTS);
-    if (!built.ok) {
-      if (built.why === "sol") return shortOfSol(0, BASE_FEE_LAMPORTS);
-      return held(`Saving every payment would fail right now (${built.why}). Nothing was signed.`);
+  const built = await assembleMeasured(conn, owner, blockhash, ixs, RULE_MICRO_LAMPORTS, MAX_TX_BYTES - WALLET_HEADROOM_BYTES);
+  if (!built.ok) {
+    if (built.why === "sol") {
+      // The holding account's rent is lent and returned inside the transaction, but the wallet must hold it while it runs.
+      const need = depositLamports + prepaidLamports + holdingRent + BASE_FEE_LAMPORTS + WALLET_FLOOR_LAMPORTS;
+      return held(
+        `Starting needs about ${sol(need)} of SOL in this wallet: ${sol(depositLamports)} of deposits that come back if you ever stop and close, and ${sol(prepaidLamports)} that prepays your next automatic saves. It has ${sol(haveLamports)}. Nothing was signed.`,
+      );
     }
-    return ok({
-      transactions: [b64(built.value.tx)],
-      lastValidBlockHeight,
-      quote: null,
-      slug,
-      joins: joins.length,
-      cost: { depositLamports, prepaidLamports, feeLamports: built.value.feeLamports },
-    });
-  }
-
-  // ── the first save and every payment, together ──────────────────────────────────────
-  const parts = await saveParts({ owner, stock, usdc: saveUsdc, maxAccounts: SHARED_MAX_ACCOUNTS });
-  if (!parts.ok) return parts;
-  const p = parts.value;
-  const together = [p.memo, p.open, ...p.setup, p.swap, ...(p.cleanup ? [p.cleanup] : []), ...ruleIxs];
-  const combined = await assembleMeasured(conn, owner, blockhash, together, p.alts, SAVE_MICRO_LAMPORTS, MAX_TX_BYTES - WALLET_HEADROOM_BYTES);
-  if (combined.ok) {
-    return ok({
-      transactions: [b64(combined.value.tx)],
-      lastValidBlockHeight,
-      quote: p.quote,
-      slug,
-      joins: joins.length,
-      cost: { depositLamports: depositLamports + p.depositLamports, prepaidLamports, feeLamports: combined.value.feeLamports },
-    });
-  }
-  if (combined.why === "sol") return shortOfSol(p.depositLamports, BASE_FEE_LAMPORTS * 2);
-  if (combined.why === "usdc") return held("This wallet holds less USDC than this first save. Nothing was signed.");
-  if (combined.why === "price") return held("The price moved while the route was being quoted. Try again; nothing was signed.");
-  if (combined.why !== "size") return held(`Starting would fail right now (${combined.why}). Nothing was signed; try again in a moment.`);
-
-  // Too long for one transaction: the save as its own, then the rule, both under one approval.
-  const [save, alone] = await Promise.all([
-    buildSave({ owner, stock, usdc: saveUsdc }),
-    assembleMeasured(conn, owner, blockhash, ruleIxs, [], RULE_MICRO_LAMPORTS),
-  ]);
-  if (!save.ok) return save;
-  if (!alone.ok) {
-    if (alone.why === "sol") return shortOfSol(save.value.cost.depositLamports, BASE_FEE_LAMPORTS * 2);
-    return held(`Saving every payment would fail right now (${alone.why}). Nothing was signed.`);
+    if (built.why === "usdc") return held("This wallet holds less USDC than that payment now. Nothing was signed.");
+    if (built.why === "size") return held("This start has too many Plan invitations to fit in one approval. Join them from your savings page afterwards.");
+    return held(`Starting would fail right now (${built.why}). Nothing was signed; try again in a moment.`);
   }
   return ok({
-    transactions: [save.value.transactionBase64, b64(alone.value.tx)],
-    lastValidBlockHeight: Math.min(lastValidBlockHeight, save.value.lastValidBlockHeight),
-    quote: save.value.quote,
+    transactions: [b64(built.value.tx)],
+    lastValidBlockHeight,
     slug,
     joins: joins.length,
-    cost: {
-      depositLamports: depositLamports + save.value.cost.depositLamports,
-      prepaidLamports,
-      feeLamports: save.value.cost.feeLamports + alone.value.feeLamports,
-    },
+    first,
+    cost: { depositLamports, prepaidLamports, feeLamports: built.value.feeLamports },
   });
 }
 
@@ -200,7 +170,6 @@ async function assembleMeasured(
   owner: PublicKey,
   blockhash: string,
   ixs: readonly TransactionInstruction[],
-  alts: readonly AddressLookupTableAccount[],
   microLamports: number,
   maxBytes: number = MAX_TX_BYTES,
 ): Promise<Outcome<{ tx: VersionedTransaction; feeLamports: number }>> {
@@ -210,7 +179,7 @@ async function assembleMeasured(
         payerKey: owner,
         recentBlockhash: blockhash,
         instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports }), ...ixs],
-      }).compileToV0Message([...alts]),
+      }).compileToV0Message(),
     );
   let probe: VersionedTransaction;
   try {
@@ -220,7 +189,7 @@ async function assembleMeasured(
     // compileToV0Message or serialize throws when the message cannot be encoded at all.
     return held("size");
   }
-  let used = 400_000;
+  let used = 200_000;
   try {
     const sim = await conn.simulateTransaction(probe, { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" });
     const refusal = readSimulation(sim.value.err, sim.value.logs);

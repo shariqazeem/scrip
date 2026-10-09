@@ -151,6 +151,7 @@ async function assemble(owner: string, opts: { refresh?: boolean }): Promise<Out
     unswept: unswept.toString(),
     sliceNext: sliceNow?.ok ? sliceNow.value.slice.toString() : "0",
     sweeps: v.book?.rule.sweeps ?? 0,
+    enabledUnix: v.book?.rule.enabled ? v.book.rule.enabledUnix : 0,
     floatLamports: v.floatLamports.toString(),
     sweepsCovered: v.sweepsCovered,
     keeper: { alive: keeper.ok, lastReason: mine?.lastReason ?? null, lastSweepAt: mine?.lastSweepAt ?? null },

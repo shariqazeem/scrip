@@ -7,6 +7,7 @@ import { receipts, saves } from "@/lib/db/schema";
 import { short } from "@/lib/format";
 import { matchesFor } from "@/lib/plan/matches";
 import { landedToStock } from "@/lib/receipt/figures";
+import { startedWith } from "@/lib/start/memo";
 import { isStranger, isTeam, walletTag } from "@/lib/team";
 import { stockByMint } from "./catalogue";
 
@@ -35,20 +36,20 @@ export function sweepPreference(r: { recipient: string; settledUnix: number; att
   return gap === null ? 4 : 5;
 }
 /**
- * WHICH RECEIPT LEADS, ACROSS BOTH KINDS. Lower is better; among equals, the newest. An automatic
- * save is the product's story and a save now is its first step, so: a stranger's fast automatic
- * save, then a stranger's save, then a stranger's slower automatic save, then the team's fast
- * automatic save, the team's save, the team's slower one, and last whatever took longer or is
- * not attributed. Until 9 October any save led, so the founder's first $5 test would have
- * replaced the ten-second automatic save on the front door.
+ * WHICH RECEIPT LEADS, ACROSS BOTH KINDS. Lower is better; among equals, the newest. The front
+ * door shows the product, and the product is the automatic save: since 9 October any automatic
+ * save that became stock within ten minutes leads, a stranger's before the team's and a fast one
+ * before a slower one; a save made by hand (a swap) comes after them, a stranger's first; last
+ * whatever took longer or is not attributed. "It feels like just a swap," the founder said of
+ * the start that led with one.
  */
 export type FrontCandidate =
   | { readonly kind: "save"; readonly owner: string; readonly settledUnix: number }
   | { readonly kind: "sweep"; readonly recipient: string; readonly settledUnix: number; readonly attributedJson: string };
 
 export function frontRank(c: FrontCandidate): number {
-  if (c.kind === "save") return isTeam(c.owner) ? 4 : 1;
-  const byPreference = [0, 3, 2, 5, 6, 7] as const;
+  if (c.kind === "save") return isTeam(c.owner) ? 5 : 4;
+  const byPreference = [0, 1, 2, 3, 6, 7] as const;
   return byPreference[sweepPreference(c)] ?? 7;
 }
 
@@ -68,6 +69,10 @@ export type FrontReceipt = {
   readonly tag: "team" | "paid tester" | undefined;
   /** A sponsor's match on this save, read from its own transaction. */
   readonly match: { readonly by: string; readonly usdc: bigint; readonly amountRaw: bigint } | null;
+  /** An automatic save: seconds from the money landing (or saving being turned on) to the stock. */
+  readonly seconds: number | null;
+  /** The rule's first payment, counted as saving was turned on. */
+  readonly atStart: boolean;
 };
 
 export async function frontReceipt(): Promise<FrontReceipt | null> {
@@ -102,6 +107,8 @@ export async function frontReceipt(): Promise<FrontReceipt | null> {
       settledUnix: save.settledUnix,
       tag: walletTag(save.owner),
       match: null,
+      seconds: null,
+      atStart: false,
     };
   }
   const sweep = best.row;
@@ -121,7 +128,17 @@ export async function frontReceipt(): Promise<FrontReceipt | null> {
     settledUnix: sweep.settledUnix,
     tag: walletTag(sweep.recipient),
     match: m ? { by: m.sponsorHandle ? `@${m.sponsorHandle}` : short(m.sponsor), usdc: m.usdc, amountRaw: m.amountRaw } : null,
+    seconds: landedToStock(sweep.settledUnix, arrivalsOf(sweep.attributedJson)),
+    atStart: startedWith(sweep.attributedJson),
   };
+}
+
+function arrivalsOf(attributedJson: string): Array<number | null | undefined> {
+  try {
+    return (JSON.parse(attributedJson) as Array<{ at?: number | null }>).map((a) => a.at);
+  } catch {
+    return [];
+  }
 }
 
 /**

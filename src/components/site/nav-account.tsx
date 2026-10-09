@@ -34,7 +34,7 @@ export function NavAccount() {
 }
 
 const MENU = [
-  { href: "/#start", label: "Start saving" },
+  { href: "/", label: "Start saving" },
   { href: "/app/save", label: "Save once" },
   { href: "/app", label: "Your savings" },
   { href: "/teams", label: "For teams" },

@@ -70,3 +70,20 @@ async function healthAt(url: string): Promise<Outcome<KeeperHealth>> {
     return held(`The keeper could not be reached (${err instanceof Error ? err.message : String(err)}).`);
   }
 }
+
+/**
+ * ASK SCRIP'S SERVERS TO LOOK NOW — after a start lands, so its first save does not wait for
+ * the next poll. Each service spaces its own looks, so this can only make one sooner. Fire and
+ * forget: a service that does not answer still looks at its next poll.
+ */
+export async function wakeKeepers(): Promise<number> {
+  const urls = keeperHealthUrls().map((u) => u.replace(/\/health\/?$/, "/wake"));
+  const answers = await Promise.all(
+    urls.map((u) =>
+      fetch(u, { method: "POST", cache: "no-store", signal: AbortSignal.timeout(2_000) })
+        .then((r) => r.ok)
+        .catch(() => false),
+    ),
+  );
+  return answers.filter(Boolean).length;
+}
