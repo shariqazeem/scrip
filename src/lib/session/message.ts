@@ -88,6 +88,40 @@ export function signInTextMatches(text: string, expect: { pubkey: string; nonce:
   return seen.size === wanted.size;
 }
 
+/**
+ * A WALLET'S OWN WORDING, STILL OURS WHERE IT MATTERS. `signInTextMatches` expects the wallet to
+ * copy our fields verbatim, which the standard asks and Phantom does; a wallet that drops the
+ * statement, reorders a field or writes the time in another ISO form would otherwise lock its
+ * owner out of their savings. What makes a sign-in safe is narrower and is all checked here: the
+ * first line names this site (a signature gathered elsewhere names that site), the second is the
+ * address that signs, our single-use nonce is in it (the route has already matched it to the
+ * cookie it issued), and any URI or time it carries is ours and recent. The route still verifies
+ * the signature over the exact bytes the wallet signed.
+ */
+export function signInTextCarries(text: string, expect: { pubkey: string; nonce: string }, now: number = Math.floor(Date.now() / 1000)): boolean {
+  const f = signInFields();
+  const lines = text.split("\n").map((l) => l.replace(/\r$/, ""));
+  if (lines[0] !== `${f.domain} wants you to sign in with your Solana account:`) return false;
+  if (lines[1] !== expect.pubkey) return false;
+  let nonce = false;
+  for (const line of lines.slice(2)) {
+    if (line === `Nonce: ${expect.nonce}`) nonce = true;
+    else if (line.startsWith("Nonce:")) return false;
+    if (line.startsWith("URI:")) {
+      const uri = line.slice(4).trim().replace(/\/$/, "");
+      if (uri !== f.uri.replace(/\/$/, "")) return false;
+    }
+    if (line.startsWith("Issued At:")) {
+      const t = Date.parse(line.slice(10).trim());
+      if (Number.isNaN(t)) return false;
+      const age = now - Math.floor(t / 1000);
+      if (age < -60 || age > NONCE_TTL_SECONDS) return false;
+    }
+    if (line.startsWith("Chain ID:") && !/^Chain ID: (solana:)?(mainnet|mainnet-beta|devnet|testnet|localnet)$/.test(line)) return false;
+  }
+  return nonce;
+}
+
 /** A nonce is 128 bits of hex — enough that a replay needs the real one, not a guess. */
 export function newNonce(): string {
   const bytes = new Uint8Array(16);

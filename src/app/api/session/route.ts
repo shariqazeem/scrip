@@ -1,7 +1,7 @@
 import { ed25519 } from "@noble/curves/ed25519";
 import { PublicKey } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
-import { isFreshIssuedAt, signInMessage, signInTextMatches } from "@/lib/session/message";
+import { isFreshIssuedAt, signInMessage, signInTextCarries, signInTextMatches } from "@/lib/session/message";
 import {
   NONCE_COOKIE,
   SESSION_COOKIE,
@@ -78,7 +78,8 @@ export async function POST(req: NextRequest) {
     } catch {
       return deny();
     }
-    if (!signInTextMatches(new TextDecoder().decode(signed), { pubkey, nonce, issuedAt })) return deny();
+    const text = new TextDecoder().decode(signed);
+    if (!signInTextMatches(text, { pubkey, nonce, issuedAt }) && !signInTextCarries(text, { pubkey, nonce })) return deny();
     expected = signed;
   } else {
     expected = new TextEncoder().encode(signInMessage(pubkey, nonce, issuedAt));

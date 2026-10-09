@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { signInMessage, signInTextMatches } from "./message";
+import { signInMessage, signInTextCarries, signInTextMatches } from "./message";
 
 /**
  * The wallet is the judge of this format, and it judges strictly. These assertions are the
@@ -72,5 +72,36 @@ describe("a sign-in the wallet wrote itself", () => {
     expect(signInTextMatches(msg.split("\n").filter((l) => !l.startsWith("Nonce: ")).join("\n"), expect_)).toBe(false);
     expect(signInTextMatches(withLine("Nonce: ", `Nonce: ${NONCE}`), expect_)).toBe(false);
     expect(signInTextMatches(msg.replace("costs nothing", "costs everything"), expect_)).toBe(false);
+  });
+});
+
+describe("a sign-in another wallet worded its own way", () => {
+  const NONCE = "0123456789abcdef0123456789abcdef";
+  const AT = "2026-09-21T14:00:00.000Z";
+  const NOW = Math.floor(Date.parse(AT) / 1000) + 30;
+  const at = (l: string[]) => l.join("\n");
+  const base = msg.split("\n");
+  const domainLine = base[0]!;
+  const uriLine = base.find((l) => l.startsWith("URI: "))!;
+
+  it("is accepted when only the wording differs: no statement, another time format, its own fields", () => {
+    const solflareLike = at([domainLine, PUBKEY, "", uriLine, "Version: 1", "Chain ID: solana:mainnet", `Nonce: ${NONCE}`, "Issued At: 2026-09-21T14:00:00Z", "Expiration Time: 2026-09-21T14:10:00Z"]);
+    expect(signInTextMatches(solflareLike, { pubkey: PUBKEY, nonce: NONCE, issuedAt: AT })).toBe(false);
+    expect(signInTextCarries(solflareLike, { pubkey: PUBKEY, nonce: NONCE }, NOW)).toBe(true);
+    expect(signInTextCarries(at([...base.map((l) => (l.startsWith("URI: ") ? `${l}/` : l))]), { pubkey: PUBKEY, nonce: NONCE }, NOW)).toBe(true);
+  });
+
+  it("is still refused for another site, another address, another nonce or no nonce", () => {
+    expect(signInTextCarries(msg.replace(/^[^ ]+ wants/, "evil.example wants"), { pubkey: PUBKEY, nonce: NONCE }, NOW)).toBe(false);
+    expect(signInTextCarries(msg, { pubkey: "11111111111111111111111111111111", nonce: NONCE }, NOW)).toBe(false);
+    expect(signInTextCarries(msg, { pubkey: PUBKEY, nonce: "f".repeat(32) }, NOW)).toBe(false);
+    expect(signInTextCarries(at(base.filter((l) => !l.startsWith("Nonce: "))), { pubkey: PUBKEY, nonce: NONCE }, NOW)).toBe(false);
+  });
+
+  it("is refused when it points at another URI, is stale, or names another chain", () => {
+    const swap = (from: string, to: string) => at(base.map((l) => (l.startsWith(from) ? to : l)));
+    expect(signInTextCarries(swap("URI: ", "URI: https://evil.example"), { pubkey: PUBKEY, nonce: NONCE }, NOW)).toBe(false);
+    expect(signInTextCarries(msg, { pubkey: PUBKEY, nonce: NONCE }, NOW + 3_600)).toBe(false);
+    expect(signInTextCarries(swap("Version: ", "Version: 1\nChain ID: ethereum:1"), { pubkey: PUBKEY, nonce: NONCE }, NOW)).toBe(false);
   });
 });
