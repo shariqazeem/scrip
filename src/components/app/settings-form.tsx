@@ -91,3 +91,79 @@ export function SettingsForm({ owner, delegatedAmount, floatLamports, sweepsCove
     </div>
   );
 }
+
+/**
+ * STOP AND TAKE BACK THE SOL — one signature that revokes Scrip's permission, turns saving off
+ * and closes the savings record, so everything the record holds comes back to this wallet: its
+ * deposit, its name's deposit and the prepaid saves not used yet. The stock and every receipt
+ * stay. Until 9 October "stop" only paused, and the SOL stayed behind with no button to fetch it.
+ */
+export function CloseSavings({
+  owner,
+  returnLamports,
+  returnMoney,
+}: {
+  owner: string;
+  returnLamports: string;
+  returnMoney: string | null;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [why, setWhy] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const back = sol(BigInt(returnLamports));
+
+  async function close() {
+    setBusy(true);
+    setWhy(null);
+    const out = await signRuleAction(owner, { action: "close" });
+    setBusy(false);
+    if (!out.ok) {
+      if (out.why) setWhy(out.why);
+      return;
+    }
+    // This browser no longer belongs to a saver: the front door shows the start again.
+    try {
+      localStorage.removeItem("scrip:saving");
+    } catch {
+      // Nothing to forget.
+    }
+    setDone(true);
+  }
+
+  if (done) {
+    return (
+      <div className="sp-close is-done">
+        <p className="sp-why is-ok">
+          <Check size={14} strokeWidth={2} aria-hidden /> Stopped. {back} is back in your
+          wallet; your stock and every receipt stay.
+        </p>
+        <button
+          type="button"
+          className="sp-action"
+          onClick={() => window.location.assign("/app")}
+        >
+          Back to your savings
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="sp-close">
+      <p className="sp-close-say">
+        Turns saving off, takes back Scrip&rsquo;s permission on your USDC, and closes your
+        savings record. <strong>{back}</strong>
+        {returnMoney ? ` (${returnMoney})` : ""} comes back to this wallet: the record&rsquo;s
+        deposit, its name&rsquo;s deposit, and the prepaid saves you have not used. Your stock
+        and every receipt stay where they are, and you can start again any time.
+      </p>
+      <button type="button" className="sp-action" disabled={busy} onClick={() => void close()}>
+        {busy ? "Approve in your wallet…" : `Stop and take back ${back}`}
+      </button>
+      {why ? (
+        <p className="sp-why is-err">
+          <TriangleAlert size={14} strokeWidth={2} aria-hidden /> {why}
+        </p>
+      ) : null}
+    </div>
+  );
+}

@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SignInPanel } from "@/components/app/savings-home";
 import { PageFrame } from "@/components/app/page-frame";
-import { SettingsForm } from "@/components/app/settings-form";
+import { CloseSavings, SettingsForm } from "@/components/app/settings-form";
 import { SignOut } from "@/components/auth/connect";
 import { PublishToggle } from "@/components/org/publish-toggle";
 import { TelegramLink } from "@/components/app/telegram-link";
+import { PublicKey } from "@solana/web3.js";
+import { solInMoney } from "@/components/save/types";
 import { liveView } from "@/lib/book/live";
+import { solUsd } from "@/lib/market";
+import { connection } from "@/lib/solana/connection";
+import { bookPda, handlePda } from "@/lib/solana/program";
 import { currentOwner } from "@/lib/session/server";
 import { siteUrl } from "@/lib/site";
 import "@/components/org/org.css";
@@ -27,6 +32,16 @@ export default async function SettingsPage() {
   }
   const v = await liveView(owner, { refresh: false });
   const view = v.ok ? v.value : null;
+  // What closing returns, read from the two accounts it closes: never an estimate.
+  const [held, price] = await Promise.all([
+    view?.handle
+      ? connection()
+          .getMultipleAccountsInfo([bookPda(new PublicKey(owner)), handlePda(view.handle)], "confirmed")
+          .then((infos) => infos.reduce((n, i) => n + (i?.lamports ?? 0), 0))
+          .catch(() => null)
+      : Promise.resolve(null),
+    solUsd().catch(() => null),
+  ]);
   const bot = process.env.TELEGRAM_BOT_USERNAME?.trim() || null;
   return (
     <PageFrame eyebrow={view?.handle ? `@${view.handle}` : "Settings"} title="Settings." sub="The limit on what Scrip can move, the saves you prepaid, who can see your savings, and where a save is announced." actions={<SignOut />}>
@@ -56,6 +71,14 @@ export default async function SettingsPage() {
               </p>
               <TelegramLink owner={owner} bot={bot} />
             </section>
+            {held ? (
+              <section className="sp-org-section">
+                <p className="sp-section-label">
+                  <span>Stop and take back your SOL</span>
+                </p>
+                <CloseSavings owner={owner} returnLamports={String(held)} returnMoney={solInMoney(held, price)} />
+              </section>
+            ) : null}
             <section className="sp-org-section">
               <p className="sp-section-label">
                 <span>Your name</span>

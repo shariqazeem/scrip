@@ -468,3 +468,22 @@
   color: var(--warn);
 }
 
+
+/* ── stop and take back the SOL ─────────────────────────────────────────── */
+.sp-close {
+  display: grid;
+  gap: var(--s-3);
+  justify-items: start;
+  max-width: 62ch;
+}
+.sp-close-say {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--ink-muted);
+}
+.sp-close-say strong {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink);
+}

@@ -3,12 +3,27 @@ import { type NextRequest, NextResponse } from "next/server";
 import { assetByMint, defaultAsset } from "@/lib/assets/registry";
 import { loadBook, usdcMintFor } from "@/lib/book/read-book";
 import { validateSlug } from "@/lib/handle";
-import { changeRuleIxs, disableRuleIxs, enableRuleIxs, openBookIx, pauseIxs, resumeIxs, setAssetIx, topUpAllowanceIxs, withdrawFloatIx, depositFloatIx, openUsdcIfMissing } from "@/lib/rule/instructions";
+import {
+  changeRuleIxs,
+  closeBookIx,
+  disableRuleIx,
+  disableRuleIxs,
+  enableRuleIxs,
+  openBookIx,
+  pauseIxs,
+  resumeIxs,
+  revokeIx,
+  setAssetIx,
+  topUpAllowanceIxs,
+  withdrawFloatIx,
+  depositFloatIx,
+  openUsdcIfMissing,
+} from "@/lib/rule/instructions";
 import { type RuleTerms, validateRule } from "@/lib/rule/slice";
 import { currentOwner } from "@/lib/session/server";
 import { cluster } from "@/lib/solana/cluster";
 import { connection } from "@/lib/solana/connection";
-import { SCRIP_PROGRAM_ID } from "@/lib/solana/program";
+import { SCRIP_PROGRAM_ID, bookPda } from "@/lib/solana/program";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +34,7 @@ export const dynamic = "force-dynamic";
  * The owner signs in their wallet; this route cannot.
  */
 type Body = {
-  action?: "open" | "start" | "enable" | "change" | "pause" | "resume" | "disable" | "allowance" | "float" | "withdraw" | "asset";
+  action?: "open" | "start" | "enable" | "change" | "pause" | "resume" | "disable" | "allowance" | "float" | "withdraw" | "asset" | "close";
   slug?: string;
   assetMint?: string;
   termsVersion?: number;
@@ -161,6 +176,29 @@ export async function POST(req: NextRequest) {
       const r = withdrawFloatIx(ownerKey, BigInt(body.lamports ?? "0"));
       if (!r.ok) return bad(r.why);
       ixs = [r.value];
+      break;
+    }
+    case "close": {
+      // STOP AND TAKE BACK THE SOL, in one signature: the permission revoked (only Scrip's own),
+      // saving turned off, and the savings record closed, which returns everything it holds —
+      // its deposit, its name's deposit and whatever prepaid saves are left — to this wallet.
+      // The stock and every receipt stay: receipts are their own accounts, and the stock was
+      // always in this wallet.
+      const b = view.value.book;
+      if (!b) return bad("This wallet has no savings record to close.");
+      if (b.pending) return bad("A save is being made right now. Try again in a minute.");
+      const list = [];
+      const d = view.value.usdc;
+      if (d.exists && d.delegate === bookPda(ownerKey).toBase58() && d.delegatedAmount > 0n) list.push(revokeIx(ownerKey, usdcMint));
+      if (b.rule.enabled) {
+        const off = disableRuleIx(ownerKey, usdcMint);
+        if (!off.ok) return bad(off.why);
+        list.push(off.value);
+      }
+      const close = closeBookIx(ownerKey, b.slug);
+      if (!close.ok) return bad(close.why);
+      list.push(close.value);
+      ixs = list;
       break;
     }
     default:

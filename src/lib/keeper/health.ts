@@ -76,11 +76,12 @@ async function healthAt(url: string): Promise<Outcome<KeeperHealth>> {
  * the next poll. Each service spaces its own looks, so this can only make one sooner. Fire and
  * forget: a service that does not answer still looks at its next poll.
  */
-export async function wakeKeepers(): Promise<number> {
+export async function wakeKeepers(warmMint?: string): Promise<number> {
   const urls = keeperHealthUrls().map((u) => u.replace(/\/health\/?$/, "/wake"));
+  const body = warmMint ? JSON.stringify({ mint: warmMint }) : undefined;
   const answers = await Promise.all(
     urls.map((u) =>
-      fetch(u, { method: "POST", cache: "no-store", signal: AbortSignal.timeout(2_000) })
+      fetch(u, { method: "POST", cache: "no-store", body, headers: body ? { "content-type": "application/json" } : undefined, signal: AbortSignal.timeout(2_000) })
         .then((r) => r.ok)
         .catch(() => false),
     ),

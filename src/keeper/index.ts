@@ -341,7 +341,29 @@ async function priceFor(book: Book, asset: Asset): Promise<Outcome<PriceSource>>
   if (asset.feedRaw && asset.feedRaw.feedId === book.feedRaw) candidates.push({ feed: asset.feedRaw, adjusted: false });
   if (asset.feedAdjusted && asset.feedAdjusted.feedId === book.feedAdjusted) candidates.push({ feed: asset.feedAdjusted, adjusted: true });
   if (candidates.length === 0) return held("neither of the book's feeds is the registry's");
+  return priceFrom(candidates);
+}
 
+/**
+ * A START IS BEING APPROVED: have its stock's price ready by the time it lands. Asked by the
+ * site the moment somebody taps Start; the price is the one every save shares for eight
+ * minutes, so this costs at most one post per stock in that time, and only when no usable price
+ * exists. Until 9 October the first save waited for this post after the start had landed: about
+ * ten of the sixteen seconds between starting and the stock arriving. A backup never warms.
+ */
+async function warmPrice(asset: Asset): Promise<void> {
+  if (BACKUP_AFTER_SECONDS > 0 || CLUSTER !== "mainnet-beta") return;
+  // The same feeds, in the same order, as a register opened on this stock names, so the save
+  // that follows finds this price shared, or joins this post while it is still in flight.
+  const candidates: Array<{ feed: PriceFeed; adjusted: boolean }> = [];
+  if (asset.feedRaw) candidates.push({ feed: asset.feedRaw, adjusted: false });
+  if (asset.feedAdjusted) candidates.push({ feed: asset.feedAdjusted, adjusted: true });
+  if (candidates.length === 0) return;
+  const r = await priceFrom(candidates);
+  log(r.ok ? `price ready for ${asset.symbol} before a start lands` : `could not ready a ${asset.symbol} price: ${r.why}`);
+}
+
+async function priceFrom(candidates: ReadonlyArray<{ feed: PriceFeed; adjusted: boolean }>): Promise<Outcome<PriceSource>> {
   const now = Math.floor(Date.now() / 1000);
   for (const c of candidates) {
     if (!c.feed.account) continue;
@@ -994,14 +1016,29 @@ async function main(): Promise<void> {
         res.end();
         return;
       }
-      const now = Date.now();
-      const woke = now - lastWakeAt >= WAKE_GAP_MS;
-      if (woke) {
-        lastWakeAt = now;
-        void tick();
-      }
-      res.writeHead(202, { "content-type": "application/json" });
-      res.end(JSON.stringify({ woke }));
+      // An optional body names a stock whose price to ready: a start is being approved.
+      let body = "";
+      req.on("data", (chunk: Buffer) => {
+        if (body.length < 1_024) body += chunk.toString("utf8");
+      });
+      req.on("end", () => {
+        let mint: unknown = null;
+        try {
+          mint = (JSON.parse(body || "{}") as { mint?: unknown }).mint;
+        } catch {
+          mint = null;
+        }
+        const asset = typeof mint === "string" ? assetByMint(mint) : undefined;
+        if (asset) void warmPrice(asset).catch((err) => log("readying a price failed:", err instanceof Error ? err.message : err));
+        const now = Date.now();
+        const woke = !asset && now - lastWakeAt >= WAKE_GAP_MS;
+        if (woke) {
+          lastWakeAt = now;
+          void tick();
+        }
+        res.writeHead(202, { "content-type": "application/json" });
+        res.end(JSON.stringify({ woke, warming: Boolean(asset) }));
+      });
       return;
     }
     res.writeHead(404);

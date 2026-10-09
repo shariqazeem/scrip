@@ -146,21 +146,48 @@ export function StartCard({
   const readWallet = useCallback(async (address: string): Promise<WalletView | null> => {
     // The wallet's state first: it decides what the card says. Its payments follow, and a busy
     // wallet's history must not hold the card: after a few seconds the USDC it holds stands in.
-    const payments = fetch(`/api/save/wallet/${address}`, { cache: "no-store", signal: AbortSignal.timeout(PAYMENTS_WAIT_MS) })
-      .then((r) => (r.ok ? (r.json() as Promise<{ usdc?: string; inflows?: Array<{ sig: string; at: number; usdc: string; from: string | null }> }>) : null))
+    const payments = fetch(`/api/save/wallet/${address}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(PAYMENTS_WAIT_MS),
+    })
+      .then((r) =>
+        r.ok
+          ? (r.json() as Promise<{
+              usdc?: string;
+              inflows?: Array<{ sig: string; at: number; usdc: string; from: string | null }>;
+            }>)
+          : null,
+      )
       .catch(() => null);
     const v = await fetch(`/api/start/view/${address}`, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<WalletView>) : null))
       .catch(() => null);
     if (v) {
       setView(v);
-      rememberSaving(v.saving ? { address, rateBps: v.saving.rateBps, enabled: v.saving.enabled, stock: v.saving.stock } : null);
+      rememberSaving(
+        v.saving
+          ? {
+              address,
+              rateBps: v.saving.rateBps,
+              enabled: v.saving.enabled,
+              stock: v.saving.stock,
+            }
+          : null,
+      );
       if (!v.saving) setCached(null);
       settleHold();
     }
     const body = await payments;
     if (body?.usdc !== undefined) {
-      setPay({ usdc: BigInt(body.usdc), inflows: (body.inflows ?? []).map((f) => ({ sig: f.sig, at: f.at, usdc: BigInt(f.usdc), from: f.from })) });
+      setPay({
+        usdc: BigInt(body.usdc),
+        inflows: (body.inflows ?? []).map((f) => ({
+          sig: f.sig,
+          at: f.at,
+          usdc: BigInt(f.usdc),
+          from: f.from,
+        })),
+      });
     } else if (v) {
       setPay({ usdc: BigInt(v.usdc), inflows: [] });
     }
@@ -271,6 +298,14 @@ export function StartCard({
     }
     const c = connected;
     setPhase("building");
+    // While the wallet is open, have the stock's price posted, so the first save does not wait for it.
+    if (first && stock.ready !== false) {
+      void fetch("/api/start/wake", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mint }),
+      }).catch(() => undefined);
+    }
     const v = await readWallet(c.account.address);
     if (!v)
       return fail(
@@ -353,7 +388,18 @@ export function StartCard({
   if (view?.saving && connected) return <AlreadySaving saving={view.saving} />;
   // Before the wallet has answered: what this browser last knew, so a saver never sees the start
   // sentence flash up and away. The read above replaces it within a second, either way.
-  if (cached && !view && phase === "idle") return <AlreadySaving saving={{ rateBps: cached.rateBps, enabled: cached.enabled, state: "", stock: cached.stock, slug: "" }} />;
+  if (cached && !view && phase === "idle")
+    return (
+      <AlreadySaving
+        saving={{
+          rateBps: cached.rateBps,
+          enabled: cached.enabled,
+          state: "",
+          stock: cached.stock,
+          slug: "",
+        }}
+      />
+    );
 
   return (
     <div className={`sp-go${compact ? " is-compact" : ""}`} id="start">
@@ -455,8 +501,9 @@ export function StartCard({
           {connected?.wallet.name === "Phantom" && !why ? (
             // Said before the wallet says it, so it reads as expected rather than as an alarm.
             <p className="sp-go-heads">
-              Phantom may show a red warning that this site asks to move funds in the future. That is the $200 limit below, only into {stock.name}, while Phantom
-              reviews scrip.work; you can take it back any time.
+              Phantom may show a red warning that this site asks to move funds in the future.
+              That is the $200 limit below, only into {stock.name}, while Phantom reviews
+              scrip.work; you can take it back any time.
             </p>
           ) : null}
           <p className="sp-save-trust">
@@ -467,8 +514,10 @@ export function StartCard({
             </span>
           </p>
           <p className="sp-go-fine">
-            {stock.issuerLine} Starting sets aside about {costText(view, solUsd)}, mostly
-            deposits that come back if you stop, and confirms you are not a US person.
+            {stock.issuerLine} Starting sets aside about {costText(view, solUsd)} of SOL: a
+            small deposit for your savings record, and prepaid fees for your next automatic
+            saves (each uses about 0.003 SOL). Whatever is unused comes back when you stop, in
+            Settings. Starting confirms you are not a US person.
             {connected ? (
               <>
                 {" "}
@@ -687,11 +736,25 @@ function FirstPanel({
  * after three seconds, whatever happens here.
  */
 const SAVING_KEY = "scrip:saving";
-type SavingCache = { readonly address: string; readonly rateBps: number; readonly enabled: boolean; readonly stock: string | null };
+type SavingCache = {
+  readonly address: string;
+  readonly rateBps: number;
+  readonly enabled: boolean;
+  readonly stock: string | null;
+};
 function readSaving(): SavingCache | null {
   try {
-    const j = JSON.parse(localStorage.getItem(SAVING_KEY) ?? "null") as Partial<SavingCache> | null;
-    return j && typeof j.address === "string" && typeof j.rateBps === "number" ? { address: j.address, rateBps: j.rateBps, enabled: j.enabled !== false, stock: j.stock ?? null } : null;
+    const j = JSON.parse(
+      localStorage.getItem(SAVING_KEY) ?? "null",
+    ) as Partial<SavingCache> | null;
+    return j && typeof j.address === "string" && typeof j.rateBps === "number"
+      ? {
+          address: j.address,
+          rateBps: j.rateBps,
+          enabled: j.enabled !== false,
+          stock: j.stock ?? null,
+        }
+      : null;
   } catch {
     return null;
   }
