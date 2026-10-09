@@ -100,6 +100,10 @@ describe("the next whole share is arithmetic, never a forecast", () => {
     const n = nextWholeShare(view([arrival(0, { amountRaw: "99000000" })])); // 0.99
     expect(n?.line).toContain("The next arrival");
   });
+  it("says nothing of a share hundreds of arrivals away", () => {
+    // 0.0007 a receipt: about 1,428 more arrivals, which helps nobody.
+    expect(nextWholeShare(view([arrival(0, { amountRaw: "70000" })]))).toBeNull();
+  });
   it("says nothing when the asset is a stand-in with no decimals", () => {
     const v = { ...view([arrival(0)]), asset: { mint: "MINT", symbol: "?", name: "?", decimals: null } } as unknown as LiveView;
     expect(nextWholeShare(v)).toBeNull();

@@ -87,6 +87,9 @@ export function milestonesFor(view: LiveView): Milestone[] {
  * units are missing from the next whole share. It is labelled arithmetic wherever it is
  * shown, and it says nothing about price.
  */
+/** Past this many arrivals (two years of weekly pay) the next whole share is not mentioned. */
+export const FAR_ARRIVALS = 104;
+
 export function nextWholeShare(view: LiveView): NextUp | null {
   const asset = view.asset;
   if (!asset || asset.decimals === null) return null;
@@ -98,6 +101,9 @@ export function nextWholeShare(view: LiveView): NextUp | null {
   if (avg <= 0n) return null;
   const missing = one - (total % one);
   const arrivals = Number((missing + avg - 1n) / avg);
+  // A share hundreds of arrivals away is true and says nothing worth saying: on 9 October a
+  // first $0.50 save read "About 1,513 more arrivals complete your first whole QQQx".
+  if (arrivals > FAR_ARRIVALS) return null;
   const shares = Number(total / one);
   const which = shares === 0 ? `first whole ${asset.symbol}` : `${ordinal(shares + 1)} whole ${asset.symbol}`;
   return {
