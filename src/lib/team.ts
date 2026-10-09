@@ -20,6 +20,7 @@ export const TEAM: ReadonlyMap<string, string> = new Map([
   ["6mCBiCNNpaN8roM3HDJazNtceKEkTbWQzep71ae9fKDE", "the demo wallet"],
   // The founder's fresh Phantom account: the first start through the one-card flow, 9 October.
   ["4hf34x32RzZ5FS3JUXoZ5eFZCZtdZDnNq1QjAxXRS3dV", "the founder's test wallet"],
+  ["9P3hWtaU6k2jxm3w1YMdEB9d8yEApQDZdEoQ9u3F2TSo", "the founder's test wallet, the first start that saved its last payment"],
 ]);
 
 /**
