@@ -625,3 +625,16 @@ button.sp-start-secondary {
   border: 1px solid var(--warn-border);
   border-radius: var(--r-md);
 }
+
+/* A browser whose wallet already saves: between the first paint and the page waking up, the start
+   sentence waits, invisible and holding its place (the card then shows what it remembers); and
+   never longer than four seconds, whatever happens to the script. */
+html[data-saving]:not([data-known]) .sp-go {
+  visibility: hidden;
+  animation: sp-go-release 0s linear 4s forwards;
+}
+@keyframes sp-go-release {
+  to {
+    visibility: visible;
+  }
+}

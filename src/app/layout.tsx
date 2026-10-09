@@ -71,7 +71,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             has not hydrated should see. It runs before first paint, so nothing flashes.
             An attribute, not a class: className is server-rendered, and changing it before
             hydration makes React warn that the tree does not match. */}
-        <script dangerouslySetInnerHTML={{ __html: 'document.documentElement.setAttribute("data-js","1")' }} />
+        {/* And a browser whose wallet already saves (remembered by the start card) is marked,
+            so the front door holds its start sentence back instead of flashing it for the
+            second it takes to read the wallet and say "you save 10% of every payment". */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'document.documentElement.setAttribute("data-js","1");try{if(localStorage.getItem("scrip:saving"))document.documentElement.setAttribute("data-saving","1")}catch(e){}',
+          }}
+        />
       </head>
       <body>
         {children}

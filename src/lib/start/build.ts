@@ -42,6 +42,8 @@ import { type FirstHands, firstPaymentHands, holdingSeed, startInstructions } fr
 
 const RULE_MICRO_LAMPORTS = 100_000;
 const SIMULATE_UNITS = 1_400_000;
+/** The least compute a start asks for, so the wallet's own checks always fit beside it. */
+const MIN_UNITS = 200_000;
 const BASE_FEE_LAMPORTS = 5_000;
 /** A wallet must stay rent-exempt after paying: Solana's floor for an empty account. */
 const WALLET_FLOOR_LAMPORTS = 890_880;
@@ -198,7 +200,10 @@ async function assembleMeasured(
   } catch {
     // A simulation the RPC cannot run does not block the start; the wallet still checks.
   }
-  const units = Math.min(SIMULATE_UNITS, Math.ceil(used * 1.25) + 20_000);
+  // Generous on purpose: Phantom adds its Lighthouse checks inside this budget, and its support
+  // names a budget too tight for them as a cause of its warning. 200,000 units at this price is
+  // 20,000 lamports, a fiftieth of a cent's worth more than a tight one.
+  const units = Math.min(SIMULATE_UNITS, Math.max(Math.ceil(used * 1.5) + 50_000, MIN_UNITS));
   const tx = make(units);
   if (tx.serialize().length > maxBytes) return held("size");
   return ok({ tx, feeLamports: BASE_FEE_LAMPORTS + Math.ceil((units * microLamports) / 1e6) });

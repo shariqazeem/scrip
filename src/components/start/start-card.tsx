@@ -104,6 +104,7 @@ export function StartCard({
   const [why, setWhy] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
+  const [cached, setCached] = useState<SavingCache | null>(null);
   const sheetRef = useRef<HTMLDialogElement>(null);
 
   const stock = stocks.find((s) => s.mint === mint) ?? stocks[0]!;
@@ -151,7 +152,12 @@ export function StartCard({
     const v = await fetch(`/api/start/view/${address}`, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<WalletView>) : null))
       .catch(() => null);
-    if (v) setView(v);
+    if (v) {
+      setView(v);
+      rememberSaving(v.saving ? { address, rateBps: v.saving.rateBps, enabled: v.saving.enabled, stock: v.saving.stock } : null);
+      if (!v.saving) setCached(null);
+      settleHold();
+    }
     const body = await payments;
     if (body?.usdc !== undefined) {
       setPay({ usdc: BigInt(body.usdc), inflows: (body.inflows ?? []).map((f) => ({ sig: f.sig, at: f.at, usdc: BigInt(f.usdc), from: f.from })) });
@@ -164,15 +170,42 @@ export function StartCard({
   // A wallet that already trusts this site is known without a prompt.
   useEffect(() => {
     const name = rememberedWallet();
-    const w = name ? wallets.find((x) => x.name === name) : undefined;
+    if (!name) {
+      // No wallet this browser remembers: nothing to wait for.
+      rememberSaving(null);
+      setCached(null);
+      settleHold();
+      return;
+    }
+    const w = wallets.find((x) => x.name === name);
     if (!w || connected) return;
     void silentConnect(w).then((address) => {
       const account = address ? w.accounts.find((a) => a.address === address) : undefined;
-      if (!account) return;
+      if (!account) {
+        rememberSaving(null);
+        setCached(null);
+        settleHold();
+        return;
+      }
       setConnected({ wallet: w, account });
       void readWallet(account.address);
     });
   }, [wallets, connected, readWallet]);
+  // What this browser last knew of its wallet, shown the moment the page wakes and checked
+  // against the chain as soon as the wallet answers.
+  useEffect(() => {
+    setCached(readSaving());
+  }, []);
+  // A remembered wallet that never answers (the extension removed or locked) must not keep the
+  // remembered state on the page: after three seconds the sentence comes back.
+  useEffect(() => {
+    if (connected || view) return;
+    const t = setTimeout(() => {
+      setCached(null);
+      settleHold();
+    }, 3_000);
+    return () => clearTimeout(t);
+  }, [connected, view]);
 
   // A sponsor's suggested rate, until the person chooses their own.
   useEffect(() => {
@@ -291,6 +324,7 @@ export function StartCard({
     } catch {
       // No haptics here.
     }
+    rememberSaving({ address: c.account.address, rateBps, enabled: true, stock: stock.name });
     setDone({
       sig: sent.value,
       owner: c.account.address,
@@ -317,6 +351,9 @@ export function StartCard({
   // ── what the card says, in order of what is true ─────────────────────────────────────
   if (done) return <Started done={done} compact={compact} openPlan={openPlan} />;
   if (view?.saving && connected) return <AlreadySaving saving={view.saving} />;
+  // Before the wallet has answered: what this browser last knew, so a saver never sees the start
+  // sentence flash up and away. The read above replaces it within a second, either way.
+  if (cached && !view && phase === "idle") return <AlreadySaving saving={{ rateBps: cached.rateBps, enabled: cached.enabled, state: "", stock: cached.stock, slug: "" }} />;
 
   return (
     <div className={`sp-go${compact ? " is-compact" : ""}`} id="start">
@@ -443,6 +480,8 @@ export function StartCard({
                   className="sp-save-textbtn"
                   onClick={() => {
                     rememberWallet(null);
+                    rememberSaving(null);
+                    setCached(null);
                     setConnected(null);
                     setView(null);
                     setPay(null);
@@ -638,6 +677,38 @@ function FirstPanel({
       </button>
     </div>
   );
+}
+
+/**
+ * THIS BROWSER'S WALLET ALREADY SAVES — remembered, so the next visit's front door can hold the
+ * start sentence back before first paint (the head script in `app/layout.tsx` reads it) instead
+ * of flashing it for the second it takes to read the wallet and say "you save 10% of every
+ * payment". `data-known` releases the hold once the card knows either way; CSS also releases it
+ * after three seconds, whatever happens here.
+ */
+const SAVING_KEY = "scrip:saving";
+type SavingCache = { readonly address: string; readonly rateBps: number; readonly enabled: boolean; readonly stock: string | null };
+function readSaving(): SavingCache | null {
+  try {
+    const j = JSON.parse(localStorage.getItem(SAVING_KEY) ?? "null") as Partial<SavingCache> | null;
+    return j && typeof j.address === "string" && typeof j.rateBps === "number" ? { address: j.address, rateBps: j.rateBps, enabled: j.enabled !== false, stock: j.stock ?? null } : null;
+  } catch {
+    return null;
+  }
+}
+function rememberSaving(saving: SavingCache | null): void {
+  try {
+    if (saving) localStorage.setItem(SAVING_KEY, JSON.stringify(saving));
+    else localStorage.removeItem(SAVING_KEY);
+  } catch {
+    // Storage refused: the next visit simply shows the sentence first.
+  }
+  const root = document.documentElement;
+  if (saving) root.setAttribute("data-saving", "1");
+  else root.removeAttribute("data-saving");
+}
+function settleHold(): void {
+  document.documentElement.setAttribute("data-known", "1");
 }
 
 /** Units at Jupiter's display price, short: an illustration of the slice, never a settlement. */
