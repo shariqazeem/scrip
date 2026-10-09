@@ -4,7 +4,7 @@
  * badge passed) and opening Scrip's Plan. Any funded address stands in as the payer; nothing is
  * signed, so nothing can be sent.
  *
- *   npx tsx --conditions=react-server scripts/curve-simulate.ts --payer <funded address> [--sponsor <funded address>]
+ *   npx tsx --conditions=react-server scripts/curve-simulate.ts --payer <funded address> [--sponsor <funded address>] [--swap-owner <a USDC holder>]
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -50,6 +50,39 @@ async function main() {
       ...scripCurveConfig(kind),
     });
     await simulate(`create the ${kind} config, priced in the Nasdaq 100`, payer, [ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }), ...tx.instructions]);
+  }
+
+  // The first buy's swap: USDC into the Nasdaq 100 through Jupiter, built exactly as curve.ts
+  // builds it, for any address that holds USDC (--swap-owner), simulated without a signature.
+  const swapOwner = flag("swap-owner");
+  if (swapOwner) {
+    const jup = await import("@/lib/jupiter/client");
+    const { TOKEN_2022_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync } = await import("@solana/spl-token");
+    const owner = new PublicKey(swapOwner);
+    const q = await jup.quote({ inputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", outputMint: CURVE_QUOTE.mint, amount: 5_000_000n, slippageBps: 100, maxAccounts: 40 });
+    if (!q.ok) throw new Error(q.why);
+    const account = getAssociatedTokenAddressSync(CURVE_QUOTE_MINT, owner, true, TOKEN_2022_PROGRAM_ID);
+    const ixs = await jup.swapInstructions({ quote: q.value, userPublicKey: owner, destinationTokenAccount: account });
+    if (!ixs.ok) throw new Error(ixs.why);
+    const alts = await jup.lookupTables(conn, ixs.value.lookupTableAddresses);
+    if (!alts.ok) throw new Error(alts.why);
+    const { blockhash } = await conn.getLatestBlockhash("confirmed");
+    const tx = new VersionedTransaction(
+      new TransactionMessage({
+        payerKey: owner,
+        recentBlockhash: blockhash,
+        instructions: [
+          ComputeBudgetProgram.setComputeUnitLimit({ units: 600_000 }),
+          createAssociatedTokenAccountIdempotentInstruction(owner, account, owner, CURVE_QUOTE_MINT, TOKEN_2022_PROGRAM_ID),
+          ...ixs.value.setup,
+          ixs.value.swap,
+          ...(ixs.value.cleanup ? [ixs.value.cleanup] : []),
+        ],
+      }).compileToV0Message(alts.value),
+    );
+    const sim = await conn.simulateTransaction(tx, { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" });
+    console.log(`swap $5 of USDC into the Nasdaq 100 for ${owner.toBase58().slice(0, 6)}…: ${sim.value.err ? `FAILED ${JSON.stringify(sim.value.err)}` : "simulation ok"}, about ${(Number(q.value.outAmount) / 1e8).toFixed(6)} QQQx, ${tx.serialize().length} bytes`);
+    if (sim.value.err) console.log((sim.value.logs ?? []).slice(-10).join("\n"));
   }
 
   const name = "Scrip Curve: launch fees matching savers";
