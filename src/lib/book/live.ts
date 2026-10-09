@@ -5,6 +5,8 @@ import { resolveAssets } from "@/lib/assets/stand-in";
 import { db } from "@/lib/db";
 import { books, grants } from "@/lib/db/schema";
 import { rowToArrival } from "@/components/stub/from-row";
+import { short } from "@/lib/format";
+import { matchesFor } from "@/lib/plan/matches";
 import { indexReceipts, receiptsFor } from "@/lib/ledger/indexer";
 import { attempt, type Outcome, ok } from "@/lib/outcome";
 import { DEFAULT_MIN_INBOUND, computeSlice } from "@/lib/rule/slice";
@@ -106,6 +108,18 @@ async function assemble(owner: string, opts: { refresh?: boolean }): Promise<Out
   const vestLabels = await resolveAssets(vestingRows.map((g) => g.asset));
   const v = view.value;
   const mine = keeper.ok ? (keeper.value.books[v.pda] ?? null) : null;
+  // A sponsor's match lands seconds after the save it matches, so the newest two automatic saves
+  // are looked up on every read (cached briefly in matchesFor): the register's stub gains its
+  // green line while the owner watches, without opening the receipt.
+  const recentSweeps = rows.filter((r) => r.kind === "sweep").slice(0, 2);
+  const matchOf = new Map(
+    await Promise.all(
+      recentSweeps.map(async (r) => {
+        const m = (await matchesFor(r.pda, r.sig).catch(() => []))[0] ?? null;
+        return [r.id, m ? { by: m.sponsorHandle ? `@${m.sponsorHandle}` : short(m.sponsor), usdc: m.usdc.toString(), amountRaw: m.amountRaw.toString() } : null] as const;
+      }),
+    ),
+  );
   const above = v.book?.rule.enabled && v.usdc.balance > v.book.rule.watermark ? v.usdc.balance - v.book.rule.watermark : 0n;
   const unswept = above >= DEFAULT_MIN_INBOUND ? above : 0n;
   // The exact slice waiting to be taken, not an estimate. A pending arrival that shows only
@@ -140,7 +154,7 @@ async function assemble(owner: string, opts: { refresh?: boolean }): Promise<Out
     floatLamports: v.floatLamports.toString(),
     sweepsCovered: v.sweepsCovered,
     keeper: { alive: keeper.ok, lastReason: mine?.lastReason ?? null, lastSweepAt: mine?.lastSweepAt ?? null },
-    arrivals: rows.map((r) => rowToArrival(r, (mint) => (v.asset && v.asset.mint === mint ? v.asset : null))),
+    arrivals: rows.map((r) => ({ ...rowToArrival(r, (mint) => (v.asset && v.asset.mint === mint ? v.asset : null)), match: matchOf.get(r.id) ?? null })),
     holdings: v.holdings
       .filter((h) => h.qtyRaw > 0n)
       .map((h) => ({ mint: h.asset.mint, symbol: h.asset.symbol, decimals: h.asset.decimals, qtyRaw: h.qtyRaw.toString(), qtyAdjusted: h.qtyAdjusted.toString(), multiplier: h.multiplier })),

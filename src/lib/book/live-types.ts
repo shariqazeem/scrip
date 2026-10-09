@@ -22,6 +22,8 @@ export type LiveArrival = {
   readonly measured7dRaw: string;
   readonly measured30dAt: number;
   readonly measured30dRaw: string;
+  /** A sponsor's match on this save, read from its own transaction; only on the newest saves. */
+  readonly match?: { readonly by: string; readonly usdc: string; readonly amountRaw: string } | null;
 };
 
 export type LiveView = {

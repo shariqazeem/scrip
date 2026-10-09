@@ -63,6 +63,10 @@ export function StubFromArrival({
   const { units, symbol } = arrivalUnits(a);
   const isSweep = a.kind === "sweep";
   const sections: StubSection[] = [];
+  if (a.match) {
+    const matched = a.decimals !== null ? unitsFromRaw(BigInt(a.match.amountRaw), a.decimals) : a.match.amountRaw;
+    sections.push({ rows: [{ k: `Added by ${a.match.by}`, v: `${usdc(BigInt(a.match.usdc))} → ${matched} ${symbol}`, tone: "ok" }] });
+  }
   if (showHeld) {
     const d = a.decimals ?? 0;
     const shareOf = (raw: string) => { const m = measuredReading(BigInt(raw), BigInt(a.amountRaw)); return m.share ? ` · ${m.share}` : ""; };
