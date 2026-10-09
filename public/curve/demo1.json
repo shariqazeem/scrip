@@ -1,7 +1,7 @@
 {
   "name": "Savings Demonstration One",
   "symbol": "DEMO1",
-  "description": "A demonstration of Scrip Curve: this token's trading fees go, through Meteora's Dynamic Fee Sharing, to a vault that pays savers in stock. It is not a Scrip token. No roadmap, no team allocation, no promise about its price. A launch is a speculative token. https://scrip.work/curve",
+  "description": "A demonstration of Scrip Curve, priced in the Nasdaq 100: every trading fee is stock, and goes straight into a Scrip Plan that matches real people's automatic savings. It is not a Scrip token. No roadmap, no team allocation, no promise about its price. A launch is a speculative token. https://scrip.work/curve",
   "image": "https://scrip.work/curve/demo1.png",
   "external_url": "https://scrip.work/curve"
 }

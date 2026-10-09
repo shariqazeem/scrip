@@ -2,71 +2,103 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Row, SiteFrame, SiteSection } from "@/components/site/site-frame";
 import { DEPLOYED } from "@/lib/curve/deployed";
-import { PRESET, THRESHOLD_USDC, VAULT_SHARES } from "@/lib/curve/preset";
-import { readLaunches, readVault } from "@/lib/curve/read";
-import { short, usd } from "@/lib/format";
+import { CURVE_QUOTE, CURVE_QUOTE_MINT, DAMM_V2_PROGRAM_ID, DBC_PROGRAM_ID, PRESET, THRESHOLD_QUOTE, tokenBadge } from "@/lib/curve/preset";
+import { readCurve } from "@/lib/curve/read";
+import { dateUTC, short, usdc } from "@/lib/format";
 import { explorerUrl } from "@/lib/solana/cluster";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Scrip Curve",
-  description: "A Meteora launch preset whose trading fees become real people's savings, through Meteora's own Dynamic Fee Sharing: 90% to a savings pool that buys stock for savers, 10% to Scrip.",
+  description:
+    "A Meteora launch preset priced in the Nasdaq 100: every trading fee is stock, and every fee goes straight into a Scrip Plan that matches real people's automatic savings.",
 };
 
 const REPO = "https://github.com/shariqazeem/scrip/blob/main";
 
+/** Nasdaq 100 base units, as a person reads them: "0.0100". */
+function units(raw: bigint | null | undefined): string {
+  if (raw === null || raw === undefined) return "—";
+  return (Number(raw) / 10 ** CURVE_QUOTE.decimals).toFixed(4);
+}
+
 /**
  * /CURVE — the Meteora entry, off the main nav.
  *
- * A launch preset on Dynamic Bonding Curve whose fee claimer is a Dynamic Fee Sharing vault,
- * so every trade's partner fee, the migration fee and the locked partner position's fees after
- * graduation all land in one vault: 90 to the Savings Pool, 10 to Scrip. The Savings Pool
- * turns its share into stock in savers' wallets. The page reads the vault and every launch
- * from the chain, says what has been checked and what has not happened yet, and makes no
- * claim about any launch's price.
+ * Launches on Meteora's Dynamic Bonding Curve, priced in the Nasdaq 100 (xStocks QQQx, which
+ * Meteora has badged for DBC and DAMM v2), whose every fee goes into a Scrip Plan that matches
+ * savers' automatic saves. The page reads the Plan, the launches and every fee transfer from the
+ * chain, says what has been proven and how, and makes no claim about any launch's price.
  */
 export default async function CurvePage() {
-  const [vault, launches] = await Promise.all([readVault(), readLaunches()]);
+  const read = readCurve();
+  const [plan, launches] = await Promise.all([read.plan, read.launches]);
   const configs = Object.entries(DEPLOYED.configs);
+  const badges = [
+    { k: "Meteora DBC", v: tokenBadge(DBC_PROGRAM_ID, CURVE_QUOTE_MINT).toBase58() },
+    { k: "Meteora DAMM v2", v: tokenBadge(DAMM_V2_PROGRAM_ID, CURVE_QUOTE_MINT).toBase58() },
+  ];
   return (
     <SiteFrame
       eyebrow="Scrip Curve"
-      title="Launches that fund savings."
-      lede="A launch preset on Meteora's Dynamic Bonding Curve whose fees become real people's savings. Every trade's partner fee goes, through Meteora's own Dynamic Fee Sharing, into one vault: 90% to the Savings Pool, which buys stock into savers' wallets, and 10% to Scrip."
+      title="Launches priced in the Nasdaq 100, whose fees match savers."
+      lede="A launch preset on Meteora's Dynamic Bonding Curve where every buy pays in tokenized Nasdaq 100 and every trading fee is stock. Each fee goes straight from the curve into a Scrip Plan, and the Plan, enforced by Scrip's program, adds it to real people's automatic savings."
     >
       <SiteSection label="The money trail">
         <div className="sp-truths">
-          <Row k="1. A trade">
-            Someone buys or sells a token launched on the Scrip Curve config. The curve charges its fee in USDC: half to the launcher, half to the
-            config&rsquo;s fee claimer, after Meteora&rsquo;s own share.
+          <Row k="1. A trade pays in stock">
+            The curve&rsquo;s quote is the Nasdaq 100 (xStocks <span className="mono">QQQx</span>), so a buy pays in it and the fee is charged in it. The fee
+            starts at {PRESET.startingFeeBps / 100}% and falls to {PRESET.endingFeeBps / 100}% over the first hour: a sniper pays the savers, a holder does not.
           </Row>
-          <Row k="2. The fee claimer is a vault">
-            The config&rsquo;s fee claimer is a Dynamic Fee Sharing vault, a program address under Meteora&rsquo;s program. Its recipients are fixed for
-            good: the Savings Pool {VAULT_SHARES.savingsPool / 100}%, Scrip {VAULT_SHARES.scrip / 100}%.
+          <Row k="2. Straight into a Plan">
+            Meteora&rsquo;s own <span className="mono">claim_trading_fee</span>, with a Scrip Plan as the receiver, moves the partner fee from the curve&rsquo;s
+            vault into the Plan&rsquo;s escrow, which is the Plan&rsquo;s own Nasdaq 100 account. One instruction; no wallet holds the fee in between.
+            Scrip&rsquo;s saving service signs it every half hour.
           </Row>
-          <Row k="3. Claimed by integration">
-            Meteora&rsquo;s <span className="mono">fund_by_claiming_fee</span> calls the curve&rsquo;s own <span className="mono">claim_trading_fee</span> with the vault as
-            signer, so the fee goes from the pool to the vault and no wallet holds it in between. After graduation, the same for the migration fee and the
-            locked partner position&rsquo;s fees on DAMM v2.
+          <Row k="3. The Plan matches savers">
+            Every automatic save a member of the Plan makes is matched from that escrow, in the same stock, by Scrip&rsquo;s program: a share of the save,
+            capped each month, priced against Pyth, never taken back.
           </Row>
-          <Row k="4. Into savings">
-            The Savings Pool takes its share and pays it to savers as stock, through Scrip&rsquo;s pay in stock: the S&amp;P 500, in their own wallet.
+          <Row k="4. Graduation keeps paying">
+            At {THRESHOLD_QUOTE.demonstration} Nasdaq 100 (a demonstration; {THRESHOLD_QUOTE.public} on the public preset) the curve graduates to a Meteora DAMM
+            v2 pool, launch token and Nasdaq 100, all liquidity locked for good. The locked partner position&rsquo;s fees go to the same Plan with
+            DAMM v2&rsquo;s <span className="mono">claim_position_fee</span>, and the partner&rsquo;s {PRESET.migrationFeePercentage}% graduation fee is moved in
+            the same minute it is withdrawn.
           </Row>
-          <Row k="5. A receipt that names the launch">Every payment funded this way says which launch paid for it and links the claim transaction.</Row>
+          <Row k="5. Every step is a transaction">Each fee below links the transaction that moved it; each match is on the saver&rsquo;s own receipt.</Row>
         </div>
       </SiteSection>
 
       <SiteSection label="Live, from the chain">
-        {vault ? (
+        {plan ? (
           <div className="sp-truths">
-            <Row k="The vault">
-              <a href={explorerUrl("address", vault.address)}>{short(vault.address)}</a>: {usd(vault.fundedUsdc)} of fees received, {usd(vault.claimedUsdc)} taken by
-              its recipients, {usd(vault.waitingUsdc)} waiting.
+            <Row k="The Plan">
+              <a href={explorerUrl("address", plan.address)}>{plan.name ?? short(plan.address)}</a>
+              {plan.sponsorHandle ? `, sponsored by @${plan.sponsorHandle}` : ""}. Its escrow{" "}
+              <a href={explorerUrl("address", plan.escrow)}>{short(plan.escrow)}</a> holds <span className="mono">{units(plan.escrowRaw)}</span> Nasdaq 100.
             </Row>
-            {vault.recipients.map((r) => (
-              <Row key={r.address} k={r.role}>
-                <a href={explorerUrl("address", r.address)}>{short(r.address)}</a>: {usd(r.totalUsdc)} earned, {usd(r.takenUsdc)} taken.
+            <Row k="From launches">
+              <span className="mono">{units(plan.fromLaunchesRaw)}</span> Nasdaq 100 in {plan.inflows.length} transfer{plan.inflows.length === 1 ? "" : "s"}.
+            </Row>
+            <Row k="Matched">
+              {plan.matches > 0 ? (
+                <>
+                  {plan.matches} automatic save{plan.matches === 1 ? "" : "s"} matched, <span className="mono">{units(plan.matchedRaw)}</span> Nasdaq 100 (
+                  {usdc(plan.matchedUsdc)}), to {plan.members} member{plan.members === 1 ? "" : "s"}.
+                </>
+              ) : (
+                <>
+                  {plan.members} member{plan.members === 1 ? "" : "s"}; no save matched from it yet. A match lands seconds after a member&rsquo;s automatic save,
+                  whenever a price can be verified.
+                </>
+              )}
+            </Row>
+            {plan.inflows.slice(0, 8).map((f) => (
+              <Row key={f.sig} k={dateUTC(f.at)}>
+                <a href={explorerUrl("tx", f.sig)}>
+                  <span className="mono">+{units(f.raw)}</span> Nasdaq 100 from {f.from}
+                </a>
               </Row>
             ))}
             {configs.map(([kind, c]) => (
@@ -76,67 +108,103 @@ export default async function CurvePage() {
             ))}
             {launches.map((l) => (
               <Row key={l.pool} k={`${l.name} (${l.symbol})`}>
-                {l.kind === "demonstration" ? "A demonstration launch, never a Scrip token. " : ""}Pool <a href={explorerUrl("address", l.pool)}>{short(l.pool)}</a>
-                {l.quoteReserveUsdc !== null ? `: ${usd(l.quoteReserveUsdc)} in the curve, ${usd(l.partnerFeeWaitingUsdc ?? 0)} of partner fees waiting to be claimed` : ""}
-                {l.migrated ? ", graduated to DAMM v2" : ""}.
+                {l.kind === "demonstration" ? "A demonstration launch, never called a Scrip token; every buy so far is Scrip's founder's own. " : ""}Curve{" "}
+                <a href={explorerUrl("address", l.pool)}>{short(l.pool)}</a>
+                {l.quoteReserveRaw !== null ? (
+                  <>
+                    : <span className="mono">{units(l.quoteReserveRaw)}</span> of <span className="mono">{units(l.thresholdRaw)}</span> Nasdaq 100
+                  </>
+                ) : null}
+                {l.migrated && l.dammPool ? (
+                  <>
+                    , graduated to DAMM v2 pool <a href={explorerUrl("address", l.dammPool)}>{short(l.dammPool)}</a>
+                  </>
+                ) : null}
+                {l.feeWaitingRaw !== null && l.feeWaitingRaw > 0n ? (
+                  <>
+                    ; <span className="mono">{units(l.feeWaitingRaw)}</span> of fee waiting for the next move into the Plan
+                  </>
+                ) : null}
+                .
               </Row>
             ))}
           </div>
         ) : (
           <p className="sp-body">
-            Nothing is on mainnet yet. The vault, the config and a demonstration launch are created by Scrip&rsquo;s founder with the open-source script
+            Nothing is on mainnet yet. The Plan, the config and a demonstration launch are created by Scrip&rsquo;s founder with the open-source script
             below; this page reads them from the chain the moment they exist.
           </p>
         )}
       </SiteSection>
 
-      <SiteSection label="The preset">
+      <SiteSection label="Why the Nasdaq 100">
         <div className="sp-truths">
-          <Row k="Quote">USDC. The fee vault takes one plain mint, and tokenized stocks carry extensions it refuses.</Row>
-          <Row k="Fee">
-            Starts at {PRESET.startingFeeBps / 100}% and falls to {PRESET.endingFeeBps / 100}% over the first hour, so a sniper pays the savers and a holder
-            does not. Collected in USDC. The launcher keeps {PRESET.creatorTradingFeePercentage}% of the partner-side fee.
+          <Row k="A stock-pair">
+            Meteora asks for launch mechanics tuned to tokenized stocks. Pricing a launch in one makes every fee a share of the index, and a Plan&rsquo;s
+            escrow holds the same stock, so a fee needs no swap to reach a saver.
           </Row>
-          <Row k="Graduation">
-            To Meteora DAMM v2 at {THRESHOLD_USDC.public} USDC, where it migrates on its own through Meteora (a demonstration uses {THRESHOLD_USDC.demonstration}{" "}
-            and the manual migrator). A {PRESET.migrationFeePercentage}% migration fee, half to the vault. The migrated pool collects its fees in USDC.
+          <Row k="Permissionless today">
+            xStocks carry a permanent delegate and a pause authority, which Meteora allows only with a token badge. Both badges for{" "}
+            <span className="mono">QQQx</span> exist on mainnet:{" "}
+            {badges.map((b, i) => (
+              <span key={b.k}>
+                {i > 0 ? " and " : ""}
+                {b.k} <a href={explorerUrl("address", b.v)}>{short(b.v)}</a>
+              </span>
+            ))}
+            .
           </Row>
-          <Row k="Liquidity">Every position locked for good at graduation: nobody can pull the pool, and the locked partner position keeps paying the vault.</Row>
-          <Row k="Token">A plain SPL token with immutable metadata and no mint authority: nobody can mint more after launch.</Row>
-          <Row k="No public form">Launches are by invitation, for sponsors of savers, so nobody can use Scrip&rsquo;s name to sell a token.</Row>
+          <Row k="Not a vault">
+            Meteora&rsquo;s Dynamic Fee Sharing vault accepts only plain mints and refuses an xStock, so the claim names the Plan directly instead. Fewer
+            moving parts, and the fee never sits anywhere but the Plan.
+          </Row>
         </div>
       </SiteSection>
 
-      <SiteSection label="What is checked, and what is not">
+      <SiteSection label="The preset">
+        <div className="sp-truths">
+          <Row k="Quote">The Nasdaq 100, <span className="mono">QQQx</span>, issued by Backed (xStocks): the issuer can freeze or move it, and dividends are reinvested.</Row>
+          <Row k="Fee">
+            {PRESET.startingFeeBps / 100}% falling to {PRESET.endingFeeBps / 100}% over an hour, collected in the quote. On a demonstration the launcher keeps
+            none of it; on the public preset, {PRESET.creatorTradingFeePercentage.public}%.
+          </Row>
+          <Row k="Graduation">
+            To Meteora DAMM v2 at {THRESHOLD_QUOTE.public} Nasdaq 100 ({THRESHOLD_QUOTE.demonstration} for a demonstration), a{" "}
+            {PRESET.migrationFeePercentage}% graduation fee, the graduated pool collecting its fee in the Nasdaq 100.
+          </Row>
+          <Row k="Liquidity">Every position locked for good at graduation: nobody can pull the pool, and the locked partner position keeps paying the Plan.</Row>
+          <Row k="Token">A plain SPL token with immutable metadata and no mint authority: nobody can mint more after launch.</Row>
+        </div>
+      </SiteSection>
+
+      <SiteSection label="Proven before it ran">
         <ul>
           <li>
-            <strong>Checked from Meteora&rsquo;s own code, 7 October:</strong> a config&rsquo;s fee claimer can be the fee-sharing vault; at graduation the
-            partner&rsquo;s DAMM v2 position goes to the fee claimer; the migration fee is withdrawn by the fee claimer. Details in{" "}
-            <a href={`${REPO}/docs/decisions.md`}>the decision log</a>.
+            <strong>On Meteora&rsquo;s own programs:</strong> <span className="mono">npm run curve:rehearse</span> boots a local validator holding the mainnet DBC
+            and DAMM v2 programs, Token-2022, the Nasdaq 100 mint and both badges, and runs the founder&rsquo;s exact commands: the Plan, the config, a launch,
+            buys, the fees into the Plan, graduation, a trade on the graduated pool and its fee into the Plan. Every step passes.
           </li>
           <li>
-            <strong>Simulated on mainnet:</strong> creating the vault and both configs against Meteora&rsquo;s live programs.
+            <strong>Simulated on mainnet:</strong> creating the config priced in the Nasdaq 100 with Meteora&rsquo;s badge, and opening the Plan.
           </li>
           <li>
-            <strong>Not yet proven on mainnet:</strong> {DEPLOYED.launches.length > 0 ? "a fee that reached a saver's receipt." : "the vault, the config, a launch, and a fee that reached a saver's receipt."}
+            <strong>The code:</strong> <a href={`${REPO}/src/lib/curve/preset.ts`}>preset.ts</a>, <a href={`${REPO}/src/lib/curve/claims.ts`}>claims.ts</a>,{" "}
+            <a href={`${REPO}/scripts/curve.ts`}>curve.ts</a>, <a href={`${REPO}/scripts/curve-rehearse.sh`}>curve-rehearse.sh</a>.
+          </li>
+          <li>
+            <strong>What rests on trust:</strong> the claim is signed by Scrip&rsquo;s saving service, which Meteora lets choose the receiver; it only ever names
+            the Plan, and every claim is public. A Scrip program instruction that claims into the Plan by itself is the next step.
           </li>
         </ul>
       </SiteSection>
 
-      <SiteSection label="How it differs">
-        <p className="sp-body">
-          Other stock launchpads pay their creators or their holders. This one pays savers outside the token, and claims nothing about price. Any
-          launchpad can copy the savings route: the preset and the pipeline are open source in <a href={`${REPO}/src/lib/curve/preset.ts`}>preset.ts</a> and{" "}
-          <a href={`${REPO}/scripts/curve.ts`}>curve.ts</a>.
-        </p>
-      </SiteSection>
-
       <SiteSection label="Before you trade a launch">
         <p className="sp-body">
-          <strong>A launch is a speculative token. Scrip makes no claim about its price; it guarantees only where its fees go.</strong>
+          <strong>A launch is a speculative token. Scrip makes no claim about its price; it guarantees only where its fees go.</strong> A demonstration launch
+          exists to show the route, is never called a Scrip token, and is not promoted.
         </p>
         <p className="sp-body">
-          <Link href="/proof">The rest of the proof</Link>
+          <Link href="/teams">Plans, for whoever pays you</Link>
         </p>
       </SiteSection>
     </SiteFrame>

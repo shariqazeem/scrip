@@ -24,7 +24,8 @@
     "book": "tsx scripts/book.ts",
     "test:localnet": "scripts/localnet.sh start && scripts/localnet.sh test; scripts/localnet.sh stop",
     "preflight": "tsx scripts/preflight.ts",
-    "rehearse": "scripts/rehearse.sh"
+    "rehearse": "scripts/rehearse.sh",
+    "curve:rehearse": "scripts/curve-rehearse.sh"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",

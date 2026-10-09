@@ -1,88 +1,92 @@
-# Scrip Curve — launches that fund savings
+# Scrip Curve — launches priced in the Nasdaq 100, whose fees match savers
 
-A launch preset on Meteora's Dynamic Bonding Curve whose fees become real people's savings.
-The config's fee claimer is a Meteora Dynamic Fee Sharing vault; the vault's recipients are a
-Savings Pool (90%) and Scrip (10%); the Savings Pool pays its share to savers as S&P 500, in
-their own wallets, through Scrip's pay in stock, and every such receipt names the launch and
-the claim transaction it came from.
+A launch preset on Meteora's Dynamic Bonding Curve where the quote is a tokenized stock, the
+Nasdaq 100 (xStocks `QQQx`), so every buy pays in stock and every trading fee is stock. Each fee
+goes straight from the curve into a **Scrip Plan**, and the Plan, enforced by Scrip's Solana
+program, matches real people's automatic savings from it. At graduation the pool moves to Meteora
+DAMM v2 as launch token / Nasdaq 100, all liquidity locked, and its fees keep reaching the Plan.
 
-Any launchpad can copy the route: change the two recipients, keep the rest.
+Live page: [scrip.work/curve](https://scrip.work/curve), read from the chain.
 
-## The trail
+## The money trail
 
-1. **A trade** on a Scrip Curve launch pays the curve's fee in USDC (collect-fee mode
-   QuoteToken). Meteora keeps its protocol share; of the rest, the launcher gets 50%
-   (`creatorTradingFeePercentage`) and the config's fee claimer the other half.
-2. **The fee claimer is a vault**: a Dynamic Fee Sharing PDA vault
-   (`["fee_vault", base, USDC]` under `dfsdo2UqvwfN8DuUVrMRNfQe11VaiNoKcMqLHVvDPzh`), recipients
-   fixed at creation.
-3. **Claimed by integration**: `fund_by_claiming_fee` makes the vault sign DBC's own
-   `claim_trading_fee`, so fees move pool → vault with no wallet in between. After graduation,
-   `withdraw_migration_fee` and DAMM v2 `claim_position_fee` for the locked partner position
-   do the same: DBC hands the partner's position NFT to the config's fee claimer.
-4. **Into savings**: the Savings Pool takes its share (`claim_fee`) and pays a saver in stock
-   with `pay`, reason "Welcome bonus from Scrip, paid by the fees of <launch>. Claim: <sig>".
+```
+a trade on the curve          fee charged in QQQx (25% → 1% over the first hour)
+        │
+        ▼  Meteora DBC claim_trading_fee, receiver = the Plan        one instruction, no wallet between
+Scrip Plan escrow             the Plan PDA's own QQQx account
+        │
+        ▼  Scrip program match_receipt, after each member's automatic save
+a saver's wallet              "Added by @scrip" on the save's receipt, in green
+
+at graduation                 DBC → DAMM v2 (launch token / QQQx), every position locked
+        │
+        ├─ DAMM v2 claim_position_fee, receiver = the Plan            the locked partner position's fees
+        └─ DBC withdraw_migration_fee → forwarded to the Plan          the partner's 2% graduation fee
+```
+
+The fee claimer is Scrip's saving service; it signs the claims every 30 minutes
+(`src/keeper/index.ts`, `launchFeesToPlan`). Meteora lets a claimer choose the receiver, and this
+one only ever names the Plan in `src/lib/curve/deployed.json`. A Scrip program instruction that
+claims into the Plan by itself, with no signer to trust, is the next step.
+
+## Why the Nasdaq 100
+
+- **Stock-pairs.** Meteora asks for launch mechanics tuned to tokenized stocks. A launch priced in
+  one makes every fee a share of the index, and a Plan's escrow holds the same stock, so a fee
+  needs no swap to reach a saver.
+- **Permissionless today.** xStocks carry a permanent delegate and a pause authority, which
+  Meteora allows only with a token badge. Both exist on mainnet for `QQQx` (DBC and DAMM v2),
+  and for SPYx, TSLAx and NVDAx. The badge is passed when the config is created and again when
+  the pool is created (`InvalidTokenBadge` otherwise).
+- **Not a vault.** Meteora's Dynamic Fee Sharing vault accepts only plain mints (transfer-fee and
+  metadata extensions) and refuses an xStock. The receiver-claim does the same job with fewer
+  moving parts.
 
 ## The preset (`src/lib/curve/preset.ts`)
 
 | | |
 | --- | --- |
-| Quote | USDC. The vault accepts plain SPL mints and Token-2022 with only TransferFeeConfig, MetadataPointer and TokenMetadata; tokenized stocks are refused |
-| Fee | exponential scheduler, 25% falling to 1% over the first hour; dynamic fee on; collected in USDC |
-| Creator | 50% of the partner-side trading fee |
-| Graduation | DAMM v2 (`MET_DAMM_V2`), customizable migrated-pool fee 1%, collected in USDC; 750 USDC for the public preset (Meteora's keepers migrate on their own), 30 for a demonstration (manual migrator) |
-| Migration fee | 2% of the quote at graduation, half to the vault |
-| Liquidity | partner 50% and creator 50%, both permanently locked |
-| Token | SPL, 6 decimals, 1,000,000,000 supply, immutable metadata, no mint authority |
+| Quote | `QQQx`, 8 decimals, Token-2022 |
+| Fee | exponential schedule 25% → 1% over 3,600 s (60 periods), dynamic fee on, collected in the quote. A sniper pays the savers; a holder does not |
+| Creator share | none on a demonstration (every partner fee to savers); 50% on the public preset |
+| Graduation | 0.04 QQQx for a demonstration (~$30), 1 QQQx public; 2% graduation fee; DAMM v2 collecting in the quote |
+| Liquidity | partner and creator positions 100% permanently locked |
+| Token | SPL, 6 decimals, 1B supply, immutable metadata, no mint authority |
 
-`src/lib/curve/preset.test.ts` runs Meteora's own `validateConfigParameters` on both kinds.
-
-## Running it
-
-Everything is `npx tsx --conditions=react-server scripts/curve.ts <command>`. Writes simulate
-first and stop on `--dry-run`. Keypairs are read from files you name and never printed; the
-addresses created are written to `src/lib/curve/deployed.json`, which `/curve` reads.
+## Run it
 
 ```bash
-# what each step does and costs, read from mainnet now
 npx tsx --conditions=react-server scripts/curve.ts plan
-
-# 1. the vault: Savings Pool 90, Scrip 10 (recipients can never change)
-npx tsx --conditions=react-server scripts/curve.ts vault --keypair ~/scrip-curve-operator.json --pool <SAVINGS_POOL_ADDRESS> --scrip <SCRIP_ADDRESS>
-
-# 2. the demonstration config, fee claimer = the vault
-npx tsx --conditions=react-server scripts/curve.ts config --keypair ~/scrip-curve-operator.json --kind demonstration
-
-# 3. a demonstration launch: never called a Scrip token, no roadmap, no promotion
-npx tsx --conditions=react-server scripts/curve.ts launch --keypair ~/scrip-curve-operator.json --kind demonstration --name "Savings Demonstration One" --symbol DEMO1 --uri https://scrip.work/curve/demo1.json --first-buy 5
-
-# 3b. fill the curve to its threshold (30 USDC for a demonstration) once the fee has fallen to 1%
-#     (an hour after launch): a plain buy, the founder's own, simulated first like every write
-npx tsx --conditions=react-server scripts/curve.ts buy --keypair ~/scrip-curve-operator.json --pool <POOL> --usd 26
-
-# 4. once the curve completes, graduate it (or use migrator.meteora.ag)
-npx tsx --conditions=react-server scripts/curve.ts migrate --keypair ~/scrip-curve-operator.json --pool <POOL>
-
-# 5. the fees into the vault, then the Savings Pool's share out of it
-npx tsx --conditions=react-server scripts/curve.ts claim --keypair ~/scrip-savings-pool.json --pool <POOL>
-npx tsx --conditions=react-server scripts/curve.ts collect --keypair ~/scrip-savings-pool.json
-
-# 6. the share, into a saver's stock, on a receipt that names the launch and the claim
-npx tsx --conditions=react-server scripts/curve.ts pay --keypair ~/scrip-savings-pool.json --to <SAVER> --usd 1 --launch <POOL> --claim <CLAIM_SIG>
-
-npx tsx --conditions=react-server scripts/curve.ts status
 ```
 
-## What is checked
+The founder's mainnet sequence, every command simulated first: `plan-open` → `plan-invite` →
+`config` → `launch --first-buy-usd 5` → `buy --usd 27` (a partial fill) → `migrate` → `fees`
+(or let the saving service do it) → `status`.
 
-Read-only on 7 October 2026, from Meteora's code and docs (details in `docs/decisions.md`):
-the vault can be a config's fee claimer; the partner's DAMM v2 position goes to the fee claimer
-at graduation; the migration fee is withdrawn by the fee claimer; the keepers' USDC threshold
-is 750. The vault and both configs were simulated against Meteora's live mainnet programs.
+## Proven before it ran
 
-## What it never does
+```bash
+npm run curve:rehearse
+```
 
-No wash trading: one demonstration launch, a dev buy, and whatever real trades happen. No
-public launch form: launches are by invitation, so nobody sells a token under Scrip's name. No
-claim about a launch's price: **a launch is a speculative token. Scrip makes no claim about its
-price; it guarantees only where its fees go.**
+Boots a local validator holding Meteora's mainnet DBC and DAMM v2 programs, Metaplex,
+Token-2022, the Nasdaq 100 mint and both badges, with Scrip's program at its real id, and runs
+the exact commands above with throwaway keys: the Plan, an invitation, the config, a launch with
+a first buy, a buy at the opening fee, the fees into the Plan, a buy that fills the curve,
+graduation, the graduation fee into the Plan, a trade on the graduated pool, and its fee into the
+Plan. On 9 October every step passed and the Plan held exactly the sum of the fees
+(0.01006792 QQQx). `scripts/curve-simulate.ts` simulates the config and the Plan against mainnet
+itself.
+
+Two things the rehearsal found that the docs did not say: a pool on a badged quote needs the badge
+at pool creation too, and an exact-in buy larger than the curve's remaining room is refused
+(`InsufficientLiquidity`), so the filling buy uses DBC's partial-fill swap. On mainnet Meteora's
+DBC pool authority pays a graduation's rent (it holds tens of SOL); the rehearsal funds its local
+copy the same way.
+
+## Honesty
+
+A launch is a speculative token. Scrip makes no claim about its price; it guarantees only where
+its fees go. A demonstration launch exists to show the route, is never called a Scrip token, is
+not promoted, and every buy on it is the founder's own.

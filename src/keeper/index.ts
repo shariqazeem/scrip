@@ -36,6 +36,8 @@ import { type AccountInfo, ComputeBudgetProgram, Keypair, PublicKey, Transaction
 import { type Asset, type PriceFeed, USDC_MINT, assetByMint } from "@/lib/assets/registry";
 import { type Book, type Grant, decodeBook, decodeGrant, decodeMember, decodePlan, releasableRaw } from "@/lib/book/decode";
 import { matchReceiptIx } from "@/lib/plan/instructions";
+import * as curveFees from "@/lib/curve/claims";
+import { DEPLOYED as CURVE } from "@/lib/curve/deployed";
 import { vestIx } from "@/lib/grant/instructions";
 import { multiplierInForce } from "@/lib/corporate-actions/multiplier";
 import { readMintMultiplier } from "@/lib/corporate-actions/read-mint";
@@ -738,6 +740,63 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
 
 const subscribed = new Set<string>();
 
+// ── Scrip Curve: launch fees into the Plan ────────────────────────────────────────────────
+
+/**
+ * EVERY LAUNCH FEE, INTO THE PLAN, BY ITSELF. A Scrip Curve config names this service as its fee
+ * claimer; Meteora lets the claimer choose where a fee goes, and this only ever names the Plan in
+ * `src/lib/curve/deployed.json`. On a cadence it moves the curve's partner fee and, after
+ * graduation, the locked position's fee straight into the Plan's escrow, and the partner's
+ * graduation fee once (DBC pays that one to the claimer, so it is forwarded the same minute).
+ * The Plan then matches savers' automatic saves from it. A backup never claims.
+ */
+const CURVE_EVERY_MS = Number(process.env.KEEPER_CURVE_MINUTES ?? "30") * 60_000;
+/** Below this a claim costs more in fees than it moves: 1,000 base units, about $0.0075 of Nasdaq 100. */
+const CURVE_MIN_RAW = BigInt(process.env.KEEPER_CURVE_MIN_RAW ?? "1000");
+let lastCurveAt = 0;
+
+async function launchFeesToPlan(): Promise<void> {
+  if (BACKUP_AFTER_SECONDS > 0 || CLUSTER !== "mainnet-beta") return;
+  const plan = CURVE.plan;
+  if (!plan || CURVE.feeClaimer !== keeper.publicKey.toBase58() || CURVE.launches.length === 0) return;
+  if (Date.now() - lastCurveAt < CURVE_EVERY_MS) return;
+  lastCurveAt = Date.now();
+  const planKey = new PublicKey(plan.address);
+  for (const launch of CURVE.launches) {
+    const waiting = await curveFees.feesWaiting(conn, launch);
+    if (!waiting.ok) {
+      log(`${launch.symbol}: launch fees could not be read: ${waiting.why}`);
+      continue;
+    }
+    const w = waiting.value;
+    try {
+      if (w.onCurve >= CURVE_MIN_RAW) {
+        const tx = await curveFees.curveFeeToPlan(conn, { launch, claimer: keeper.publicKey, plan: planKey, amount: w.onCurve });
+        if (tx.ok) log(`${launch.symbol}: ${w.onCurve} base units of launch fee into the Plan (${(await sendAndConfirm(conn, tx.value, [keeper])).slice(0, 8)}…)`);
+      }
+      if (w.graduationFeeWaiting) {
+        const account = curveFees.claimerQuoteAccount(keeper.publicKey);
+        const before = BigInt((await conn.getTokenAccountBalance(account, "confirmed").catch(() => null))?.value.amount ?? "0");
+        const tx = await curveFees.migrationFeeWithdraw(conn, { launch, claimer: keeper.publicKey });
+        if (tx.ok) {
+          await sendAndConfirm(conn, tx.value, [keeper]);
+          const after = BigInt((await conn.getTokenAccountBalance(account, "confirmed")).value.amount);
+          if (after > before) {
+            const fwd = new Transaction().add(curveFees.forwardToPlan({ claimer: keeper.publicKey, escrow: new PublicKey(plan.escrow), amount: after - before }));
+            log(`${launch.symbol}: ${after - before} base units of graduation fee into the Plan (${(await sendAndConfirm(conn, fwd, [keeper])).slice(0, 8)}…)`);
+          }
+        }
+      }
+      if (w.onPosition >= CURVE_MIN_RAW) {
+        const tx = await curveFees.positionFeeToPlan(conn, { launch, claimer: keeper.publicKey, plan: planKey });
+        if (tx.ok) log(`${launch.symbol}: ${w.onPosition} base units of graduated-pool fee into the Plan (${(await sendAndConfirm(conn, tx.value, [keeper])).slice(0, 8)}…)`);
+      }
+    } catch (err) {
+      log(`${launch.symbol}: moving launch fees into the Plan failed:`, err instanceof Error ? err.message : err);
+    }
+  }
+}
+
 // ── grants ────────────────────────────────────────────────────────────────────────────────
 
 const lastVestAt = new Map<string, number>();
@@ -878,6 +937,11 @@ async function tick(): Promise<void> {
       await vestDue();
     } catch (err) {
       log("vesting failed:", err instanceof Error ? err.message : err);
+    }
+    try {
+      await launchFeesToPlan();
+    } catch (err) {
+      log("launch fees failed:", err instanceof Error ? err.message : err);
     }
     const books = await listBooks();
     const live = books.filter((b) => b.book.rule.enabled);

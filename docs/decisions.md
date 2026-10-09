@@ -727,3 +727,29 @@ Asked before any Curve code, per the plan:
 Still to prove on mainnet with a demonstration launch: one trade, one claim into the vault, one
 saver's receipt that names the launch. Until then `/curve` says what is checked and what is
 not.
+
+### Scrip Curve: priced in the Nasdaq 100, every fee straight into a Plan (2026-10-09)
+
+**Reopened on a new fact.** The 7 October route (quote USDC, a Dynamic Fee Sharing vault as the
+claimer, the Savings Pool paying savers by hand) was chosen because the vault "takes one plain
+mint" and xStocks carry extensions. Two facts read on 9 October changed it:
+
+1. **Meteora has token badges for QQQx (and SPYx, TSLAx, NVDAx) in both DBC and DAMM v2 on
+   mainnet** (`["token_badge", mint]` under each program). A launch quoted in the Nasdaq 100 is
+   permissionless, and it is exactly what Meteora's track asks for ("stock-pairs").
+2. **DBC's `claim_trading_fee` and DAMM v2's `claim_position_fee` take the receiver as a
+   parameter** (`claimPartnerTradingFeeToReceiver`, `claimPositionFee2`). With a Scrip Plan as
+   the receiver, the fee lands in the Plan PDA's own QQQx account, which is the Plan's escrow.
+
+So the vault is not needed (it would refuse QQQx anyway), the Savings Pool key is not needed, and
+no hand payment is needed: the Plan matches savers' automatic saves from the escrow, enforced by
+Scrip's program. The claimer is Scrip's saving service; Meteora lets it choose the receiver, so the
+route rests on that key naming only the Plan, which every claim on chain shows. A Scrip program
+instruction that claims into the Plan with the Plan as the signer would remove that trust; it
+needs a program upgrade, so it waits.
+
+Proven on a local validator holding Meteora's mainnet programs (`npm run curve:rehearse`): 11 of
+11 steps, every fee in the Plan. Found on the way: the badge is checked again at pool creation
+(`InvalidTokenBadge` without it), an exact-in buy past the curve's remaining room fails
+(`InsufficientLiquidity`; the filling buy uses DBC's partial fill), and a graduation's rent is
+paid by Meteora's DBC pool authority (funded on mainnet).
