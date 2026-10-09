@@ -53,6 +53,15 @@ describe("which receipt leads the front door, across saves and automatic saves",
     expect(pick([save(TEAM_WALLET, 2_000_000), theirs])).toBe(theirs);
   });
 
+  it("puts a payment that landed ahead of a first payment counted at the start, in the same class", () => {
+    const arrived = auto(TEAM_WALLET, 1_000_000 - 10);
+    const atStart = { kind: "sweep" as const, recipient: TEAM_WALLET, settledUnix: 2_000_000, attributedJson: JSON.stringify([{ from: "x", usdc: "1", sig: "s", at: 2_000_000 - 12, start: true }]) };
+    expect(pick([atStart, arrived])).toBe(arrived);
+    // A stranger's start still leads anything of the team's.
+    const strangerStart = { ...atStart, recipient: STRANGER };
+    expect(pick([arrived, strangerStart])).toBe(strangerStart);
+  });
+
   it("prefers a save to an automatic save that took an hour", () => {
     const theirs = save(TEAM_WALLET);
     expect(pick([auto(TEAM_WALLET, 1_000_000 - 5_269), theirs])).toBe(theirs);

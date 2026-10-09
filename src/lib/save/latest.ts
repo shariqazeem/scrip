@@ -48,9 +48,11 @@ export type FrontCandidate =
   | { readonly kind: "sweep"; readonly recipient: string; readonly settledUnix: number; readonly attributedJson: string };
 
 export function frontRank(c: FrontCandidate): number {
-  if (c.kind === "save") return isTeam(c.owner) ? 5 : 4;
+  if (c.kind === "save") return (isTeam(c.owner) ? 5 : 4) * 2;
   const byPreference = [0, 1, 2, 3, 6, 7] as const;
-  return byPreference[sweepPreference(c)] ?? 7;
+  // Within each class, a payment that landed before the rule's first payment counted at the start:
+  // "a payment lands" is the picture the front door draws, and the start is a step on the way to it.
+  return (byPreference[sweepPreference(c)] ?? 7) * 2 + (startedWith(c.attributedJson) ? 1 : 0);
 }
 
 export type FrontReceipt = {

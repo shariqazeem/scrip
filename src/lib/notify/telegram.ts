@@ -5,6 +5,7 @@ import { resolveAsset } from "@/lib/assets/stand-in";
 import { db } from "@/lib/db";
 import { type receipts, telegramLinks } from "@/lib/db/schema";
 import { bps, unitsFromRaw, usdc } from "@/lib/format";
+import { startedWith } from "@/lib/start/memo";
 import { siteUrl } from "@/lib/site";
 
 /**
@@ -68,7 +69,9 @@ export async function notifyReceipt(r: typeof receipts.$inferSelect): Promise<vo
   const units = asset ? `${unitsFromRaw(BigInt(r.amountRaw), asset.decimals)} ${asset.symbol}` : `${r.amountRaw} raw units`;
   const line =
     r.kind === "sweep"
-      ? `${usdc(r.basisUsdc)} landed. ${bps(r.rateBps)} became ${units}.`
+      ? startedWith(r.attributedJson)
+        ? `Your first save: ${bps(r.rateBps)} of ${usdc(r.basisUsdc)} became ${units}, by itself.`
+        : `${usdc(r.basisUsdc)} landed. ${bps(r.rateBps)} became ${units}.`
       : r.kind === "pay"
         ? `${usdc(r.paidUsdc)} paid to you${r.reason ? ` for “${r.reason}”` : ""}. It became ${units}.`
         : r.kind === "gift"
