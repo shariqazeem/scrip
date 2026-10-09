@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { NextResponse } from "next/server";
-import { liveView } from "@/lib/book/live";
+import { liveView, refreshReceiptsNow } from "@/lib/book/live";
 import { priceWait } from "@/lib/book/waiting";
 import { currentOwner } from "@/lib/session/server";
 
@@ -27,7 +27,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ owner: 
   }
   const view = await liveView(owner);
   if (!view.ok) return NextResponse.json({ error: view.why }, { status: 503 });
-  const v = view.value;
+  let v = view.value;
+  // The register says it has saved, and the receipt is not cached yet: read it now.
+  const since = v.enabledUnix;
+  if (v.sweeps > 0 && !v.arrivals.some((a) => a.kind === "sweep" && a.settledUnix >= since)) {
+    await refreshReceiptsNow(owner);
+    const again = await liveView(owner, { refresh: false });
+    if (again.ok) v = again.value;
+  }
   const now = Math.floor(Date.now() / 1000);
   const mine = (await currentOwner()) === owner;
   if (!mine && (!v.ruleOn || now - v.enabledUnix > WATCH_WINDOW_SECONDS)) return NextResponse.json({ error: "Nothing to watch." }, { status: 404 });

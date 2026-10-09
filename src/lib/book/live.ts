@@ -90,6 +90,18 @@ export async function refreshReceipts(): Promise<void> {
   await indexReceipts(connection(), 25, 1).catch(() => undefined);
 }
 
+/**
+ * A WATCHED SAVE HAS LANDED and its receipt is not in the cache yet: read the chain now, not at
+ * the next six-second turn. The start card asks this when the register says it has saved; on
+ * 9 October the stub printed about six seconds after the save had already landed.
+ */
+export async function refreshReceiptsNow(owner: string): Promise<void> {
+  if (gateFor(rpcUrl()).coolingFor() > 0) return;
+  lastIndexAt = Math.floor(Date.now() / 1000);
+  await indexReceipts(connection(), 25, 1).catch(() => undefined);
+  forgetLive(owner);
+}
+
 async function assemble(owner: string, opts: { refresh?: boolean }): Promise<Outcome<LiveView>> {
   const now = Math.floor(Date.now() / 1000);
   if (opts.refresh !== false) await refreshReceipts();
