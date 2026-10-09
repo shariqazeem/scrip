@@ -6,6 +6,7 @@ import { CURVE_QUOTE, CURVE_QUOTE_MINT, DAMM_V2_PROGRAM_ID, DBC_PROGRAM_ID, PRES
 import { readCurve } from "@/lib/curve/read";
 import { dateUTC, short, usdc } from "@/lib/format";
 import { explorerUrl } from "@/lib/solana/cluster";
+import { MoneyTrail } from "./trail";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function CurvePage() {
       lede="A launch preset on Meteora's Dynamic Bonding Curve where every buy pays in tokenized Nasdaq 100 and every trading fee is stock. Each fee goes straight from the curve into a Scrip Plan, and the Plan, enforced by Scrip's program, adds it to real people's automatic savings."
     >
       <SiteSection label="The money trail">
+        <MoneyTrail />
         <div className="sp-truths">
           <Row k="1. A trade pays in stock">
             The curve&rsquo;s quote is the Nasdaq 100 (xStocks <span className="mono">QQQx</span>), so a buy pays in it and the fee is charged in it. The fee
