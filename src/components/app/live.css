@@ -366,3 +366,74 @@
   color: var(--ink-muted);
   white-space: nowrap;
 }
+
+/* ── the status, as named facts (since 9 October) ───────────────────────── */
+.sp-live-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3) var(--s-6);
+  margin: 0;
+}
+.sp-live-facts > div {
+  display: grid;
+  gap: 2px;
+}
+.sp-live-facts dt {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-live-facts dd {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.sp-live-facts .is-state dd {
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+.sp-live-facts .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--ok);
+  flex: none;
+}
+.sp-live-facts.is-warn .dot {
+  background: var(--warn);
+}
+.sp-live-facts.is-off .dot {
+  background: var(--ink-faint);
+}
+.sp-live-try {
+  display: grid;
+  gap: var(--s-2);
+  max-width: 62ch;
+  padding: var(--s-4);
+  background: var(--accent-soft);
+  border-radius: var(--r-md);
+}
+.sp-live-try p {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.sp-live-try .t {
+  font-weight: 600;
+}
+.sp-live-try .addr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+.sp-live-try .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  overflow-wrap: anywhere;
+}

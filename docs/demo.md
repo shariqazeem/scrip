@@ -5,15 +5,16 @@ else in the films is recorded from the live site and edited around them, with ca
 product's own words. Never speed up or cut the moment a stub prints; if it waits for a price,
 keep that too — the program refusing to guess is the product working.
 
-Rewritten on 9 October 2026 for the one-card start and Plans. The earlier version (turning the
-rule on from `/app/rule`, an S&P 500 arrival) described the product of 24 September.
+Rewritten on 9 October 2026 for the one-card start and Plans, and again the same afternoon when
+the start's first save became the rule's own (Take 1). The earlier version (turning the rule on
+from `/app/rule`, an S&P 500 arrival) described the product of 24 September.
 
 ---
 
 ## Before you start (10 minutes)
 
-1. **A weekday, while the Nasdaq 100 has a price** (Take 2 only; Take 1 works any day). Open
-   `scrip.work`: on the start card, the Nasdaq 100 chip carries no "waits for a price" note. On
+1. **A weekday, while the Nasdaq 100 has a price** (Takes 1 and 2). Open
+   `scrip.work`: in the start card's stock list, the Nasdaq 100 carries no "waits for a price" note. On
    weekdays it is usually there day and night (the first match settled at 01:25 New York time);
    it stops for the weekend at Friday 20:00 New York, Saturday 05:00 Lahore.
 2. **Hide balances** in Phantom on the phone (tap your total balance) and in the extension.
@@ -24,19 +25,27 @@ rule on from `/app/rule`, an S&P 500 arrival) described the product of 24 Septem
 
 ---
 
-## Take 1 — "Three taps": starting (about 30 seconds, phone, any day)
+## Take 1 — "It saved itself": starting (about 45 seconds, phone, a weekday)
 
-This is also the first real test of the start card, so tell me what each Phantom screen said.
+Since 9 October the start's first save is the rule's own: the wallet's last payment is counted as
+it turns on, and seconds later 10% of it becomes stock by itself, onto a receipt. So this take
+films the whole product, not a swap. Tell me what each Phantom screen said.
 
-You need a **Phantom account that has never touched Scrip**, holding **at least $6 of USDC and
-0.03 SOL**. Afterwards, send me its address: it is a team wallet, and the ledger labels it so.
+You need a **Phantom account that has never touched Scrip**, holding **at least $6 of USDC that
+was sent to it** (from another wallet or an exchange: that is its "last payment") and **0.03 SOL**.
+Afterwards, send me its address: it is a team wallet, and the ledger labels it so.
 
 1. On the phone, open Phantom → the browser tab → `scrip.work`.
 2. Start the screen recording.
-3. Leave everything as it is: **10%**, **Nasdaq 100**, **a first save of $5**.
-4. Tap **Start saving 10%**. Approve the sign-in, then approve the transaction.
-5. Wait for "You save 10% of every payment" and the line under it with your first save.
-6. Tap the first save to open its receipt. Scroll slowly to the end. Stop.
+3. Leave everything as it is: **10%**, **Nasdaq 100**. Tap **Start saving 10%**; approve the
+   connection.
+4. The card now shows your last payment as three steps (paid, 10%, Nasdaq 100). Hold it for two
+   seconds so it reads, then tap **Start saving 10%** again and approve the transaction. (Until
+   Phantom finishes reviewing scrip.work it shows a red warning about the $200 limit; the card
+   says so first. Approve past it.)
+5. Touch nothing. The card counts the seconds, then the receipt prints: "$… at the start, 10%
+   became … Nasdaq 100, N s after you started, by itself". Wait three seconds more.
+6. Tap the receipt. Scroll slowly to the end. Stop.
 
 ## Take 2 — "Twelve seconds" and the match (about 60 seconds, laptop and phone, weekday)
 

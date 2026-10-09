@@ -48,6 +48,8 @@ const RATES = [500, 1000, 2000] as const;
 /** How long the card watches for the first save before handing over to the savings page. */
 const WATCH_MS = 10 * 60_000;
 const POLL_MS = 3_000;
+/** How long the card waits for a wallet's payment history before using the USDC it holds. */
+const PAYMENTS_WAIT_MS = 8_000;
 
 type Phase = "idle" | "connecting" | "building" | "signing" | "confirming" | "done" | "failed";
 type Invite = {
@@ -141,29 +143,18 @@ export function StartCard({
 
   // ── the wallet, read once it is known ─────────────────────────────────────────────────
   const readWallet = useCallback(async (address: string): Promise<WalletView | null> => {
-    const [v, w] = await Promise.all([
-      fetch(`/api/start/view/${address}`, { cache: "no-store" })
-        .then((r) => (r.ok ? (r.json() as Promise<WalletView>) : null))
-        .catch(() => null),
-      fetch(`/api/save/wallet/${address}`, { cache: "no-store" })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null),
-    ]);
+    // The wallet's state first: it decides what the card says. Its payments follow, and a busy
+    // wallet's history must not hold the card: after a few seconds the USDC it holds stands in.
+    const payments = fetch(`/api/save/wallet/${address}`, { cache: "no-store", signal: AbortSignal.timeout(PAYMENTS_WAIT_MS) })
+      .then((r) => (r.ok ? (r.json() as Promise<{ usdc?: string; inflows?: Array<{ sig: string; at: number; usdc: string; from: string | null }> }>) : null))
+      .catch(() => null);
+    const v = await fetch(`/api/start/view/${address}`, { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<WalletView>) : null))
+      .catch(() => null);
     if (v) setView(v);
-    const body = w as {
-      usdc?: string;
-      inflows?: Array<{ sig: string; at: number; usdc: string; from: string | null }>;
-    } | null;
+    const body = await payments;
     if (body?.usdc !== undefined) {
-      setPay({
-        usdc: BigInt(body.usdc),
-        inflows: (body.inflows ?? []).map((f) => ({
-          sig: f.sig,
-          at: f.at,
-          usdc: BigInt(f.usdc),
-          from: f.from,
-        })),
-      });
+      setPay({ usdc: BigInt(body.usdc), inflows: (body.inflows ?? []).map((f) => ({ sig: f.sig, at: f.at, usdc: BigInt(f.usdc), from: f.from })) });
     } else if (v) {
       setPay({ usdc: BigInt(v.usdc), inflows: [] });
     }
@@ -357,7 +348,11 @@ export function StartCard({
         </span>
       </div>
 
-      {connected && pay && !shortOfSol ? (
+      {connected && !pay && !shortOfSol ? (
+        <div className="sp-go-first is-next">
+          <p className="sp-go-first-title">Reading this wallet&rsquo;s last payment…</p>
+        </div>
+      ) : connected && pay && !shortOfSol ? (
         <FirstPanel
           first={first}
           couldFirst={couldFirst}
@@ -420,6 +415,13 @@ export function StartCard({
                       : `Start saving ${pct}%`}
           </button>
           {why ? <p className="sp-start-why">{why}</p> : null}
+          {connected?.wallet.name === "Phantom" && !why ? (
+            // Said before the wallet says it, so it reads as expected rather than as an alarm.
+            <p className="sp-go-heads">
+              Phantom may show a red warning that this site asks to move funds in the future. That is the $200 limit below, only into {stock.name}, while Phantom
+              reviews scrip.work; you can take it back any time.
+            </p>
+          ) : null}
           <p className="sp-save-trust">
             <ShieldCheck size={16} strokeWidth={2} aria-hidden />
             <span>

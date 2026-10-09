@@ -615,3 +615,13 @@ button.sp-start-secondary {
     gap: var(--s-2) var(--s-3);
   }
 }
+.sp-go-heads {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--warn-soft);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--r-md);
+}

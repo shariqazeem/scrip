@@ -36,6 +36,16 @@ const STATE_LINE: Record<LiveView["state"], string> = {
   "no-usdc-account": "no USDC account yet",
   off: "not saving automatically",
 };
+/** The owner's status, in a word or two a person says. */
+const STATE_WORD: Record<LiveView["state"], string> = {
+  on: "On",
+  paused: "Stopped",
+  "delegate-replaced": "Paused",
+  "allowance-exhausted": "Limit used up",
+  "float-empty": "Prepaid saves used up",
+  "no-usdc-account": "No USDC account yet",
+  off: "Off",
+};
 
 export function LiveBook({
   initial,
@@ -102,6 +112,8 @@ export function LiveBook({
   const payUrl = view.handle ? `${site}/pay/${view.handle}` : null;
   const publicUrl = view.handle ? `${site}/@${view.handle}` : null;
   const arrivals = limit ? view.arrivals.slice(0, limit) : view.arrivals;
+  // From the receipts themselves, so it survives Scrip's servers restarting.
+  const lastSave = view.arrivals.find((a) => a.kind === "sweep")?.settledUnix ?? view.keeper.lastSweepAt ?? null;
 
   async function togglePublish() {
     setPublishing(true);
@@ -178,14 +190,49 @@ export function LiveBook({
           ) : (
             <p className="sp-live-rule is-off">{mode === "owner" && !view.handle ? "Not saving automatically yet." : "Not saving automatically."}</p>
           )}
-          <p className={`sp-live-watch${warn ? " is-warn" : view.state === "off" ? " is-off" : ""}`}>
-            <span className="dot" aria-hidden />
-            <span>watching {short(view.owner)}</span>
-            <span>{waiting ? waiting.chip : STATE_LINE[view.state]}</span>
-            {view.ruleOn ? <span>last save {view.keeper.lastSweepAt ? since(view.keeper.lastSweepAt) : view.sweeps > 0 ? `${view.sweeps} so far` : "none yet"}</span> : null}
-            {view.ruleOn ? <span>limit {usdc(BigInt(view.usdc.delegatedAmount))} left</span> : null}
-            {view.ruleOn ? <span>{sweepsCovered(BigInt(view.floatLamports))} saves prepaid</span> : null}
-          </p>
+          {/* Plain facts with their names, not a machine's status line: until 9 October this read
+              "watching 4hf3…S3dV · saving every payment · limit $200 left · 6 saves prepaid". */}
+          <dl className={`sp-live-facts${warn || waiting ? " is-warn" : view.state === "off" ? " is-off" : ""}`}>
+            <div className="is-state">
+              <dt>Status</dt>
+              <dd>
+                <span className="dot" aria-hidden />
+                {waiting ? "Waiting for a price" : STATE_WORD[view.state]}
+              </dd>
+            </div>
+            {view.ruleOn ? (
+              <>
+                <div>
+                  <dt>Last automatic save</dt>
+                  <dd>{lastSave ? since(lastSave) : "none yet"}</dd>
+                </div>
+                <div>
+                  <dt>Scrip can still move</dt>
+                  <dd>{usdc(BigInt(view.usdc.delegatedAmount))}</dd>
+                </div>
+                <div>
+                  <dt>Prepaid</dt>
+                  <dd>
+                    {sweepsCovered(BigInt(view.floatLamports))} more save{sweepsCovered(BigInt(view.floatLamports)) === 1 ? "" : "s"}
+                  </dd>
+                </div>
+              </>
+            ) : null}
+          </dl>
+          {mode === "owner" && view.ruleOn && view.sweeps === 0 && view.arrivals.length === 0 && unswept === 0n ? (
+            // The one thing a new saver has not seen yet is the point of all this. Show them how to see it.
+            <div className="sp-live-try">
+              <p className="t">See it work now</p>
+              <p>
+                Send any amount of USDC to this wallet, from an exchange or another wallet. Seconds after it lands, {bps(view.rateNowBps)} of it becomes{" "}
+                {asset ? nameOf(asset.symbol) : "stock"} by itself, and its receipt prints just below.
+              </p>
+              <div className="addr">
+                <span className="mono">{view.owner}</span>
+                <CopyText text={view.owner} label="Copy your address" />
+              </div>
+            </div>
+          ) : null}
           {view.state === "delegate-replaced" ? <p className="sp-live-why">Another app took the permission on your USDC account, which paused saving. Start again to give it back; payments count from today.</p> : null}
           {view.state === "allowance-exhausted" ? <p className="sp-live-why">The limit is used up, so saving has paused. Set a new limit to keep saving; your USDC stays where it is until then.</p> : null}
           {view.state === "float-empty" ? <p className="sp-live-why">The prepaid saves are used up. Prepay more to keep saving; nothing is lost while it waits.</p> : null}
