@@ -16,6 +16,7 @@ import { waitedFor } from "@/lib/pyth/price";
 import { priceState } from "@/lib/pyth/ready";
 import { readReceiptBySignature, NOT_YET_SETTLED, TOUCHED_NOT_WRITTEN, writerForSignature } from "@/lib/book/read-receipt";
 import { db } from "@/lib/db";
+import { startedWith } from "@/lib/start/memo";
 import { receipts as receiptsTable } from "@/lib/db/schema";
 import { age, bps, dateUTC, measuresOn, pythToUsd, short, sol, stampUTC, unitsFromRaw, usd, usdc } from "@/lib/format";
 import { solUsd } from "@/lib/market";
@@ -80,7 +81,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!r.ok) return { title: "Receipt" };
   const v = r.value;
   const units = v.asset_ ? `${unitsFromRaw(v.amountRaw, v.asset_.decimals)} ${v.asset_.symbol}` : `${v.amountRaw} units`;
-  const title = v.kind === "sweep" ? `${usdc(v.basisUsdc)} landed · ${bps(v.rateBps)} became ${units}` : `${usdc(v.paidUsdc)} paid · became ${units}`;
+  // A first save counted at the start says so in the tab and the link preview too, as on the stub.
+  const atStart =
+    v.kind === "sweep" &&
+    startedWith((await db.select({ a: receiptsTable.attributedJson }).from(receiptsTable).where(eq(receiptsTable.pda, v.address)).limit(1).catch(() => []))[0]?.a ?? "[]");
+  const title =
+    v.kind === "sweep" ? `${usdc(v.basisUsdc)} ${atStart ? "at the start" : "landed"} · ${bps(v.rateBps)} became ${units}` : `${usdc(v.paidUsdc)} paid · became ${units}`;
   return {
     title,
     description: `${units} in ${short(v.recipient)}'s own wallet, ${stampUTC(v.settledUnix)}. A permanent receipt on Solana, measured at 7 and 30 days.`,
@@ -262,11 +268,13 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
     });
   }
   if (cost) {
-    const parts = [`${sol(cost.rentLamports)} rent, kept with this receipt`, `${sol(cost.tipLamports)} for submitting it`];
-    if (cost.accountLamports > 0) parts.push(`${sol(cost.accountLamports)} for a new ${symbol} account`);
+    // In the words a saver uses: what keeps this receipt on Solana, what paid for making the save,
+    // and the stock account it opened, which belongs to the saver.
+    const parts = [`${sol(cost.rentLamports)} keeps this receipt on Solana for good`, `${sol(cost.tipLamports)} for making the save`];
+    if (cost.accountLamports > 0) parts.push(`${sol(cost.accountLamports)} opened the ${symbol} account, which is the saver’s`);
     sections.push({
       rows: [
-        { k: "Cost", v: `${sol(cost.totalLamports)} from ${r.kind === "vest" ? "the grant’s" : "the register’s"} float${solPrice ? ` · ≈ ${usd((cost.totalLamports / 1e9) * solPrice)} at today’s SOL price` : ""}` },
+        { k: "Cost", v: `${sol(cost.totalLamports)} from ${r.kind === "vest" ? "the grant’s prepaid fees" : "the saver’s prepaid saves"}${solPrice ? ` · ≈ ${usd((cost.totalLamports / 1e9) * solPrice)} at today’s SOL price` : ""}` },
         { k: "Of which", v: parts.join(" · "), tone: "muted" as const },
       ],
     });
