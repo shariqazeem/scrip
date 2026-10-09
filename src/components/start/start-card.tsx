@@ -358,6 +358,13 @@ export function StartCard({ stocks, defaultMint, solUsd, cluster, firstQuote, op
           <strong>{invite.sponsorName ?? "Your sponsor"}</strong> adds {invite.matchBps / 100}% of every automatic save, up to {dollars(Number(invite.monthlyCapUsdc) / 1e6)} a month, in {invite.stock}.
           Starting joins their Plan.
         </p>
+      ) : openPlan && !view?.saving && connected?.account.address !== openPlan.sponsor ? (
+        // Scrip's own Plan while it has room: said before anyone starts, and said as it is — a
+        // request after starting, read by a person, not a match that comes with the start.
+        <p className="sp-start-offer">
+          <strong>Scrip matches its first savers:</strong> {openPlan.matchBps / 100}% of every automatic save, up to {dollars(openPlan.capUsd)} a month, in{" "}
+          {openPlan.stockName}. After you start, ask to join.
+        </p>
       ) : null}
 
       {shortOfSol && connected && view ? (
