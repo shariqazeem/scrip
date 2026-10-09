@@ -184,6 +184,26 @@ async function main() {
       }
       return;
     }
+    case "buy": {
+      // A plain buy on a launch recorded here: the founder's own, and said so wherever it is shown.
+      // The fee falls from 25% to 1% over the first hour, so a buy that only fills the curve waits.
+      const poolKey = flag("pool");
+      const launch = deployed.launches.find((l) => l.pool === poolKey);
+      if (!launch) throw new Error("--pool must be a launch recorded in deployed.json.");
+      const usd = Number(flag("usd") ?? "0");
+      if (!(usd > 0)) throw new Error("--usd <USDC to spend> is required.");
+      const payer = loadKeypair();
+      const tx = await dbc.pool.swap({
+        owner: payer.publicKey,
+        pool: new PublicKey(launch.pool),
+        amountIn: new BN(Math.round(usd * 1e6)),
+        minimumAmountOut: new BN(0),
+        swapBaseForQuote: false,
+        referralTokenAccount: null,
+      });
+      await send(tx, payer, [], `buy ${usd} USDC of ${launch.symbol}`);
+      return;
+    }
     case "migrate": {
       const poolKey = flag("pool");
       const launch = deployed.launches.find((l) => l.pool === poolKey);

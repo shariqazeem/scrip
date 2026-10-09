@@ -56,6 +56,10 @@ npx tsx --conditions=react-server scripts/curve.ts config --keypair ~/scrip-curv
 # 3. a demonstration launch: never called a Scrip token, no roadmap, no promotion
 npx tsx --conditions=react-server scripts/curve.ts launch --keypair ~/scrip-curve-operator.json --kind demonstration --name "Savings Demonstration One" --symbol DEMO1 --uri https://scrip.work/curve/demo1.json --first-buy 5
 
+# 3b. fill the curve to its threshold (30 USDC for a demonstration) once the fee has fallen to 1%
+#     (an hour after launch): a plain buy, the founder's own, simulated first like every write
+npx tsx --conditions=react-server scripts/curve.ts buy --keypair ~/scrip-curve-operator.json --pool <POOL> --usd 26
+
 # 4. once the curve completes, graduate it (or use migrator.meteora.ag)
 npx tsx --conditions=react-server scripts/curve.ts migrate --keypair ~/scrip-curve-operator.json --pool <POOL>
 
