@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CurveChart } from "@/components/curve/curve-chart";
 import { TradePanel } from "@/components/curve/trade-panel";
 import { Row, SiteFrame, SiteSection } from "@/components/site/site-frame";
 import { DEPLOYED } from "@/lib/curve/deployed";
 import { launchAt } from "@/lib/curve/launches";
 import { readCurve } from "@/lib/curve/read";
+import { curveShape } from "@/lib/curve/shape";
 import { PRESET, curveQuote, feeBpsAt } from "@/lib/curve/preset";
 import { dateUTC, short } from "@/lib/format";
 import { nameOf } from "@/lib/save/names";
@@ -53,6 +55,9 @@ export default async function LaunchPage({ params }: Params) {
   const intoPlan = ((await readCurve().plans).find((p) => p.stock === l.stock)?.inflows ?? []).slice();
   const intoPlanRaw = intoPlan.reduce((n, f) => n + f.raw, 0n);
   const planLink = plan ? <a href={explorerUrl("address", plan.address)}>{stockName} Plan</a> : <>{stockName} Plan</>;
+  const shape = await curveShape(connection(), l);
+  // The market's own chart: the curve while it fills, the graduated pool after.
+  const liveChart = `https://www.geckoterminal.com/solana/pools/${l.migrated && l.dammPool ? l.dammPool : l.pool}`;
   const icon = `/api/curve/icon?${new URLSearchParams({ s: l.symbol ?? "?", k: l.stock })}`;
   return (
     <SiteFrame
@@ -86,6 +91,8 @@ export default async function LaunchPage({ params }: Params) {
           <span>{pct}%</span>
         </div>
       </div>
+
+      {shape.ok ? <CurveChart shape={shape.value} stockName={stockName} symbol={symbol} migrated={l.migrated} liveChart={liveChart} /> : null}
 
       <TradePanel pool={l.pool} symbol={symbol} stock={l.stock} stockName={stockName} cluster={cluster()} kind={l.kind} full={full} migrated={l.migrated} />
 
