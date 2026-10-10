@@ -50,7 +50,7 @@ export default async function LaunchPage({ params }: Params) {
     <SiteFrame
       eyebrow="Scrip Curve"
       title={`${symbol}, priced in ${stockName}.`}
-      lede={`${l.name ?? "A token"}, launched on Scrip Curve by ${short(l.creator)}. Every trading fee it pays is ${stockName}: half to its launcher, half to savers.`}
+      lede={`${l.name ?? "A token"}, launched on Scrip Curve by ${short(l.creator)}. Every trading fee it pays is ${stockName}: ${l.kind === "demonstration" ? "all of it to savers, after Meteora's share" : "half to its launcher, half to savers, after Meteora's share"}.`}
     >
       <div className="sp-cv-head">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -83,7 +83,7 @@ export default async function LaunchPage({ params }: Params) {
             ) : (
               <>
                 <span className="mono">{(fee / 100).toFixed(2)}%</span>
-                {now < falls ? `, falling to ${PRESET.endingFeeBps / 100}% by ${dateUTC(falls)}` : ""}. Collected in {stockName}.
+                {now < falls ? `, falling to ${PRESET.endingFeeBps / 100}% at ${new Date(falls * 1000).toISOString().slice(11, 16)} UTC` : ""}. Collected in {stockName}.
               </>
             )}
           </Row>
