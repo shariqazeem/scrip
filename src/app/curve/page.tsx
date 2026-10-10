@@ -185,7 +185,7 @@ export default async function CurvePage() {
             Meteora asks for launch mechanics tuned to tokenized stocks. Pricing a launch in one makes every fee a share of that stock, and a Plan&rsquo;s escrow holds the
             same stock, so a fee needs no swap to reach a saver.
           </Row>
-          <Row k="Permissionless today">
+          <Row k="Open to anyone today">
             xStocks carry a permanent delegate and a pause authority, which Meteora allows only with a token badge. Both badges, for DBC and DAMM v2, exist on mainnet for
             all four:{" "}
             {CURVE_STOCKS.map((s, i) => (

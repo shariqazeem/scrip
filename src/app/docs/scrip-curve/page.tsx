@@ -84,7 +84,7 @@ export default function Page() {
           is stock the moment it is charged.
         </li>
         <li>
-          <strong>Permissionless today.</strong> These xStocks carry a permanent delegate and a pause authority, which Meteora allows only with a
+          <strong>Open to anyone today.</strong> These xStocks carry a permanent delegate and a pause authority, which Meteora allows only with a
           token badge. Meteora has badged all four for DBC and for DAMM v2 on mainnet, and the badge is checked when the config is made and again
           when each pool is.
         </li>

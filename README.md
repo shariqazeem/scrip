@@ -115,7 +115,7 @@ at graduation              DBC → DAMM v2 (launch token / stock), every positio
 
 | | |
 | --- | --- |
-| Priced in | the Nasdaq 100, the S&P 500, Tesla or Nvidia (xStocks `QQQx`, `SPYx`, `TSLAx`, `NVDAx`), each badged by Meteora for DBC and DAMM v2, so the quote is permissionless |
+| Priced in | the Nasdaq 100, the S&P 500, Tesla or Nvidia (xStocks `QQQx`, `SPYx`, `TSLAx`, `NVDAx`), each badged by Meteora for DBC and DAMM v2, so anyone can launch in them |
 | Fee | 25% at launch, falling to 1% over the first hour, collected in the stock: a bot that buys first pays savers. The launcher's own first buy, in the launch transaction, pays 1% |
 | Who keeps it | Meteora keeps a fifth. Of the rest: on a public launch half to the launcher and half to the Plan; on a demonstration all of it to the Plan |
 | Graduation | a public launch at about $850 of the stock, which Meteora graduates by itself; a demonstration at about $15. Every position locked |

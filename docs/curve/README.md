@@ -58,7 +58,7 @@ refused: a launch is a token priced in a stock, not a share of it.
 - **Stock-pairs.** Meteora asks for launch mechanics tuned to tokenized stocks. A launch priced in
   one makes every fee a share of that stock, and a Plan's escrow holds the same stock, so a fee
   needs no swap to reach a saver.
-- **Permissionless today.** xStocks carry a permanent delegate and a pause authority, which Meteora
+- **Open to anyone today.** xStocks carry a permanent delegate and a pause authority, which Meteora
   allows only with a token badge. Both badges (DBC and DAMM v2) exist on mainnet for all four,
   read on 10 October. The badge is passed when the config is created and again when the pool is
   created (`InvalidTokenBadge` otherwise).
