@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Launch on Scrip Curve",
-  description: "Launch a token priced in the Nasdaq 100, the S&P 500, Tesla or Nvidia. Half of every trading fee is yours; the other half goes to savers.",
+  description: "Launch a token priced in the Nasdaq 100, the S&P 500, Tesla or Nvidia. Its trading fees go to savers as stock, and half of them to you if you choose.",
 };
 
 /**
@@ -31,7 +31,7 @@ export default function LaunchPage() {
     <SiteFrame
       eyebrow="Scrip Curve"
       title="Launch a token priced in a stock."
-      lede="Pick the stock, name it, sign once. Half of every trading fee is yours; the other half goes to savers, as stock, through a Scrip Plan."
+      lede="Pick the stock, name it, sign once. Its trading fees go to savers as stock, through a Scrip Plan, and half of them to you if you choose."
     >
       <LaunchForm stocks={stocks} cluster={cluster()} />
     </SiteFrame>
