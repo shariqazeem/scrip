@@ -24,7 +24,25 @@ const units = (raw: string | null | undefined, decimals: number, dp: number) => 
  * curve worth $750 or more by itself; a smaller one (a demonstration) waits for anyone to do it,
  * so the panel offers exactly that, in one approval, instead of a buy that would be refused.
  */
-export function TradePanel({ pool, symbol, stock, stockName, cluster, kind, full }: { pool: string; symbol: string; stock: string; stockName: string; cluster: string; kind: "public" | "demonstration"; full: boolean }) {
+export function TradePanel({
+  pool,
+  symbol,
+  stock,
+  stockName,
+  cluster,
+  kind,
+  full,
+  migrated,
+}: {
+  pool: string;
+  symbol: string;
+  stock: string;
+  stockName: string;
+  cluster: string;
+  kind: "public" | "demonstration";
+  full: boolean;
+  migrated: boolean;
+}) {
   const router = useRouter();
   const { wallets, connected, choose } = useCurveWallet();
   const [tab, setTab] = useState<"buy" | "sell">("buy");
@@ -58,6 +76,8 @@ export function TradePanel({ pool, symbol, stock, stockName, cluster, kind, full
   }, [live, router]);
 
   const isFull = live ? !live.migrated && BigInt(live.quoteReserveRaw) >= BigInt(live.thresholdRaw) : full;
+  // What the server read until the first live answer, so a graduated launch never reads as a curve.
+  const graduated = live ? live.migrated : migrated;
   const tokens = live?.tokensRaw ? BigInt(live.tokensRaw) : 0n;
   const sellRaw = (tokens * BigInt(share)) / 100n;
 
@@ -236,7 +256,7 @@ export function TradePanel({ pool, symbol, stock, stockName, cluster, kind, full
             />
           </div>
           <p className="sp-cv-note">
-            {live?.migrated
+            {graduated
               ? `Paid in USDC. Jupiter routes it to ${symbol} through its Meteora DAMM v2 pool.`
               : `Paid in USDC. Jupiter turns it into ${stockName}, which buys ${symbol}${live ? ` at the fee now, ${(live.feeBps / 100).toFixed(2)}%` : ""}.`}
           </p>
@@ -251,7 +271,7 @@ export function TradePanel({ pool, symbol, stock, stockName, cluster, kind, full
             ))}
           </div>
           <p className="sp-cv-note">
-            Sells {units(sellRaw.toString(), 6, 2)} {symbol} {live?.migrated ? "through its Meteora DAMM v2 pool" : "back into the curve"}. You receive {stockName}, which stays in your wallet.
+            Sells {units(sellRaw.toString(), 6, 2)} {symbol} {graduated ? "through its Meteora DAMM v2 pool" : "back into the curve"}. You receive {stockName}, which stays in your wallet.
           </p>
         </>
       )}

@@ -5,6 +5,7 @@ import { TradePanel } from "@/components/curve/trade-panel";
 import { Row, SiteFrame, SiteSection } from "@/components/site/site-frame";
 import { DEPLOYED } from "@/lib/curve/deployed";
 import { launchAt } from "@/lib/curve/launches";
+import { readCurve } from "@/lib/curve/read";
 import { PRESET, curveQuote, feeBpsAt } from "@/lib/curve/preset";
 import { dateUTC, short } from "@/lib/format";
 import { nameOf } from "@/lib/save/names";
@@ -48,6 +49,10 @@ export default async function LaunchPage({ params }: Params) {
   const fee = l.migrated ? null : feeBpsAt(now - l.activationUnix);
   const falls = l.activationUnix + PRESET.feeDecaySeconds;
   const plan = DEPLOYED.plans[l.stock];
+  // Every launch priced in this stock pays into the same Plan, so what reached it is counted for all of them.
+  const intoPlan = ((await readCurve().plans).find((p) => p.stock === l.stock)?.inflows ?? []).slice();
+  const intoPlanRaw = intoPlan.reduce((n, f) => n + f.raw, 0n);
+  const planLink = plan ? <a href={explorerUrl("address", plan.address)}>{stockName} Plan</a> : <>{stockName} Plan</>;
   const icon = `/api/curve/icon?${new URLSearchParams({ s: l.symbol ?? "?", k: l.stock })}`;
   return (
     <SiteFrame
@@ -82,7 +87,7 @@ export default async function LaunchPage({ params }: Params) {
         </div>
       </div>
 
-      <TradePanel pool={l.pool} symbol={symbol} stock={l.stock} stockName={stockName} cluster={cluster()} kind={l.kind} full={full} />
+      <TradePanel pool={l.pool} symbol={symbol} stock={l.stock} stockName={stockName} cluster={cluster()} kind={l.kind} full={full} migrated={l.migrated} />
 
       <SiteSection label="This launch, from the chain">
         <div className="sp-truths">
@@ -99,14 +104,26 @@ export default async function LaunchPage({ params }: Params) {
             )}
           </Row>
           <Row k="For savers">
-            <span className="mono">{units(l.partnerFeeRaw, q.decimals, 6)}</span> {stockName} of fee waiting on the curve; Scrip&rsquo;s saving service moves it into the{" "}
-            {plan ? (
-              <a href={explorerUrl("address", plan.address)}>{stockName} Plan</a>
+            {l.migrated ? (
+              <>
+                Its graduated pool&rsquo;s trading fees, and its share of the graduation fee, are {stockName}. Scrip&rsquo;s saving service claims them into the {planLink} every
+                half hour, where they match savers&rsquo; automatic saves.
+              </>
+            ) : l.partnerFeeRaw > 0n ? (
+              <>
+                <span className="mono">{units(l.partnerFeeRaw, q.decimals, 6)}</span> {stockName} of fee waiting on the curve; Scrip&rsquo;s saving service moves it into the {planLink} every
+                half hour, where it matches savers&rsquo; automatic saves.
+              </>
             ) : (
-              `${stockName} Plan`
-            )}{" "}
-            every half hour, where it matches savers&rsquo; automatic saves.
+              <>No fee waiting on the curve right now: Scrip&rsquo;s saving service has moved every one so far into the {planLink}, where it matches savers&rsquo; automatic saves.</>
+            )}
           </Row>
+          {intoPlan.length > 0 ? (
+            <Row k="In the Plan from launches">
+              <span className="mono">{units(intoPlanRaw, q.decimals, 6)}</span> {stockName} in {intoPlan.length} fee{intoPlan.length === 1 ? "" : "s"}, from every launch priced in {stockName}. The latest:{" "}
+              <a href={explorerUrl("tx", intoPlan[0]!.sig)}>{short(intoPlan[0]!.sig)}</a>, from {intoPlan[0]!.from}.
+            </Row>
+          ) : null}
           <Row k="The curve">
             <a href={explorerUrl("address", l.pool)}>{short(l.pool)}</a>, on Meteora DBC
           </Row>
