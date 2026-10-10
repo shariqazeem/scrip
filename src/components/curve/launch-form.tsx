@@ -25,7 +25,9 @@ export function LaunchForm({ stocks, cluster }: { stocks: readonly LaunchStock[]
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
   const [first, setFirst] = useState<number>(0);
-  const [phase, setPhase] = useState<"idle" | "wallet" | "building" | "signing" | "done">("idle");
+  const [phase, setPhase] = useState<"idle" | "wallet" | "swapping" | "building" | "signing" | "done">("idle");
+  // Stock a first-buy swap already delivered, kept so a retry of the launch never swaps twice.
+  const [swapped, setSwapped] = useState<{ stock: string; raw: string } | null>(null);
   const [why, setWhy] = useState<string | null>(null);
   const [pool, setPool] = useState<string | null>(null);
   const picked = stocks.find((s) => s.symbol === stock);
@@ -35,35 +37,59 @@ export function LaunchForm({ stocks, cluster }: { stocks: readonly LaunchStock[]
   const problem = name || symbol ? launchNameProblem(name, symbol) : null;
   const icon = useMemo(() => `/api/curve/icon?${new URLSearchParams({ s: sym || "?", k: stock })}`, [sym, stock]);
 
+  /** POST to the builder; the answer, or why not, in words. */
+  const ask = async (body: Record<string, unknown>): Promise<{ ok: true; j: Record<string, unknown> } | { ok: false; why: string }> => {
+    try {
+      const res = await fetch("/api/curve/tx", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok || !Array.isArray(j.transactions)) return { ok: false, why: typeof j.error === "string" ? j.error : "It could not be built." };
+      return { ok: true, j };
+    } catch {
+      return { ok: false, why: "The network dropped the request. Nothing was sent." };
+    }
+  };
+
+  /**
+   * A first buy in USDC is two approvals, each its own transaction: the swap into the stock lands
+   * first, and only then is the launch built, buying with the stock really in the wallet. Under one
+   * prompt Phantom checked the launch against a wallet that did not yet hold the stock and warned
+   * "unsafe" (10 October); apart, each one checks clean.
+   */
   const go = async (c: Connected | null) => {
     setWhy(null);
     if (launchNameProblem(name, symbol)) return setWhy(launchNameProblem(name, symbol));
     if (!c) return setPhase("wallet");
+    let stockRaw: string | undefined = swapped && swapped.stock === stock ? swapped.raw : undefined;
+    if (first > 0 && !stockRaw) {
+      setPhase("swapping");
+      const swap = await ask({ action: "swap", owner: c.account.address, stock, usd: first });
+      if (!swap.ok) {
+        setPhase("idle");
+        return setWhy(swap.why);
+      }
+      const sent = await signAndRelay(c, cluster, swap.j.transactions as string[]);
+      if (!sent.ok) {
+        setPhase("idle");
+        return setWhy(sent.why || null);
+      }
+      stockRaw = String(swap.j.minOut);
+      setSwapped({ stock, raw: stockRaw });
+    }
     setPhase("building");
     const mint = Keypair.generate();
-    let res: Response;
-    try {
-      res = await fetch("/api/curve/tx", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "launch", owner: c.account.address, stock, kind: effectiveKind, name, symbol: sym, mint: mint.publicKey.toBase58(), usd: first }),
-      });
-    } catch {
+    const launch = await ask({ action: "launch", owner: c.account.address, stock, kind: effectiveKind, name, symbol: sym, mint: mint.publicKey.toBase58(), stockRaw });
+    if (!launch.ok) {
       setPhase("idle");
-      return setWhy("The network dropped the request. Nothing was sent.");
-    }
-    const j = (await res.json().catch(() => ({}))) as { transactions?: string[]; pool?: string; error?: string };
-    if (!res.ok || !j.transactions || !j.pool) {
-      setPhase("idle");
-      return setWhy(j.error ?? "The launch could not be built.");
+      return setWhy(stockRaw ? `${launch.why} Your $${first} is already ${picked?.name} in your wallet; launching again uses it.` : launch.why);
     }
     setPhase("signing");
-    const sent = await signAndRelay(c, cluster, j.transactions, mint);
+    const sent = await signAndRelay(c, cluster, launch.j.transactions as string[], mint);
     if (!sent.ok) {
       setPhase("idle");
-      return setWhy(sent.why || (sent.signatures.length > 0 ? "The first part landed; the launch itself did not. Your USDC is now in your wallet as stock." : null));
+      return setWhy(`${sent.why || "The launch was not approved."}${stockRaw ? ` Your $${first} is already ${picked?.name} in your wallet; launching again uses it.` : ""}`);
     }
-    setPool(j.pool);
+    setSwapped(null);
+    setPool(String(launch.j.pool));
     setPhase("done");
   };
 
@@ -135,8 +161,8 @@ export function LaunchForm({ stocks, cluster }: { stocks: readonly LaunchStock[]
           ))}
         </div>
         <p className="sp-cv-note">
-          Paid in USDC: Jupiter turns it into {picked?.name ?? "the stock"}, then it buys your token in the same approval. The first buy pays the lowest fee, 1%; anyone
-          buying in the first hour after pays more, from 25% falling to 1%.
+          Paid in USDC: your wallet asks twice, first to turn it into {picked?.name ?? "the stock"} through Jupiter, then to launch and buy with it. The first buy pays
+          the lowest fee, 1%; anyone buying in the first hour after pays more, from 25% falling to 1%.
         </p>
       </div>
 
@@ -194,12 +220,18 @@ export function LaunchForm({ stocks, cluster }: { stocks: readonly LaunchStock[]
       {why ? <p className="sp-cv-err">{why}</p> : null}
 
       <div className="sp-cv-actions">
-        <button type="button" className="sp-btn is-primary" disabled={phase === "building" || phase === "signing" || Boolean(problem) || !name || !symbol} onClick={() => go(connected)}>
-          {phase === "building" ? "Preparing…" : phase === "signing" ? "Waiting for your wallet…" : `Launch ${sym || "your token"}`}
+        <button type="button" className="sp-btn is-primary" disabled={phase === "swapping" || phase === "building" || phase === "signing" || Boolean(problem) || !name || !symbol} onClick={() => go(connected)}>
+          {phase === "swapping"
+            ? `1 of 2: $${first} into ${picked?.name}…`
+            : phase === "building"
+              ? "Preparing the launch…"
+              : phase === "signing"
+                ? `${first > 0 ? "2 of 2: " : ""}waiting for your wallet…`
+                : `Launch ${sym || "your token"}`}
         </button>
       </div>
       <p className="sp-cv-note">
-        {connected ? `Signing as ${connected.account.address.slice(0, 4)}…${connected.account.address.slice(-4)}. ` : ""}Your wallet asks once. A launch is a speculative token,
+        {connected ? `Signing as ${connected.account.address.slice(0, 4)}…${connected.account.address.slice(-4)}. ` : ""}{first > 0 ? "Your wallet asks twice, each within a minute." : "Your wallet asks once."} A launch is a speculative token,
         not a stock and not a share of one; Scrip makes no claim about its price, only about where its fees go. Not offered to US persons.
       </p>
     </div>

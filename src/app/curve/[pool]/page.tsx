@@ -73,7 +73,7 @@ export default async function LaunchPage({ params }: Params) {
         </div>
       </div>
 
-      <TradePanel pool={l.pool} symbol={symbol} stockName={stockName} cluster={cluster()} />
+      <TradePanel pool={l.pool} symbol={symbol} stock={l.stock} stockName={stockName} cluster={cluster()} />
 
       <SiteSection label="This launch, from the chain">
         <div className="sp-truths">

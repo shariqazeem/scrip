@@ -36,10 +36,17 @@ export { launchNameProblem };
  *            routes USDC to the token directly.
  *   sell     the token back into the curve for the stock, which stays in the seller's wallet.
  *
- * When one transaction cannot carry it all (a long route), the same steps go as two under one
- * approval: the swap first, the curve second, each atomic. Nothing here holds or moves anything:
- * it describes what the wallet will be asked to sign.
+ * Every answer is ONE transaction, simulated against the wallet as it is now. When a step is too
+ * long for one (a launch with its first buy and a Jupiter route), the caller takes two separate
+ * approvals: the swap into the stock first, and only once it has landed, the curve, built for the
+ * stock really in the wallet. Two dependent transactions under one prompt made Phantom simulate
+ * the second against a wallet that did not yet hold the stock, so it warned "unsafe", and the time
+ * spent in those warnings let the first one's blockhash run out (10 October). Nothing here holds
+ * or moves anything: it describes what the wallet will be asked to sign.
  */
+
+/** What `assemble` answers when the steps do not fit in one transaction: the caller swaps first. */
+export const TOO_LONG = "too long for one transaction";
 
 export const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const MAX_TX_BYTES = 1_232;
@@ -81,63 +88,58 @@ function own(ixs: readonly TransactionInstruction[]): TransactionInstruction[] {
   return ixs.filter((ix) => !ix.programId.equals(ComputeBudgetProgram.programId));
 }
 
-/**
- * One transaction when it fits, else one per group, all on the owner's budget. The first is
- * simulated (the second depends on the first having landed, so the wallet checks it).
- */
-async function assemble(conn: Connection, owner: PublicKey, groups: readonly Group[], units: number): Promise<Outcome<{ txs: VersionedTransaction[]; simulated: boolean }>> {
+/** One transaction on the owner's budget, simulated first; `TOO_LONG` when it cannot fit with the wallet's headroom. */
+async function assemble(conn: Connection, owner: PublicKey, groups: readonly Group[], units: number, paysWith = "USDC"): Promise<Outcome<{ txs: VersionedTransaction[]; simulated: boolean }>> {
   const { blockhash } = await conn.getLatestBlockhash("confirmed");
-  const tables = (g: readonly Group[]) => {
-    const seen = new Set<string>();
-    return g.flatMap((x) => x.alts).filter((t) => (seen.has(t.key.toBase58()) ? false : (seen.add(t.key.toBase58()), true)));
-  };
-  const make = (g: readonly Group[], cu: number) =>
-    new VersionedTransaction(
+  const seen = new Set<string>();
+  const tables = groups.flatMap((x) => x.alts).filter((t) => (seen.has(t.key.toBase58()) ? false : (seen.add(t.key.toBase58()), true)));
+  let tx: VersionedTransaction;
+  try {
+    tx = new VersionedTransaction(
       new TransactionMessage({
         payerKey: owner,
         recentBlockhash: blockhash,
-        instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: cu }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: MICRO_LAMPORTS }), ...g.flatMap((x) => x.ixs)],
-      }).compileToV0Message(tables(g)),
+        instructions: [ComputeBudgetProgram.setComputeUnitLimit({ units: Math.min(1_400_000, units) }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: MICRO_LAMPORTS }), ...groups.flatMap((x) => x.ixs)],
+      }).compileToV0Message(tables),
     );
-  const fits = (tx: VersionedTransaction) => {
-    try {
-      return tx.serialize().length <= MAX_TX_BYTES - WALLET_HEADROOM_BYTES;
-    } catch {
-      return false;
-    }
-  };
-  let txs: VersionedTransaction[];
-  try {
-    const whole = make(groups, Math.min(1_400_000, units));
-    txs = fits(whole) || groups.length === 1 ? [whole] : groups.map((g) => make([g], Math.min(1_400_000, Math.ceil(units * 0.75))));
+    if (tx.serialize().length > MAX_TX_BYTES - WALLET_HEADROOM_BYTES) return held(TOO_LONG);
   } catch {
-    // A message too large to encode at all: one per group.
-    txs = groups.map((g) => make([g], Math.min(1_400_000, Math.ceil(units * 0.75))));
+    // compileToV0Message or serialize throws when the message cannot be encoded at all.
+    return held(TOO_LONG);
   }
-  if (!txs.every(fits)) return held("This does not fit in a Solana transaction. Try a smaller amount.");
   try {
-    const sim = await conn.simulateTransaction(txs[0]!, { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" });
+    const sim = await conn.simulateTransaction(tx, { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" });
     const refusal = readSimulation(sim.value.err, sim.value.logs);
     if (refusal) {
       if (refusal.kind === "sol") return held("This wallet needs a little more SOL for the network fee and the new accounts.");
-      if (refusal.kind === "usdc") return held("This wallet holds less USDC than that.");
+      if (refusal.kind === "usdc") return held(`This wallet holds less ${paysWith} than that.`);
       if (refusal.kind === "price") return held("The price moved before it could be checked. Try again.");
       return held(`The chain refused it in a dry run: ${refusal.detail}`);
     }
-    return ok({ txs, simulated: true });
+    return ok({ txs: [tx], simulated: true });
   } catch {
     // A simulation the RPC cannot run never blocks: the wallet still checks.
-    return ok({ txs, simulated: false });
+    return ok({ txs: [tx], simulated: false });
   }
 }
 
 export type Built = { readonly transactions: string[]; readonly simulated: boolean };
 const b64 = (txs: readonly VersionedTransaction[]) => txs.map((t) => Buffer.from(t.serialize()).toString("base64"));
 
+/** USDC into a curve stock, in the owner's own wallet: the first of two approvals when one transaction cannot carry a step. */
+export async function buildSwap(conn: Connection, input: { owner: PublicKey; stock: CurveStock; usdc: bigint }): Promise<Outcome<Built & { minOut: bigint }>> {
+  if (input.usdc <= 0n) return held("Choose an amount.");
+  const leg = await usdcIntoStock(conn, input.owner, input.stock, input.usdc);
+  if (!leg.ok) return leg;
+  const built = await assemble(conn, input.owner, [leg.value], 600_000);
+  if (!built.ok) return built;
+  return ok({ transactions: b64(built.value.txs), simulated: built.value.simulated, minOut: leg.value.minOut });
+}
+
 /** A launch on a Scrip Curve config. `mint` is the new token's address; its keypair stays in the browser. */
 export async function buildLaunch(
   conn: Connection,
-  input: { owner: PublicKey; stock: CurveStock; kind: CurveKind; config: string | null | undefined; table?: string | null; name: string; symbol: string; mint: PublicKey; site: string; firstUsdc?: bigint; firstStockRaw?: bigint },
+  input: { owner: PublicKey; stock: CurveStock; kind: CurveKind; config: string | null | undefined; table?: string | null; name: string; symbol: string; mint: PublicKey; site: string; firstStockRaw?: bigint },
 ): Promise<Outcome<Built & { pool: string; firstStockRaw: bigint }>> {
   const problem = launchNameProblem(input.name, input.symbol);
   if (problem) return held(problem);
@@ -145,13 +147,8 @@ export async function buildLaunch(
   if (!config) return held(`Scrip Curve is not open in ${nameOf(input.stock)} yet.`);
   const quoteMint = new PublicKey(curveQuote(input.stock).mint);
   const groups: Group[] = [];
-  let first = input.firstStockRaw ?? 0n;
-  if (!first && input.firstUsdc && input.firstUsdc > 0n) {
-    const leg = await usdcIntoStock(conn, input.owner, input.stock, input.firstUsdc);
-    if (!leg.ok) return leg;
-    groups.push(leg.value);
-    first = leg.value.minOut;
-  }
+  // Paid from stock the wallet already holds (the swap, when there is one, landed first).
+  const first = input.firstStockRaw ?? 0n;
   const name = input.name.trim();
   const symbol = input.symbol.trim().toUpperCase();
   const createPoolParam = {
@@ -181,7 +178,7 @@ export async function buildLaunch(
     return held(`The launch could not be built (${err instanceof Error ? err.message : String(err)}).`);
   }
   groups.push({ ixs: pool, alts: await curveTable(conn, input.table) });
-  const built = await assemble(conn, input.owner, groups, first > 0n ? 900_000 : 400_000);
+  const built = await assemble(conn, input.owner, groups, first > 0n ? 900_000 : 400_000, nameOf(input.stock));
   if (!built.ok) return built;
   return ok({
     transactions: b64(built.value.txs),
@@ -232,7 +229,7 @@ export async function buildBuy(conn: Connection, input: { owner: PublicKey; laun
     return held(`The buy could not be built (${err instanceof Error ? err.message : String(err)}).`);
   }
   groups.push({ ixs, alts: await curveTable(conn, input.table) });
-  const built = await assemble(conn, input.owner, groups, groups.length > 1 ? 700_000 : 300_000);
+  const built = await assemble(conn, input.owner, groups, groups.length > 1 ? 700_000 : 300_000, groups.length > 1 ? "USDC" : nameOf(launch.stock));
   if (!built.ok) return built;
   return ok({ transactions: b64(built.value.txs), simulated: built.value.simulated, tokensMin });
 }
@@ -262,7 +259,7 @@ export async function buildSell(conn: Connection, input: { owner: PublicKey; lau
     const q = dbc.pool.swapQuote2({ virtualPool, config, swapBaseForQuote: true, hasReferral: false, eligibleForFirstSwapWithMinFee: false, currentPoint, slippageBps: CURVE_SLIPPAGE_BPS, swapMode: SwapMode.ExactIn, amountIn: new BN(input.tokensRaw.toString()) });
     const stockMin = BigInt((q.minimumAmountOut ?? new BN(0)).toString());
     const tx = await dbc.pool.swap2({ owner: input.owner, pool: new PublicKey(launch.pool), swapBaseForQuote: true, referralTokenAccount: null, swapMode: SwapMode.ExactIn, amountIn: new BN(input.tokensRaw.toString()), minimumAmountOut: new BN(stockMin.toString()) });
-    const built = await assemble(conn, input.owner, [{ ixs: own(tx.instructions), alts: await curveTable(conn, input.table) }], 300_000);
+    const built = await assemble(conn, input.owner, [{ ixs: own(tx.instructions), alts: await curveTable(conn, input.table) }], 300_000, input.launch.symbol ?? "of this launch");
     if (!built.ok) return built;
     return ok({ transactions: b64(built.value.txs), simulated: built.value.simulated, stockMin });
   } catch (err) {

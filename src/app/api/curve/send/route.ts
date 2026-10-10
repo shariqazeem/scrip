@@ -36,13 +36,21 @@ export async function POST(req: NextRequest) {
   const required = tx.message.header.numRequiredSignatures;
   if (tx.signatures.slice(0, required).some((s) => s.every((b) => b === 0))) return NextResponse.json({ error: "The transaction is not fully signed." }, { status: 400 });
   const conn = connection();
+  const raw = tx.serialize();
+  // A wallet that takes longer than about a minute to approve hands back a transaction the
+  // network no longer accepts. Said in those words, because "blockhash" means nothing to a person.
+  const expired = "Your wallet took longer than about a minute to approve, and the network only accepts a signed transaction for about that long. Nothing moved: press the button again and approve within a minute.";
   try {
-    const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
+    const sig = await conn.sendRawTransaction(raw, { skipPreflight: false, maxRetries: 0 });
     const height = await conn.getBlockHeight("confirmed");
-    const confirmed = await confirmSignature(conn, sig, height + 150);
-    if (!confirmed.ok) return NextResponse.json({ error: `${confirmed.why} Nothing moved.` }, { status: 422 });
+    // The same signed bytes again while the network has not seen them: a dropped transaction is
+    // never reported, and this is the only way it still lands inside its minute.
+    const confirmed = await confirmSignature(conn, sig, height + 150, "confirmed", () => conn.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }));
+    if (!confirmed.ok) return NextResponse.json({ error: /expired/.test(confirmed.why) ? expired : `${confirmed.why} Nothing moved.` }, { status: 422 });
     return NextResponse.json({ signature: sig });
   } catch (err) {
-    return NextResponse.json({ error: `Refused (${err instanceof Error ? err.message.slice(0, 200) : String(err)}).` }, { status: 422 });
+    const why = err instanceof Error ? err.message : String(err);
+    if (/blockhash not found|BlockhashNotFound|block height exceeded/i.test(why)) return NextResponse.json({ error: expired }, { status: 422 });
+    return NextResponse.json({ error: `Refused (${why.slice(0, 200)}).` }, { status: 422 });
   }
 }

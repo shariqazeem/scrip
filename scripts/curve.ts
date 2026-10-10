@@ -317,9 +317,15 @@ async function main() {
       if (!name || !symbol) throw new Error("--name and --symbol are required.");
       const payer = loadKeypair();
       const mint = Keypair.generate();
-      const firstStockRaw = flag("first-buy-quote") ? BigInt(Math.round(Number(flag("first-buy-quote")) * 10 ** curveQuote(stock).decimals)) : undefined;
-      const firstUsdc = Number(flag("first-buy-usd") ?? "0") > 0 ? BigInt(Math.round(Number(flag("first-buy-usd")) * 1e6)) : undefined;
-      const built = await build.buildLaunch(conn, { owner: payer.publicKey, stock, kind, config: deployed.configs[stock]?.[kind]?.address, table: deployed.lookupTable, name, symbol, mint: mint.publicKey, site: process.env.NEXT_PUBLIC_SITE_URL?.replace(/"/g, "") || "https://scrip.work", firstStockRaw, firstUsdc });
+      let firstStockRaw = flag("first-buy-quote") ? BigInt(Math.round(Number(flag("first-buy-quote")) * 10 ** curveQuote(stock).decimals)) : undefined;
+      if (!firstStockRaw && Number(flag("first-buy-usd") ?? "0") > 0) {
+        // The site's order: the swap lands first, then the launch buys with the stock it delivered.
+        const swap = await build.buildSwap(conn, { owner: payer.publicKey, stock, usdc: BigInt(Math.round(Number(flag("first-buy-usd")) * 1e6)) });
+        if (!swap.ok) throw new Error(swap.why);
+        await sendBuilt(swap.value.transactions, [payer], `swap $${flag("first-buy-usd")} of USDC into ${stock}`);
+        firstStockRaw = swap.value.minOut;
+      }
+      const built = await build.buildLaunch(conn, { owner: payer.publicKey, stock, kind, config: deployed.configs[stock]?.[kind]?.address, table: deployed.lookupTable, name, symbol, mint: mint.publicKey, site: process.env.NEXT_PUBLIC_SITE_URL?.replace(/"/g, "") || "https://scrip.work", firstStockRaw });
       if (!built.ok) throw new Error(built.why);
       const sigs = await sendBuilt(built.value.transactions, [payer, mint], `launch ${name} (${symbol}), priced in ${stock}${built.value.firstStockRaw > 0n ? `, with a first buy of ${unitsOf(stock, built.value.firstStockRaw)}` : ""}`);
       console.log(`pool ${built.value.pool}, mint ${mint.publicKey.toBase58()}`);
@@ -337,7 +343,13 @@ async function main() {
       const stockRaw = flag("quote") ? BigInt(Math.round(Number(flag("quote")) * 10 ** curveQuote(launch.stock).decimals)) : undefined;
       const usdc = Number(flag("usd") ?? "0") > 0 ? BigInt(Math.round(Number(flag("usd")) * 1e6)) : undefined;
       if (!stockRaw && !usdc) throw new Error("--usd <USDC to spend> or --quote <stock to spend> is required.");
-      const built = await build.buildBuy(conn, { owner: payer.publicKey, launch, table: deployed.lookupTable, usdc, stockRaw });
+      let built = await build.buildBuy(conn, { owner: payer.publicKey, launch, table: deployed.lookupTable, usdc, stockRaw });
+      if (!built.ok && built.why === build.TOO_LONG && usdc) {
+        const swap = await build.buildSwap(conn, { owner: payer.publicKey, stock: launch.stock, usdc });
+        if (!swap.ok) throw new Error(swap.why);
+        await sendBuilt(swap.value.transactions, [payer], `swap $${flag("usd")} of USDC into ${launch.stock}`);
+        built = await build.buildBuy(conn, { owner: payer.publicKey, launch, table: deployed.lookupTable, stockRaw: swap.value.minOut });
+      }
       if (!built.ok) throw new Error(built.why);
       await sendBuilt(built.value.transactions, [payer], `buy ${launch.symbol ?? launch.pool.slice(0, 6)} (at least ${built.value.tokensMin} base units)`);
       return;

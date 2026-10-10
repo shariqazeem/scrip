@@ -16,14 +16,14 @@ const units = (raw: string | null | undefined, decimals: number, dp: number) => 
  * token, one approval), sell back into the curve for the stock, which stays in the seller's
  * wallet. Balances and the fee are read from the chain after every trade, never assumed.
  */
-export function TradePanel({ pool, symbol, stockName, cluster }: { pool: string; symbol: string; stockName: string; cluster: string }) {
+export function TradePanel({ pool, symbol, stock, stockName, cluster }: { pool: string; symbol: string; stock: string; stockName: string; cluster: string }) {
   const { wallets, connected, choose } = useCurveWallet();
   const [tab, setTab] = useState<"buy" | "sell">("buy");
   const [usd, setUsd] = useState<number>(25);
   const [other, setOther] = useState("");
   const [share, setShare] = useState<number>(100);
   const [live, setLive] = useState<Live | null>(null);
-  const [phase, setPhase] = useState<"idle" | "wallet" | "building" | "signing">("idle");
+  const [phase, setPhase] = useState<"idle" | "wallet" | "swapping" | "building" | "signing">("idle");
   const [why, setWhy] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const owner = connected?.account.address ?? null;
@@ -42,34 +42,64 @@ export function TradePanel({ pool, symbol, stockName, cluster }: { pool: string;
   const tokens = live?.tokensRaw ? BigInt(live.tokensRaw) : 0n;
   const sellRaw = (tokens * BigInt(share)) / 100n;
 
+  /** POST to the builder: the transactions, a request to swap first, or why not. */
+  const ask = async (body: Record<string, unknown>): Promise<{ ok: true; j: Record<string, unknown> } | { ok: false; swapFirst: boolean; why: string }> => {
+    try {
+      const res = await fetch("/api/curve/tx", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (res.status === 409 && j.swapFirst) return { ok: false, swapFirst: true, why: "" };
+      if (!res.ok || !Array.isArray(j.transactions)) return { ok: false, swapFirst: false, why: typeof j.error === "string" ? j.error : "It could not be built." };
+      return { ok: true, j };
+    } catch {
+      return { ok: false, swapFirst: false, why: "The network dropped the request. Nothing was sent." };
+    }
+  };
+
+  /**
+   * A buy in USDC that one transaction cannot carry is two approvals: the swap into the stock lands
+   * first, then the buy is built for the stock really in the wallet, so each one checks clean in
+   * the wallet. Never two dependent transactions under one prompt.
+   */
   const go = async (c: Connected | null) => {
     setWhy(null);
     setDone(null);
     if (!c) return setPhase("wallet");
     if (tab === "sell" && sellRaw <= 0n) return setWhy(`This wallet holds no ${symbol}.`);
     setPhase("building");
-    const body = tab === "buy" ? { action: "buy", owner: c.account.address, pool, usd } : { action: "sell", owner: c.account.address, pool, tokens: sellRaw.toString() };
-    let res: Response;
-    try {
-      res = await fetch("/api/curve/tx", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-    } catch {
-      setPhase("idle");
-      return setWhy("The network dropped the request. Nothing was sent.");
+    let built = await ask(tab === "buy" ? { action: "buy", owner: c.account.address, pool, usd } : { action: "sell", owner: c.account.address, pool, tokens: sellRaw.toString() });
+    if (!built.ok && built.swapFirst) {
+      setPhase("swapping");
+      const swap = await ask({ action: "swap", owner: c.account.address, stock, usd });
+      if (!swap.ok) {
+        setPhase("idle");
+        return setWhy(swap.why);
+      }
+      const sent = await signAndRelay(c, cluster, swap.j.transactions as string[]);
+      if (!sent.ok) {
+        setPhase("idle");
+        return setWhy(sent.why || null);
+      }
+      setPhase("building");
+      built = await ask({ action: "buy", owner: c.account.address, pool, stockRaw: String(swap.j.minOut) });
+      if (!built.ok) {
+        setPhase("idle");
+        await refresh();
+        return setWhy(`${built.why} Your $${usd} is ${stockName} in your wallet now.`);
+      }
     }
-    const j = (await res.json().catch(() => ({}))) as { transactions?: string[]; error?: string };
-    if (!res.ok || !j.transactions) {
+    if (!built.ok) {
       setPhase("idle");
-      return setWhy(j.error ?? "It could not be built.");
+      return setWhy(built.why);
     }
     setPhase("signing");
-    const sent = await signAndRelay(c, cluster, j.transactions);
+    const sent = await signAndRelay(c, cluster, built.j.transactions as string[]);
     setPhase("idle");
-    if (!sent.ok) return setWhy(sent.why || (sent.signatures.length > 0 ? `Your USDC became ${stockName}, which is in your wallet; the buy itself did not land.` : null));
-    setDone(tab === "buy" ? `Bought. ${symbol} is in your wallet.` : `Sold. The ${stockName} is in your wallet.`);
     await refresh();
+    if (!sent.ok) return setWhy(sent.why || null);
+    setDone(tab === "buy" ? `Bought. ${symbol} is in your wallet.` : `Sold. The ${stockName} is in your wallet.`);
   };
 
-  const busy = phase === "building" || phase === "signing";
+  const busy = phase === "swapping" || phase === "building" || phase === "signing";
   return (
     <div className="sp-cv-trade">
       <div className="sp-cv-tabs" role="tablist" aria-label="Buy or sell">
@@ -169,7 +199,7 @@ export function TradePanel({ pool, symbol, stockName, cluster }: { pool: string;
       {done ? <p className="sp-cv-done">{done}</p> : null}
 
       <button type="button" className="sp-btn is-primary" disabled={busy} onClick={() => go(connected)}>
-        {phase === "building" ? "Preparing…" : phase === "signing" ? "Waiting for your wallet…" : !connected ? "Connect a wallet" : tab === "buy" ? `Buy $${usd} of ${symbol}` : `Sell ${share}% of your ${symbol}`}
+        {phase === "swapping" ? `1 of 2: $${usd} into ${stockName}…` : phase === "building" ? "Preparing…" : phase === "signing" ? "Waiting for your wallet…" : !connected ? "Connect a wallet" : tab === "buy" ? `Buy $${usd} of ${symbol}` : `Sell ${share}% of your ${symbol}`}
       </button>
     </div>
   );
