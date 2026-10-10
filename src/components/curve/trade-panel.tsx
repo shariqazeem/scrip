@@ -20,6 +20,7 @@ export function TradePanel({ pool, symbol, stockName, cluster }: { pool: string;
   const { wallets, connected, choose } = useCurveWallet();
   const [tab, setTab] = useState<"buy" | "sell">("buy");
   const [usd, setUsd] = useState<number>(25);
+  const [other, setOther] = useState("");
   const [share, setShare] = useState<number>(100);
   const [live, setLive] = useState<Live | null>(null);
   const [phase, setPhase] = useState<"idle" | "wallet" | "building" | "signing">("idle");
@@ -83,10 +84,32 @@ export function TradePanel({ pool, symbol, stockName, cluster }: { pool: string;
         <>
           <div className="sp-cv-amounts">
             {BUYS.map((a) => (
-              <button key={a} type="button" className={`sp-cv-amount${usd === a ? " is-on" : ""}`} onClick={() => setUsd(a)}>
+              <button
+                key={a}
+                type="button"
+                className={`sp-cv-amount${usd === a && !other ? " is-on" : ""}`}
+                onClick={() => {
+                  setUsd(a);
+                  setOther("");
+                }}
+              >
                 ${a}
               </button>
             ))}
+            <input
+              className="sp-cv-input mono"
+              style={{ width: 120, height: 40 }}
+              aria-label="Another amount, in dollars"
+              inputMode="decimal"
+              placeholder="$ other"
+              value={other}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9.]/g, "");
+                setOther(raw);
+                const v = Number(raw);
+                if (Number.isFinite(v) && v > 0) setUsd(Math.min(10_000, v));
+              }}
+            />
           </div>
           <p className="sp-cv-note">
             Paid in USDC. Jupiter turns it into {stockName}, which buys {symbol}{live && !live.migrated ? ` at the fee now, ${(live.feeBps / 100).toFixed(2)}%` : ""}.
