@@ -53,20 +53,25 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
           Saves made before someone joins are never matched. You can end a Plan whenever nobody is left in it and take back what is unspent; a match
           already paid is never taken back. <Link href="/app/org/plans">Start a Plan</Link>
         </p>
-        {live && live.plans > 0 ? (
-          <div className="sp-truths">
+        <div className="sp-truths">
+          {live && live.plans > 0 ? (
             <Row k="On Solana mainnet, read now">
               {live.plans} Plan{live.plans === 1 ? "" : "s"}, {live.members} member{live.members === 1 ? "" : "s"}, {live.matches} match{live.matches === 1 ? "" : "es"} paid,{" "}
               {usdc(live.matchedUsdc)} added in stock. <Link href="/ledger">Every receipt</Link>
             </Row>
-            {live.matches > 0 ? (
-              <Row k="What a match looks like">
-                The first one on mainnet, in green on the save&rsquo;s own receipt, linked to its own transaction. It was Scrip&rsquo;s own test wallet,
-                matched by its founder&rsquo;s Plan. <Link href={`/receipt/${FIRST_MATCH_RECEIPT}`}>Open the receipt</Link>
-              </Row>
-            ) : null}
-          </div>
-        ) : null}
+          ) : null}
+          {live && live.matches > 0 ? (
+            <Row k="What a match looks like">
+              The first one on mainnet, in green on the save&rsquo;s own receipt, linked to its own transaction. It was Scrip&rsquo;s own test wallet,
+              matched by its founder&rsquo;s Plan. <Link href={`/receipt/${FIRST_MATCH_RECEIPT}`}>Open the receipt</Link>
+            </Row>
+          ) : null}
+          <Row k="Plans funded by launches">
+            Scrip&rsquo;s own Plans, one each in the Nasdaq 100, the S&amp;P 500, Tesla and Nvidia, are funded by Scrip Curve: the savers&rsquo; share of
+            every trading fee on a launch priced in that stock goes from Meteora&rsquo;s curve straight into the Plan&rsquo;s escrow.{" "}
+            <Link href="/curve">Scrip Curve</Link>
+          </Row>
+        </div>
       </SiteSection>
       <SiteSection label="Or pay part of their pay in stock">
         <div className="sp-truths">

@@ -40,7 +40,7 @@ const SITE = siteUrl();
  */
 const TITLE = "Scrip — your income invests itself";
 const DESCRIPTION =
-  "Scrip turns part of the USDC in your Solana wallet into stocks you own, such as the S&P 500, Nvidia and Apple, with one signature and a public receipt read from the chain. Say yes once, and a slice of every USDC payment into that wallet is saved the same way, by itself, in the same wallet.";
+  "Scrip turns money moving on Solana into stocks people own. Say yes once, and a slice of every USDC payment into your wallet becomes stock such as the Nasdaq 100 or the S&P 500, by itself, in the same wallet, with a public receipt read from the chain. Whoever pays you can match it with a Plan the program enforces, and every token launched on Scrip Curve, priced in a stock on Meteora, pays a share of its trading fees into those matches.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Row, SiteFrame, SiteSection } from "@/components/site/site-frame";
 
-export const metadata: Metadata = { title: "Company", description: "Scrip is where income becomes ownership. The manifesto, the seven firsts, and who builds this." };
+export const metadata: Metadata = { title: "Company", description: "Scrip is where income becomes ownership: every payment, whoever pays you, and every launch on Scrip Curve. The manifesto, the eight firsts, and who builds this." };
 
 const FIRSTS = [
   ["A stock can be paid", "Pay in stock; the rule", "/teams"],
@@ -12,15 +12,16 @@ const FIRSTS = [
   ["A stock can arrive before the opening bell", "The clock on the floor", "/#floor"],
   ["A stock can be given, and claimed into any wallet", "Claim links", "/teams"],
   ["A stock can prove it was kept", "Keep-rate on chain", "/docs/keep-rate"],
+  ["A stock can price a launch whose fees pay savers", "Scrip Curve", "/curve"],
 ] as const;
 
 export default function CompanyPage() {
   return (
-    <SiteFrame eyebrow="Company" title="Scrip is where income becomes ownership." lede="Since the first stock exchange, being paid in ownership was for employees of public companies with brokerage accounts. Now a stock is a token that can be paid, ruled, given, vested and remembered like money.">
+    <SiteFrame eyebrow="Company" title="Scrip is where income becomes ownership." lede="Since the first stock exchange, being paid in ownership was for employees of public companies with brokerage accounts. Now a stock is a token that can be paid, ruled, given, vested, matched and remembered like money, and even price a launch whose fees go to savers.">
       <SiteSection label="The name">
         <p className="sp-body">A scrip is a certificate entitling its holder to shares, and “paid in scrip” is the old phrase for being paid in something other than cash. There is no better word for a company where income becomes stock certificates.</p>
       </SiteSection>
-      <SiteSection label="The seven firsts" aside="each one on the floor">
+      <SiteSection label="The eight firsts" aside="each one on Solana">
         <div className="sp-truths">
           {FIRSTS.map(([first, where, href], i) => (
             <Row key={first} k={`0${i + 1}`}>
@@ -30,13 +31,13 @@ export default function CompanyPage() {
         </div>
       </SiteSection>
       <SiteSection label="What it is not">
-        <p className="sp-body">Not a trading terminal, a robo-advisor, a lender, a card, a social feed, a launchpad, or a brokerage. It gives no advice. It never decides amounts: the rate is the owner&rsquo;s, the price is Jupiter&rsquo;s route bounded by Pyth, the timing is arrival.</p>
+        <p className="sp-body">Not a trading terminal, a robo-advisor, a lender, a card, a social feed, or a brokerage. It gives no advice. It never decides amounts: the rate is the owner&rsquo;s, the price is Jupiter&rsquo;s route bounded by Pyth, the timing is arrival. Scrip Curve launches tokens, and there too Scrip decides nothing about a price; it only says where the fees go.</p>
       </SiteSection>
       <SiteSection label="Who builds this">
         <p className="sp-body">Shariq. The founder&rsquo;s own rule runs on the wallet he is paid to, and Scrip pays its own bounties in stock through <Link href="/@scrip" className="sp-inline-link">@scrip</Link>. Every payment Scrip makes is on that page, labelled as Scrip&rsquo;s.</p>
       </SiteSection>
       <SiteSection label="Where it goes">
-        <p className="sp-body">Rules on income. A stock slice is the first rule; the same standing instruction later routes a slice into a mix, a reserve or a set-aside, for a person, a grant program or an agent&rsquo;s treasury. Each step is the rule with one more destination, never a new product.</p>
+        <p className="sp-body">Rules on income. A stock slice is the first rule; the same standing instruction later routes a slice into a mix, a reserve or a set-aside, for a person, a grant program or an agent&rsquo;s treasury. Each step is the rule with one more destination, never a new product. Beyond income, any money already moving on Solana can become somebody&rsquo;s savings: Plans match what people save, and Scrip Curve sends a share of every launch&rsquo;s trading fees into those Plans.</p>
       </SiteSection>
       <div className="sp-hero-cta">
         <Link href="/security" className="sp-btn">

@@ -15,6 +15,7 @@ import { liveView } from "@/lib/book/live";
 import { resolveHandle } from "@/lib/book/read-book";
 import { db } from "@/lib/db";
 import { books } from "@/lib/db/schema";
+import { curveCounts } from "@/lib/curve/read";
 import { bps, unitsFromRaw, usdc } from "@/lib/format";
 import { validateSlug } from "@/lib/handle";
 import { type ReceiptRow, keepRate } from "@/lib/keep-rate";
@@ -32,7 +33,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Proof",
-  description: "Scrip on Solana mainnet, read from the chain: the front book printing, the last automatic save replayed instruction by instruction, every receipt and how much of it is still held.",
+  description: "Scrip on Solana mainnet, read from the chain: the front book printing, the last automatic save replayed instruction by instruction, the Plans that match it, Scrip Curve's launches whose fees fund the matches, every receipt and how much of it is still held.",
 };
 
 /**
@@ -48,7 +49,7 @@ export const metadata = {
  */
 export default async function ProofPage() {
   const site = siteUrl();
-  const [totals, recent, rows, floor, front] = await Promise.all([ledgerTotals(), recentReceipts(24), allReceiptRows(), floorView(), frontBook()]);
+  const [totals, recent, rows, floor, front, curve] = await Promise.all([ledgerTotals(), recentReceipts(24), allReceiptRows(), floorView(), frontBook(), curveCounts()]);
   // "Within seconds" is true while a price the program would accept exists, and false on a
   // Saturday. Read it, rather than promise it: null (unknown) promises no timing at all.
   // Whether an arrival on the front book would become stock now: on chain, or from a price Scrip's
@@ -106,6 +107,7 @@ export default async function ProofPage() {
     { n: "05", title: "It arrives before the opening bell", body: floor.slept.total > 0 ? `${bps(floor.slept.bps)} of arrivals here settled while the NYSE was shut. When no price can be verified, at a weekend, an arrival waits in the wallet instead of converting on a guess.` : "The NYSE keeps hours; Solana does not. The floor counts every arrival that settled while the exchange was shut.", href: "#floor", go: "The clock on the floor" },
     { n: "06", title: "It can be given", body: "A first share can be sent to someone who has never held one. They claim it into their own wallet, and a receipt says who gave it and why.", href: latestGift ? `/receipt/${latestGift.sig}` : payHref, go: latestGift ? "The latest first share" : "Give a first share" },
     { n: "07", title: "It proves it was kept", body: "Keep-rate is measured on chain at 7 and 30 days from raw units, by anyone. It cannot be faked.", href: "/ledger", go: floor.keepRate7 ? `${bps(floor.keepRate7.bps)} kept at 7 days` : "The ledger" },
+    { n: "08", title: "It prices a launch that pays savers", body: "A token launched on Scrip Curve is priced in a stock on Meteora. Every buy pays in the stock, and the savers' share of every trading fee goes to a Plan that adds it to automatic saves.", href: "/curve", go: curve && curve.launches > 0 ? `${curve.launches} launch${curve.launches === 1 ? "" : "es"} on chain` : "Scrip Curve" },
   ];
   const sendUsd = front ? Math.max(5, Math.ceil(Number(MIN_SLICE) / 1e6 / Math.max(front.rateNowBps, 1) / 1e-4)) : 5;
   const onMainnet = cluster() === "mainnet-beta";
@@ -122,6 +124,9 @@ export default async function ProofPage() {
           </Link>
           <Link href="/teams" className="sp-nav-link">
             For teams
+          </Link>
+          <Link href="/curve" className="sp-nav-link">
+            Launches
           </Link>
           <Link href="/ledger" className="sp-nav-link">
             Ledger
@@ -157,7 +162,8 @@ export default async function ProofPage() {
             */}
             <p className="sp-lede">
               How Scrip works, as it happens on Solana mainnet: a rule on a wallet, the slice saved within seconds, a Pyth price
-              the program checks, and a receipt anyone can open, measured at 7 and 30 days.
+              the program checks, a receipt anyone can open, measured at 7 and 30 days, the Plans that match it, and the launches on
+              Scrip Curve whose fees fund the matches.
             </p>
             <div className="sp-hero-cta">
               <Link href="/" className="sp-btn is-primary">
@@ -265,10 +271,10 @@ export default async function ProofPage() {
         </Reveal>
       </section>
 
-      {/* ── the seven firsts: what a stock could never do before, each linked to where it happened ── */}
+      {/* ── the eight firsts: what a stock could never do before, each linked to where it happened ── */}
       <section className="sp-sec">
         <p className="sp-kicker">What a stock could never do before</p>
-        <h2 className="sp-h2">Seven things a brokerage share never did, each one on the floor today.</h2>
+        <h2 className="sp-h2">Eight things a brokerage share never did, each one on Solana today.</h2>
         <Reveal className="sp-sevens">
           {sevens.map((f) => (
             <Link key={f.n} href={f.href} className="sp-seven">

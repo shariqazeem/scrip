@@ -38,6 +38,7 @@ const MENU = [
   { href: "/app/save", label: "Save once" },
   { href: "/app", label: "Your savings" },
   { href: "/teams", label: "For teams" },
+  { href: "/curve", label: "Launches" },
   { href: "/proof", label: "Proof" },
   { href: "/security", label: "Security" },
   { href: "/docs", label: "Docs" },

@@ -31,7 +31,7 @@ function units(raw: bigint | null | undefined, decimals = 8): string {
 }
 
 /**
- * /CURVE — Scrip Curve, the Meteora entry, off the main nav: launch a token priced in a stock on
+ * /CURVE — Scrip Curve, "Launches" on every nav since 10 October: launch a token priced in a stock on
  * Meteora's Dynamic Bonding Curve, from this site, and every launch's partner fee goes into a
  * Scrip Plan in the same stock that matches savers' automatic saves. The page reads the launches
  * (every pool on a Scrip Curve config, anyone's), the Plans and every fee transfer from the chain,

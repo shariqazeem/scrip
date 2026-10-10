@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, Ellipsis, FileText, HandCoins, House, Layers, PiggyBank, Receipt, ScrollText, Send, Settings, ShieldCheck, SlidersHorizontal, Wallet, X } from "lucide-react";
+import { BookOpen, Ellipsis, FileText, HandCoins, House, Layers, PiggyBank, Receipt, Rocket, ScrollText, Send, Settings, ShieldCheck, SlidersHorizontal, Wallet, X } from "lucide-react";
 import { ScripMark } from "@/components/brand/scrip-mark";
 import { useSession } from "@/lib/session/use-session";
 import { short } from "@/lib/format";
@@ -14,8 +14,8 @@ import { short } from "@/lib/format";
  *
  * TWO GROUPS. YOUR SAVINGS is everything a saver does: the first screen, saving now, saving
  * every payment, the receipts, the stocks, the statements, the settings, and paying someone
- * in stock. PUBLIC is what anyone can open without an account: the proof (the floor, the
- * keepers and the rest of the machine), the ledger and the docs.
+ * in stock. PUBLIC is what anyone can open without an account: Scrip Curve's launches, whose
+ * fees match savers, the proof (the floor and the rest of the machine), the ledger and the docs.
  *
  * ON A PHONE the rail is a bottom bar of FIVE labelled tabs: Home, Save, Every payment,
  * Receipts, and More, which opens the rest. Eleven bare icons in 375 px was a row nobody
@@ -42,6 +42,7 @@ const NAV = [
   {
     group: "Public",
     items: [
+      { href: "/curve", label: "Launches", phone: null, Icon: Rocket },
       { href: "/proof", label: "Proof", phone: null, Icon: ShieldCheck },
       { href: "/ledger", label: "Ledger", phone: null, Icon: ScrollText },
       { href: "/docs", label: "Docs", phone: null, Icon: BookOpen },

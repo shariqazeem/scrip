@@ -8,6 +8,8 @@ export const JUMP_PAGES: ReadonlyArray<readonly [href: string, name: string, wha
   ["/", "Save", "part of the USDC you were paid, into a stock, now"],
   ["/proof", "Proof", "how Scrip works, every number read from the chain"],
   ["/teams", "Teams", "pay people in stock, and add to what they save"],
+  ["/curve", "Launches", "Scrip Curve: tokens priced in a stock, whose fees match savers"],
+  ["/curve/launch", "Launch", "a token priced in a stock, from your own wallet"],
   ["/app", "Your savings", "what you own, and your next step"],
   ["/app/save", "Save now", "turn some USDC into a stock, inside the app"],
   ["/app/rule", "Every payment", "how much of every payment is saved, by itself"],

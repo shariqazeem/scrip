@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Scrip",
     short_name: "Scrip",
-    description: "A rule on your wallet: a slice of every dollar that lands becomes stock, in the same wallet, with a receipt.",
+    description: "Stocks you own, from money already moving: a slice of every payment, matched by whoever pays you and by launches on Scrip Curve.",
     start_url: "/app",
     display: "standalone",
     background_color: "#f7f5ef",

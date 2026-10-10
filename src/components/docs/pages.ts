@@ -9,4 +9,5 @@ export const DOC_PAGES = [
   { href: "/docs/receipts", label: "Receipts" },
   { href: "/docs/keep-rate", label: "Keep-rate" },
   { href: "/docs/corporate-actions", label: "Corporate actions" },
+  { href: "/docs/scrip-curve", label: "How a launch pays savers" },
 ] as const;

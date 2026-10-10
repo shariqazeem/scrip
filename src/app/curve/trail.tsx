@@ -1,5 +1,5 @@
 import { ArrowDown } from "lucide-react";
-import "./curve.css";
+import "./trail.css";
 
 /**
  * THE MONEY TRAIL, DRAWN — the three places a launch fee passes through, in order, with the

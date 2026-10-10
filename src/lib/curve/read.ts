@@ -54,6 +54,19 @@ export function readCurve(): Read {
   return fresh;
 }
 
+/**
+ * Scrip Curve in one line, for the pages that mention it beside the rest of Scrip: how many
+ * launches are on chain, how many graduated, and how many fees reached a Plan. Null when the
+ * chain could not be read, so a page says nothing rather than a zero that means "unknown".
+ */
+export type CurveCounts = { readonly launches: number; readonly graduated: number; readonly fees: number };
+export async function curveCounts(): Promise<CurveCounts | null> {
+  const read = readCurve();
+  const [plans, launches] = await Promise.all([read.plans, read.launches]);
+  if (launches.length === 0 && plans.length === 0) return null;
+  return { launches: launches.length, graduated: launches.filter((l) => l.migrated).length, fees: plans.reduce((n, p) => n + p.inflows.length, 0) };
+}
+
 async function readPlans(): Promise<CurvePlanView[]> {
   const out: CurvePlanView[] = [];
   for (const stock of CURVE_STOCKS) {

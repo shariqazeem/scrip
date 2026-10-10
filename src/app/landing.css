@@ -1052,6 +1052,7 @@
 .sp-sevens.is-in .sp-seven:nth-child(5) { transition-delay: 280ms; }
 .sp-sevens.is-in .sp-seven:nth-child(6) { transition-delay: 350ms; }
 .sp-sevens.is-in .sp-seven:nth-child(7) { transition-delay: 420ms; }
+.sp-sevens.is-in .sp-seven:nth-child(8) { transition-delay: 490ms; }
 .sp-seven .n {
   font-family: var(--font-mono);
   font-size: var(--fs-caption);

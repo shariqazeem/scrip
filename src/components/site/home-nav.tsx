@@ -5,8 +5,9 @@ import "@/app/front.css";
 
 /**
  * THE PUBLIC NAV, ON PAPER — on the front page and every page a stranger reads. Scrip, For
- * teams, Proof, the way into your savings, and the one primary action, Start saving. On a phone:
- * the mark, your savings, and a menu for the rest. The dark floor's nav lives only on /proof.
+ * teams, Launches (Scrip Curve), Proof, the way into your savings, and the one primary action,
+ * Start saving. On a phone: the mark, your savings, and a menu for the rest. The dark floor's nav
+ * lives only on /proof.
  *
  * On the front door itself the start is the hero, already on the screen, so the nav does not
  * repeat it; elsewhere it opens the front door at its top, never a scroll to an anchor.
@@ -20,6 +21,9 @@ export function HomeNav({ front = false }: { front?: boolean } = {}) {
       <span className="sp-home-nav-spacer" />
       <Link href="/teams" className="sp-home-nav-link is-wide">
         For teams
+      </Link>
+      <Link href="/curve" className="sp-home-nav-link is-wide">
+        Launches
       </Link>
       <Link href="/proof" className="sp-home-nav-link is-wide">
         Proof
