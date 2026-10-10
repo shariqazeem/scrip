@@ -43,17 +43,20 @@ export function useCurveWallet(): { wallets: readonly Sendable[]; connected: Con
   return { wallets, connected, choose };
 }
 
-/** Sign every transaction in one prompt, add `extra`'s signature where it is required, send each in order. */
-export async function signAndRelay(c: Connected, cluster: string, transactions: readonly string[], extra?: Keypair): Promise<{ ok: true; signatures: string[] } | { ok: false; why: string; signatures: string[] }> {
+/**
+ * Sign every transaction in one prompt, add each `extra` key's signature where it is required (a
+ * launch's mint; a graduation's two position NFT mints), send each in order.
+ */
+export async function signAndRelay(c: Connected, cluster: string, transactions: readonly string[], extra?: Keypair | readonly Keypair[]): Promise<{ ok: true; signatures: string[] } | { ok: false; why: string; signatures: string[] }> {
   const signed = await signAll(c.wallet, c.account, transactions.map(fromBase64), cluster);
   if (!signed.ok) return { ok: false, why: signed.why, signatures: [] };
+  const extras = extra ? (Array.isArray(extra) ? extra : [extra]) : [];
   const signatures: string[] = [];
   for (const bytes of signed.value) {
     const tx = VersionedTransaction.deserialize(bytes);
-    if (extra) {
-      const signers = tx.message.staticAccountKeys.slice(0, tx.message.header.numRequiredSignatures);
-      if (signers.some((k) => k.equals(extra.publicKey))) tx.sign([extra]);
-    }
+    const signers = tx.message.staticAccountKeys.slice(0, tx.message.header.numRequiredSignatures);
+    const mine = extras.filter((k) => signers.some((s) => s.equals(k.publicKey)));
+    if (mine.length > 0) tx.sign(mine);
     let res: Response;
     try {
       res = await fetch("/api/curve/send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ transactionBase64: toBase64(tx.serialize()) }) });

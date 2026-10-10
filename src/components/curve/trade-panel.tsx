@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Keypair } from "@solana/web3.js";
 import { walletBrowseLinks } from "@/components/save/wallets";
 import { type Connected, signAndRelay, useCurveWallet } from "./wallet-flow";
 
@@ -14,9 +16,16 @@ const units = (raw: string | null | undefined, decimals: number, dp: number) => 
 /**
  * BUY OR SELL A LAUNCH — buy with USDC (Jupiter turns it into the stock, the stock buys the
  * token, one approval), sell back into the curve for the stock, which stays in the seller's
- * wallet. Balances and the fee are read from the chain after every trade, never assumed.
+ * wallet. Balances and the fee are read from the chain after every trade, never assumed, and the
+ * page around it (the progress to graduation, what waits for savers) is re-read the moment a
+ * trade lands or the curve changes, so nobody has to reload to see 100%.
+ *
+ * A FULL CURVE cannot be traded: it graduates. Meteora's own service graduates a stock-priced
+ * curve worth $750 or more by itself; a smaller one (a demonstration) waits for anyone to do it,
+ * so the panel offers exactly that, in one approval, instead of a buy that would be refused.
  */
-export function TradePanel({ pool, symbol, stock, stockName, cluster }: { pool: string; symbol: string; stock: string; stockName: string; cluster: string }) {
+export function TradePanel({ pool, symbol, stock, stockName, cluster, kind, full }: { pool: string; symbol: string; stock: string; stockName: string; cluster: string; kind: "public" | "demonstration"; full: boolean }) {
+  const router = useRouter();
   const { wallets, connected, choose } = useCurveWallet();
   const [tab, setTab] = useState<"buy" | "sell">("buy");
   const [usd, setUsd] = useState<number>(25);
@@ -39,6 +48,16 @@ export function TradePanel({ pool, symbol, stock, stockName, cluster }: { pool: 
     return () => clearInterval(t);
   }, [refresh]);
 
+  // The curve moved (anyone's trade, a graduation by Meteora or by someone else): re-read the page.
+  const seen = useRef<string | null>(null);
+  useEffect(() => {
+    if (!live) return;
+    const key = `${live.quoteReserveRaw}:${live.migrated}`;
+    if (seen.current !== null && seen.current !== key) router.refresh();
+    seen.current = key;
+  }, [live, router]);
+
+  const isFull = live ? !live.migrated && BigInt(live.quoteReserveRaw) >= BigInt(live.thresholdRaw) : full;
   const tokens = live?.tokensRaw ? BigInt(live.tokensRaw) : 0n;
   const sellRaw = (tokens * BigInt(share)) / 100n;
 
@@ -96,10 +115,85 @@ export function TradePanel({ pool, symbol, stock, stockName, cluster }: { pool: 
     setPhase("idle");
     await refresh();
     if (!sent.ok) return setWhy(sent.why || null);
+    router.refresh();
     setDone(tab === "buy" ? `Bought. ${symbol} is in your wallet.` : `Sold. The ${stockName} is in your wallet.`);
   };
 
+  /**
+   * Graduate a full curve: two position keys made here (they sign after the wallet, like a
+   * launch's mint), one approval, the new pool's accounts paid by this wallet.
+   */
+  const graduate = async (c: Connected | null) => {
+    setWhy(null);
+    setDone(null);
+    if (!c) return setPhase("wallet");
+    setPhase("building");
+    const first = Keypair.generate();
+    const second = Keypair.generate();
+    const built = await ask({ action: "graduate", owner: c.account.address, pool, firstNft: first.publicKey.toBase58(), secondNft: second.publicKey.toBase58() });
+    if (!built.ok) {
+      setPhase("idle");
+      await refresh();
+      return setWhy(built.why);
+    }
+    setPhase("signing");
+    const sent = await signAndRelay(c, cluster, built.j.transactions as string[], [first, second]);
+    setPhase("idle");
+    await refresh();
+    if (!sent.ok) return setWhy(sent.why || null);
+    router.refresh();
+    setDone(`Graduated. ${symbol} now trades in its Meteora DAMM v2 pool, every position locked for good.`);
+  };
+
   const busy = phase === "swapping" || phase === "building" || phase === "signing";
+
+  if (isFull) {
+    return (
+      <div className="sp-cv-trade">
+        <p className="sp-cv-full">The curve is full.</p>
+        <p className="sp-cv-note">
+          {kind === "public"
+            ? `Meteora's own service graduates a stock-priced curve this size by itself, into a Meteora DAMM v2 pool where trading continues, usually within minutes. Until it does, anyone can graduate it here: your wallet pays about 0.025 SOL for the new pool's accounts.`
+            : `A demonstration is smaller than the $750 Meteora's own service graduates by itself, so anyone can graduate it here, in one approval: your wallet pays about 0.025 SOL for the new pool's accounts.`}{" "}
+          Every position in the new pool is locked for good, and its fees keep reaching savers.
+        </p>
+        {phase === "wallet" && !connected ? (
+          wallets.length > 0 ? (
+            <div className="sp-cv-wallets">
+              {wallets.map((w) => (
+                <button
+                  key={w.name}
+                  type="button"
+                  className="sp-btn"
+                  onClick={async () => {
+                    const c = await choose(w);
+                    if (typeof c === "string") return setWhy(c || null);
+                    void graduate(c);
+                  }}
+                >
+                  {w.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="sp-cv-wallets">
+              {walletBrowseLinks(typeof window === "undefined" ? "https://scrip.work/curve" : window.location.href).map((l) => (
+                <a key={l.name} className="sp-btn" href={l.href}>
+                  Open in {l.name}
+                </a>
+              ))}
+            </div>
+          )
+        ) : null}
+        {why ? <p className="sp-cv-err">{why}</p> : null}
+        {done ? <p className="sp-cv-done">{done}</p> : null}
+        <button type="button" className="sp-btn is-primary" disabled={busy} onClick={() => graduate(connected)}>
+          {phase === "building" ? "Preparing the graduation…" : phase === "signing" ? "Waiting for your wallet…" : !connected ? "Connect a wallet to graduate it" : `Graduate ${symbol}`}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="sp-cv-trade">
       <div className="sp-cv-tabs" role="tablist" aria-label="Buy or sell">
@@ -142,7 +236,9 @@ export function TradePanel({ pool, symbol, stock, stockName, cluster }: { pool: 
             />
           </div>
           <p className="sp-cv-note">
-            Paid in USDC. Jupiter turns it into {stockName}, which buys {symbol}{live && !live.migrated ? ` at the fee now, ${(live.feeBps / 100).toFixed(2)}%` : ""}.
+            {live?.migrated
+              ? `Paid in USDC. Jupiter routes it to ${symbol} through its Meteora DAMM v2 pool.`
+              : `Paid in USDC. Jupiter turns it into ${stockName}, which buys ${symbol}${live ? ` at the fee now, ${(live.feeBps / 100).toFixed(2)}%` : ""}.`}
           </p>
         </>
       ) : (
@@ -155,7 +251,7 @@ export function TradePanel({ pool, symbol, stock, stockName, cluster }: { pool: 
             ))}
           </div>
           <p className="sp-cv-note">
-            Sells {units(sellRaw.toString(), 6, 2)} {symbol} back into the curve. You receive {stockName}, which stays in your wallet.
+            Sells {units(sellRaw.toString(), 6, 2)} {symbol} {live?.migrated ? "through its Meteora DAMM v2 pool" : "back into the curve"}. You receive {stockName}, which stays in your wallet.
           </p>
         </>
       )}

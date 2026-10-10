@@ -200,6 +200,13 @@
   border: 1px solid var(--err-border);
   border-radius: var(--r-md);
 }
+/* A full curve: no trade is possible, only its graduation. Said plainly, as the panel's heading. */
+.sp-cv-full {
+  margin: 0;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  color: var(--ink);
+}
 .sp-cv-done {
   margin: 0;
   padding: var(--s-3) var(--s-4);

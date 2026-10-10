@@ -1,10 +1,24 @@
-import { ActivationType, SwapMode, deriveDbcPoolAddress, getCurrentPoint } from "@meteora-ag/dynamic-bonding-curve-sdk";
-import { TOKEN_2022_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
+import {
+  ActivationType,
+  SwapMode,
+  deriveDammV2EventAuthority,
+  deriveDammV2MigrationMetadataAddress,
+  deriveDammV2PoolAddress,
+  deriveDammV2PoolAuthority,
+  deriveDammV2TokenVaultAddress,
+  deriveDbcPoolAddress,
+  deriveDbcPoolAuthority,
+  derivePositionAddress,
+  derivePositionNftAccount,
+  getCurrentPoint,
+} from "@meteora-ag/dynamic-bonding-curve-sdk";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import {
   type AddressLookupTableAccount,
   ComputeBudgetProgram,
   type Connection,
   PublicKey,
+  SystemProgram,
   type TransactionInstruction,
   TransactionMessage,
   VersionedTransaction,
@@ -18,7 +32,7 @@ import { curveTable } from "./table";
 import { nameOf } from "@/lib/save/names";
 import type { ChainLaunch } from "./launches";
 import { curveClient } from "./launches";
-import { type CurveKind, type CurveStock, DBC_PROGRAM_ID, curveQuote, tokenBadge } from "./preset";
+import { type CurveKind, type CurveStock, DAMM_V2_CUSTOMIZABLE_CONFIG, DAMM_V2_PROGRAM_ID, DBC_PROGRAM_ID, curveQuote, tokenBadge } from "./preset";
 
 export { launchNameProblem };
 
@@ -35,6 +49,11 @@ export { launchNameProblem };
  *            buy past graduation fills the curve and returns the rest); once graduated, Jupiter
  *            routes USDC to the token directly.
  *   sell     the token back into the curve for the stock, which stays in the seller's wallet.
+ *   graduate a full curve into a Meteora DAMM v2 pool, every position locked. Meteora's own
+ *            service graduates a stock-priced curve worth $750 or more by itself; anything
+ *            smaller (a demonstration) waits for someone to call the migration, and this is that
+ *            call, from the launch's page. Its two position NFT mints are keypairs the browser
+ *            makes and signs with after the wallet, like a launch's mint.
  *
  * Every answer is ONE transaction, simulated against the wallet as it is now. When a step is too
  * long for one (a launch with its first buy and a Jupiter route), the caller takes two separate
@@ -265,4 +284,65 @@ export async function buildSell(conn: Connection, input: { owner: PublicKey; lau
   } catch (err) {
     return held(`The sale could not be built (${err instanceof Error ? err.message : String(err)}).`);
   }
+}
+
+/**
+ * Graduate a full curve: DBC's `migration_dammv2`, exactly as Meteora's SDK builds it
+ * (`migrateToDammV2`), but with position NFT mints the browser made, so their keys never pass
+ * through here. Anyone may call it once the curve is full; the payer pays the new pool's accounts,
+ * 0.0238 SOL when DEMO1's was simulated on mainnet on 10 October.
+ */
+export async function buildGraduate(conn: Connection, input: { owner: PublicKey; launch: ChainLaunch; table?: string | null; firstNft: PublicKey; secondNft: PublicKey }): Promise<Outcome<Built & { dammPool: string }>> {
+  const { launch } = input;
+  if (launch.migrated) return held("This launch has already graduated.");
+  if (launch.quoteReserveRaw < launch.thresholdRaw) return held("The curve is not full yet; it can graduate once it is.");
+  if (input.firstNft.equals(input.secondNft)) return held("The two position keys must differ.");
+  const dbc = curveClient(conn);
+  let ix: TransactionInstruction;
+  let dammPool: PublicKey;
+  try {
+    const pool = new PublicKey(launch.pool);
+    const virtualPool = await dbc.state.getPool(pool);
+    if (!virtualPool) return held("This launch could not be read.");
+    const s = virtualPool.poolState;
+    const config = await dbc.state.getPoolConfig(s.config);
+    if (!config) return held("This launch's config could not be read.");
+    dammPool = deriveDammV2PoolAddress(DAMM_V2_CUSTOMIZABLE_CONFIG, s.baseMint, config.quoteMint);
+    ix = await dbc.migration.program.methods
+      .migrationDammV2()
+      .accountsStrict({
+        virtualPool: pool,
+        migrationMetadata: deriveDammV2MigrationMetadataAddress(pool),
+        config: s.config,
+        poolAuthority: deriveDbcPoolAuthority(),
+        pool: dammPool,
+        firstPositionNftMint: input.firstNft,
+        firstPosition: derivePositionAddress(input.firstNft),
+        firstPositionNftAccount: derivePositionNftAccount(input.firstNft),
+        secondPositionNftMint: input.secondNft,
+        secondPosition: derivePositionAddress(input.secondNft),
+        secondPositionNftAccount: derivePositionNftAccount(input.secondNft),
+        dammPoolAuthority: deriveDammV2PoolAuthority(),
+        ammProgram: DAMM_V2_PROGRAM_ID,
+        baseMint: s.baseMint,
+        quoteMint: config.quoteMint,
+        tokenAVault: deriveDammV2TokenVaultAddress(dammPool, s.baseMint),
+        tokenBVault: deriveDammV2TokenVaultAddress(dammPool, config.quoteMint),
+        baseVault: s.baseVault,
+        quoteVault: s.quoteVault,
+        payer: input.owner,
+        tokenBaseProgram: config.tokenType === 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID,
+        tokenQuoteProgram: config.quoteTokenFlag === 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID,
+        token2022Program: TOKEN_2022_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        dammEventAuthority: deriveDammV2EventAuthority(),
+      })
+      .remainingAccounts([{ isSigner: false, isWritable: false, pubkey: DAMM_V2_CUSTOMIZABLE_CONFIG }])
+      .instruction();
+  } catch (err) {
+    return held(`The graduation could not be built (${err instanceof Error ? err.message : String(err)}).`);
+  }
+  const built = await assemble(conn, input.owner, [{ ixs: [ix], alts: await curveTable(conn, input.table) }], 600_000);
+  if (!built.ok) return built;
+  return ok({ transactions: b64(built.value.txs), simulated: built.value.simulated, dammPool: dammPool.toBase58() });
 }

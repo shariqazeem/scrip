@@ -29,7 +29,8 @@ const units = (raw: bigint, decimals: number, dp = 4) => (Number(raw) / 10 ** de
 /**
  * /CURVE/[POOL] — one launch, read from the chain: what it is priced in, how far its curve is to
  * graduation, the fee at this moment, what is waiting for savers, and the way to buy or sell it
- * from this page. Anyone's launch on a Scrip Curve config has one; anything else is not found.
+ * from this page — or, once the curve is full, to graduate it. Anyone's launch on a Scrip Curve
+ * config has one; anything else is not found.
  */
 export default async function LaunchPage({ params }: Params) {
   const { pool } = await params;
@@ -41,6 +42,8 @@ export default async function LaunchPage({ params }: Params) {
   const stockName = nameOf(l.stock);
   const symbol = l.symbol || short(l.baseMint);
   const pct = l.migrated ? 100 : Math.min(100, Math.floor(Number((l.quoteReserveRaw * 1000n) / (l.thresholdRaw || 1n)) / 10));
+  // Full but not yet graduated: DBC stops trading on the curve until someone graduates it.
+  const full = !l.migrated && l.quoteReserveRaw >= l.thresholdRaw;
   const now = Math.floor(Date.now() / 1000);
   const fee = l.migrated ? null : feeBpsAt(now - l.activationUnix);
   const falls = l.activationUnix + PRESET.feeDecaySeconds;
@@ -68,17 +71,25 @@ export default async function LaunchPage({ params }: Params) {
           <span className="fill" style={{ width: `${pct}%` }} />
         </div>
         <div className="nums">
-          <span>{l.migrated ? "Graduated to Meteora DAMM v2" : `${units(l.quoteReserveRaw, q.decimals)} of ${units(l.thresholdRaw, q.decimals)} ${stockName} to graduation`}</span>
+          <span>
+            {l.migrated
+              ? "Graduated to Meteora DAMM v2"
+              : full
+                ? `Full at ${units(l.thresholdRaw, q.decimals)} ${stockName}, ready to graduate`
+                : `${units(l.quoteReserveRaw, q.decimals)} of ${units(l.thresholdRaw, q.decimals)} ${stockName} to graduation`}
+          </span>
           <span>{pct}%</span>
         </div>
       </div>
 
-      <TradePanel pool={l.pool} symbol={symbol} stock={l.stock} stockName={stockName} cluster={cluster()} />
+      <TradePanel pool={l.pool} symbol={symbol} stock={l.stock} stockName={stockName} cluster={cluster()} kind={l.kind} full={full} />
 
       <SiteSection label="This launch, from the chain">
         <div className="sp-truths">
           <Row k="Trading fee now">
-            {fee === null ? (
+            {full ? (
+              <>None while the curve is full: trading continues in its Meteora DAMM v2 pool once it graduates.</>
+            ) : fee === null ? (
               <>The graduated pool&rsquo;s fee, about {PRESET.migratedPoolFeeBps / 100}%, collected in {stockName}.</>
             ) : (
               <>

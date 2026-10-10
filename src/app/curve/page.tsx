@@ -77,7 +77,7 @@ export default async function CurvePage() {
                     <span className="where">
                       {nameOf(l.stock)}
                       <br />
-                      {l.migrated ? "graduated" : `${pct}% to graduation`}
+                      {l.migrated ? "graduated" : l.quoteReserveRaw >= l.thresholdRaw ? "full, ready to graduate" : `${pct}% to graduation`}
                     </span>
                     <span className={`sp-cv-bar${l.migrated ? " is-done" : ""}`} aria-hidden>
                       <span className="fill" style={{ width: `${pct}%` }} />

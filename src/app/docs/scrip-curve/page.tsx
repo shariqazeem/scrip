@@ -20,7 +20,7 @@ const ROUTE = [
   ["A trade on the curve", "The buyer pays in the stock the launch is priced in, and the fee is charged in that stock: 25% at launch, falling to 1% over the first hour.", "Meteora DBC", "swap"],
   ["Into the Plan", "The config's fee claimer claims the partner fee with the Plan as the receiver, so it moves from the curve's vault to the Plan's escrow in one instruction, through no wallet.", "Meteora DBC", "claim_trading_fee"],
   ["To a saver", "After each member's automatic save, the Plan adds its share of that save from the escrow, in its own transaction, capped each month.", "Scrip", "match_receipt"],
-  ["Graduation", "At the threshold the pool moves to DAMM v2 as launch token / stock, every position locked for good. The partner's share of the 2% graduation fee is withdrawn and passed to the Plan.", "Meteora DBC", "migration_damm_v2, withdraw_migration_fee"],
+  ["Graduation", "At the threshold trading on the curve stops and the pool moves to DAMM v2 as launch token / stock, every position locked for good. Meteora's own service does it for a stock-priced curve worth $750 or more; below that (a demonstration), anyone can, from the launch's page. The partner's share of the 2% graduation fee is withdrawn and passed to the Plan.", "Meteora DBC", "migration_damm_v2, withdraw_migration_fee"],
   ["After graduation", "The locked partner position keeps earning fees in the stock, claimed to the same Plan.", "Meteora DAMM v2", "claim_position_fee"],
 ] as const;
 
@@ -126,7 +126,8 @@ export default function Page() {
             <td>Graduation</td>
             <td>
               Public: about $850 of the stock ({CURVE_STOCKS.map((s) => `${THRESHOLD.public[s]} ${s}`).join(", ")}), which Meteora graduates by
-              itself. Demonstration: about $15. A {PRESET.migrationFeePercentage}% graduation fee
+              itself. Demonstration: about $15, graduated by anyone from its page for about 0.025 SOL of the new pool&rsquo;s rent. A{" "}
+              {PRESET.migrationFeePercentage}% graduation fee
             </td>
           </tr>
           <tr>
