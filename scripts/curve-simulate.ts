@@ -1,10 +1,10 @@
 /**
  * SCRIP CURVE, SIMULATED ON MAINNET WITHOUT A KEY — the steps that can run against today's chain
- * before anything exists: creating the launch config priced in the Nasdaq 100 (Meteora's token
- * badge passed) and opening Scrip's Plan. Any funded address stands in as the payer; nothing is
- * signed, so nothing can be sent.
+ * before anything exists, in every stock: creating each launch config (Meteora's token badge
+ * passed), opening each stock's Plan, and the Jupiter swap from USDC that a first buy makes. Any
+ * funded address stands in as the payer; nothing is signed, so nothing can be sent.
  *
- *   npx tsx --conditions=react-server scripts/curve-simulate.ts --payer <funded address> [--sponsor <funded address>] [--swap-owner <a USDC holder>]
+ *   npx tsx --conditions=react-server scripts/curve-simulate.ts --payer <funded address> [--sponsor <funded address>] [--swap-owner <a USDC holder>] [--swap-usd 5]
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -21,7 +21,7 @@ const flag = (name: string) => {
 async function main() {
   const { ComputeBudgetProgram, Connection, Keypair, PublicKey, TransactionMessage, VersionedTransaction } = await import("@solana/web3.js");
   type Ix = import("@solana/web3.js").TransactionInstruction;
-  const { CURVE_QUOTE, CURVE_QUOTE_MINT, DBC_PROGRAM_ID, scripCurveConfig, tokenBadge } = await import("@/lib/curve/preset");
+  const { CURVE_STOCKS, DBC_PROGRAM_ID, curveQuote, scripCurveConfig, tokenBadge } = await import("@/lib/curve/preset");
   const { DEPLOYED } = await import("@/lib/curve/deployed");
   const { curveClient } = await import("@/lib/curve/claims");
   const { memoIx } = await import("@/lib/intake/instructions");
@@ -39,27 +39,33 @@ async function main() {
     if (sim.value.err) console.log((sim.value.logs ?? []).slice(-12).join("\n"));
   };
 
-  for (const kind of ["demonstration", "public"] as const) {
-    const tx = await curveClient(conn).partner.createConfig({
-      config: Keypair.generate().publicKey,
-      feeClaimer: new PublicKey(DEPLOYED.feeClaimer!),
-      leftoverReceiver: payer,
-      quoteMint: CURVE_QUOTE_MINT,
-      payer,
-      tokenBadge: tokenBadge(DBC_PROGRAM_ID, CURVE_QUOTE_MINT),
-      ...scripCurveConfig(kind),
-    });
-    await simulate(`create the ${kind} config, priced in the Nasdaq 100`, payer, [ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }), ...tx.instructions]);
+  for (const stock of CURVE_STOCKS) {
+    const quoteMint = new PublicKey(curveQuote(stock).mint);
+    for (const kind of stock === "QQQx" ? (["public", "demonstration"] as const) : (["public"] as const)) {
+      const tx = await curveClient(conn).partner.createConfig({
+        config: Keypair.generate().publicKey,
+        feeClaimer: new PublicKey(DEPLOYED.feeClaimer!),
+        leftoverReceiver: payer,
+        quoteMint,
+        payer,
+        tokenBadge: tokenBadge(DBC_PROGRAM_ID, quoteMint),
+        ...scripCurveConfig(kind, stock),
+      });
+      await simulate(`create the ${kind} config, priced in ${stock}`, payer, [ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }), ...tx.instructions]);
+    }
   }
 
   // The first buy's swap: USDC into the Nasdaq 100 through Jupiter, built exactly as curve.ts
   // builds it, for any address that holds USDC (--swap-owner), simulated without a signature.
   const swapOwner = flag("swap-owner");
-  if (swapOwner) {
+  for (const stock of swapOwner ? CURVE_STOCKS : []) {
+    const CURVE_QUOTE = curveQuote(stock);
+    const CURVE_QUOTE_MINT = new PublicKey(CURVE_QUOTE.mint);
     const jup = await import("@/lib/jupiter/client");
     const { TOKEN_2022_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddressSync } = await import("@solana/spl-token");
-    const owner = new PublicKey(swapOwner);
-    const q = await jup.quote({ inputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", outputMint: CURVE_QUOTE.mint, amount: 5_000_000n, slippageBps: 100, maxAccounts: 40 });
+    const owner = new PublicKey(swapOwner!);
+    const usd = Number(flag("swap-usd") ?? "5");
+    const q = await jup.quote({ inputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", outputMint: CURVE_QUOTE.mint, amount: BigInt(Math.round(usd * 1e6)), slippageBps: 100, maxAccounts: 40 });
     if (!q.ok) throw new Error(q.why);
     const account = getAssociatedTokenAddressSync(CURVE_QUOTE_MINT, owner, true, TOKEN_2022_PROGRAM_ID);
     const ixs = await jup.swapInstructions({ quote: q.value, userPublicKey: owner, destinationTokenAccount: account });
@@ -81,14 +87,16 @@ async function main() {
       }).compileToV0Message(alts.value),
     );
     const sim = await conn.simulateTransaction(tx, { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" });
-    console.log(`swap $5 of USDC into the Nasdaq 100 for ${owner.toBase58().slice(0, 6)}…: ${sim.value.err ? `FAILED ${JSON.stringify(sim.value.err)}` : "simulation ok"}, about ${(Number(q.value.outAmount) / 1e8).toFixed(6)} QQQx, ${tx.serialize().length} bytes`);
+    console.log(`swap $${usd} of USDC into ${stock} for ${owner.toBase58().slice(0, 6)}…: ${sim.value.err ? `FAILED ${JSON.stringify(sim.value.err)}` : "simulation ok"}, about ${(Number(q.value.outAmount) / 1e8).toFixed(6)} ${stock}, ${tx.serialize().length} bytes`);
     if (sim.value.err) console.log((sim.value.logs ?? []).slice(-10).join("\n"));
   }
 
-  const name = "Scrip Curve: launch fees matching savers";
-  const open = openPlanIx({ sponsor, planId: newReleaseId(), asset: CURVE_QUOTE, terms: { matchBps: 5_000, monthlyCapUsdc: 5_000_000n, defaultRateBps: 1_000, escalateBps: 0 }, reason: name });
-  if (!open.ok) throw new Error(open.why);
-  await simulate(`open Scrip's Plan as ${sponsor.toBase58().slice(0, 6)}…`, sponsor, [ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }), memoIx(sponsor, name), open.value]);
+  for (const stock of CURVE_STOCKS) {
+    const name = `Scrip Curve: launch fees in ${stock} matching savers`;
+    const open = openPlanIx({ sponsor, planId: newReleaseId(), asset: curveQuote(stock), terms: { matchBps: 5_000, monthlyCapUsdc: 5_000_000n, defaultRateBps: 1_000, escalateBps: 0 }, reason: name });
+    if (!open.ok) throw new Error(open.why);
+    await simulate(`open the ${stock} Plan as ${sponsor.toBase58().slice(0, 6)}…`, sponsor, [ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }), memoIx(sponsor, name), open.value]);
+  }
 }
 main().catch((err) => {
   console.error(err instanceof Error ? err.message.replace(/https?:\/\/\S+/g, "<rpc>") : err);

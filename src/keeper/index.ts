@@ -32,12 +32,13 @@ import {
   getAssociatedTokenAddressSync,
   unpackAccount,
 } from "@solana/spl-token";
-import { type AccountInfo, ComputeBudgetProgram, Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import { type AccountInfo, ComputeBudgetProgram, Keypair, PublicKey, type Signer, Transaction, type VersionedTransaction } from "@solana/web3.js";
 import { type Asset, type PriceFeed, USDC_MINT, assetByMint } from "@/lib/assets/registry";
 import { type Book, type Grant, decodeBook, decodeGrant, decodeMember, decodePlan, releasableRaw } from "@/lib/book/decode";
 import { matchReceiptIx } from "@/lib/plan/instructions";
 import * as curveFees from "@/lib/curve/claims";
 import { DEPLOYED as CURVE } from "@/lib/curve/deployed";
+import { launchesOnChain, partnerPositionOf } from "@/lib/curve/launches";
 import { vestIx } from "@/lib/grant/instructions";
 import { multiplierInForce } from "@/lib/corporate-actions/multiplier";
 import { readMintMultiplier } from "@/lib/corporate-actions/read-mint";
@@ -412,13 +413,25 @@ async function postPrice(candidates: ReadonlyArray<{ feed: PriceFeed; adjusted: 
       lastWhy = `${c.feed.label}: ${fresh.why}`;
       continue;
     }
-    if (!fresh.value[0]) {
+    const u = fresh.value[0];
+    if (!u) {
       lastWhy = `${c.feed.label}: Hermes returned no update`;
+      continue;
+    }
+    // Never post a price the program would refuse. Hermes answers a closed market with its last
+    // price, so on a Friday evening gold's update was already older than the ten minutes the
+    // program allows: the keeper posted it, the sweep failed PriceStale, and it tried again,
+    // about sixty times in three hours, until its SOL was gone (9 October). Checked here with the
+    // program's own bounds, nothing is spent and the save waits for a price that can settle.
+    const now = Math.floor(Date.now() / 1000);
+    const usable = settleable({ feedId: u.feedId, price: u.price, conf: u.conf, expo: u.expo, publishedAt: u.publishTime, verification: "full" }, now + 45, FEED_MAX_AGE_SECONDS, MAX_CONF_BPS);
+    if (!usable.ok) {
+      lastWhy = `${c.feed.label}: the newest price is ${Math.max(0, Math.round((now - u.publishTime) / 60))} min old, so the market is closed or quiet; the save waits for a price the program will accept`;
       continue;
     }
     feed = c.feed;
     adjusted = c.adjusted;
-    update = fresh.value[0];
+    update = u;
     break;
   }
   if (!update) return held(lastWhy);
@@ -447,14 +460,14 @@ async function postPrice(candidates: ReadonlyArray<{ feed: PriceFeed; adjusted: 
       const closeTxs = await TransactionBuilder.batchIntoVersionedTransactions(keeper.publicKey, conn, closeIxs, {
         computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS,
       });
-      await pyth.provider.sendAll(closeTxs, { skipPreflight: true, commitment: "confirmed" });
+      await sendSigned(closeTxs);
     } catch (err) {
       log("could not close the posted price accounts:", err instanceof Error ? err.message : err);
     }
   };
   const txs = await builder.buildVersionedTransactions({ computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS });
   try {
-    await pyth.provider.sendAll(txs, { skipPreflight: false, commitment: "confirmed" });
+    await sendSigned(txs, true);
   } catch (err) {
     await closeAll();
     return held(`posting the ${feed.label} price failed: ${err instanceof Error ? err.message.slice(0, 160) : String(err)}`);
@@ -487,11 +500,31 @@ type CloseIx = Awaited<ReturnType<typeof pyth.buildClosePriceUpdateInstruction>>
 /** Posted prices this keeper shares, by feed id, until they are too old for the program. */
 const sharedPrices = new Map<string, { account: PublicKey; publishTime: number; closes: CloseIx[] }>();
 
+/**
+ * Send the price library's transactions, signed here, one after another. Anchor's provider did
+ * this until 9 October, and when one failed it fetched the transaction for its logs without
+ * asking for version 0, which the RPC refuses: every failure read "Transaction version (0) is not
+ * supported", and the real one was lost. `strict` throws on a failure, so a post that fails
+ * halfway is closed by its caller; otherwise a failure is logged and left for reclaimLeftovers.
+ */
+async function sendSigned(txs: ReadonlyArray<{ tx: VersionedTransaction; signers: Signer[] }>, strict = false): Promise<void> {
+  for (const { tx, signers } of txs) {
+    tx.sign([keeper, ...signers]);
+    const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: !strict, maxRetries: 3 });
+    const done = await conn.confirmTransaction(sig, "confirmed").catch((err: unknown) => ({ value: { err: err instanceof Error ? err.message : String(err) } }));
+    if (done.value.err) {
+      const why = `${sig.slice(0, 8)}… failed: ${JSON.stringify(done.value.err).slice(0, 160)}`;
+      if (strict) throw new Error(why);
+      log(why);
+    }
+  }
+}
+
 async function closeSome(ixs: CloseIx[]): Promise<void> {
   if (ixs.length === 0) return;
   try {
     const txs = await TransactionBuilder.batchIntoVersionedTransactions(keeper.publicKey, conn, ixs, { computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS });
-    await pyth.provider.sendAll(txs, { skipPreflight: true, commitment: "confirmed" });
+    await sendSigned(txs);
   } catch (err) {
     // Left for reclaimLeftovers, which finds any account of this keeper's and closes it.
     log("could not close posted price accounts now:", err instanceof Error ? err.message : err);
@@ -743,56 +776,67 @@ const subscribed = new Set<string>();
 // ── Scrip Curve: launch fees into the Plan ────────────────────────────────────────────────
 
 /**
- * EVERY LAUNCH FEE, INTO THE PLAN, BY ITSELF. A Scrip Curve config names this service as its fee
- * claimer; Meteora lets the claimer choose where a fee goes, and this only ever names the Plan in
- * `src/lib/curve/deployed.json`. On a cadence it moves the curve's partner fee and, after
- * graduation, the locked position's fee straight into the Plan's escrow, and the partner's
- * graduation fee once (DBC pays that one to the claimer, so it is forwarded the same minute).
- * The Plan then matches savers' automatic saves from it. A backup never claims.
+ * EVERY LAUNCH FEE, INTO ITS PLAN, BY ITSELF. Every Scrip Curve config names this service as its
+ * fee claimer; Meteora lets the claimer choose where a fee goes, and this only ever names the Plan
+ * in the curve's own stock (`src/lib/curve/deployed.json`). On a cadence it walks every launch on
+ * every config, read from the chain (anyone can launch, so there is no other list), and moves the
+ * curve's partner fee and, after graduation, the locked position's fee straight into that Plan's
+ * escrow, and the partner's graduation fee once (DBC pays that one to the claimer, so it is
+ * forwarded the same minute). The Plan then matches savers' automatic saves from it. A backup
+ * never claims.
  */
 const CURVE_EVERY_MS = Number(process.env.KEEPER_CURVE_MINUTES ?? "30") * 60_000;
-/** Below this a claim costs more in fees than it moves: 1,000 base units, about $0.0075 of Nasdaq 100. */
+/** Below this a claim costs more in fees than it moves: 1,000 base units, under a cent of any curve stock. */
 const CURVE_MIN_RAW = BigInt(process.env.KEEPER_CURVE_MIN_RAW ?? "1000");
 let lastCurveAt = 0;
 
 async function launchFeesToPlan(): Promise<void> {
   if (BACKUP_AFTER_SECONDS > 0 || CLUSTER !== "mainnet-beta") return;
-  const plan = CURVE.plan;
-  if (!plan || CURVE.feeClaimer !== keeper.publicKey.toBase58() || CURVE.launches.length === 0) return;
+  if (CURVE.feeClaimer !== keeper.publicKey.toBase58() || Object.keys(CURVE.plans).length === 0) return;
   if (Date.now() - lastCurveAt < CURVE_EVERY_MS) return;
   lastCurveAt = Date.now();
-  const planKey = new PublicKey(plan.address);
-  for (const launch of CURVE.launches) {
-    const waiting = await curveFees.feesWaiting(conn, launch);
+  const launches = await launchesOnChain(conn);
+  if (!launches.ok) {
+    log(`launch fees: ${launches.why}`);
+    return;
+  }
+  for (const launch of launches.value) {
+    const plan = CURVE.plans[launch.stock];
+    if (!plan) continue;
+    const planKey = new PublicKey(plan.address);
+    const label = launch.symbol ?? launch.pool.slice(0, 6);
+    const partner = launch.dammPool ? await partnerPositionOf(conn, launch.dammPool, keeper.publicKey.toBase58()) : null;
+    const source = { pool: launch.pool, stock: launch.stock, dammPool: launch.dammPool, partner };
+    const waiting = await curveFees.feesWaiting(conn, source);
     if (!waiting.ok) {
-      log(`${launch.symbol}: launch fees could not be read: ${waiting.why}`);
+      log(`${label}: launch fees could not be read: ${waiting.why}`);
       continue;
     }
     const w = waiting.value;
     try {
       if (w.onCurve >= CURVE_MIN_RAW) {
-        const tx = await curveFees.curveFeeToPlan(conn, { launch, claimer: keeper.publicKey, plan: planKey, amount: w.onCurve });
-        if (tx.ok) log(`${launch.symbol}: ${w.onCurve} base units of launch fee into the Plan (${(await sendAndConfirm(conn, tx.value, [keeper])).slice(0, 8)}…)`);
+        const tx = await curveFees.curveFeeToPlan(conn, { pool: launch.pool, claimer: keeper.publicKey, plan: planKey, amount: w.onCurve });
+        if (tx.ok) log(`${label}: ${w.onCurve} base units of ${launch.stock} launch fee into its Plan (${(await sendAndConfirm(conn, tx.value, [keeper])).slice(0, 8)}…)`);
       }
       if (w.graduationFeeWaiting) {
-        const account = curveFees.claimerQuoteAccount(keeper.publicKey);
+        const account = curveFees.claimerQuoteAccount(keeper.publicKey, launch.stock);
         const before = BigInt((await conn.getTokenAccountBalance(account, "confirmed").catch(() => null))?.value.amount ?? "0");
-        const tx = await curveFees.migrationFeeWithdraw(conn, { launch, claimer: keeper.publicKey });
+        const tx = await curveFees.migrationFeeWithdraw(conn, { pool: launch.pool, claimer: keeper.publicKey });
         if (tx.ok) {
           await sendAndConfirm(conn, tx.value, [keeper]);
           const after = BigInt((await conn.getTokenAccountBalance(account, "confirmed")).value.amount);
           if (after > before) {
-            const fwd = new Transaction().add(curveFees.forwardToPlan({ claimer: keeper.publicKey, escrow: new PublicKey(plan.escrow), amount: after - before }));
-            log(`${launch.symbol}: ${after - before} base units of graduation fee into the Plan (${(await sendAndConfirm(conn, fwd, [keeper])).slice(0, 8)}…)`);
+            const fwd = new Transaction().add(curveFees.forwardToPlan({ claimer: keeper.publicKey, escrow: new PublicKey(plan.escrow), amount: after - before, stock: launch.stock }));
+            log(`${label}: ${after - before} base units of graduation fee into its Plan (${(await sendAndConfirm(conn, fwd, [keeper])).slice(0, 8)}…)`);
           }
         }
       }
       if (w.onPosition >= CURVE_MIN_RAW) {
-        const tx = await curveFees.positionFeeToPlan(conn, { launch, claimer: keeper.publicKey, plan: planKey });
-        if (tx.ok) log(`${launch.symbol}: ${w.onPosition} base units of graduated-pool fee into the Plan (${(await sendAndConfirm(conn, tx.value, [keeper])).slice(0, 8)}…)`);
+        const tx = await curveFees.positionFeeToPlan(conn, { source, claimer: keeper.publicKey, plan: planKey });
+        if (tx.ok) log(`${label}: ${w.onPosition} base units of graduated-pool fee into its Plan (${(await sendAndConfirm(conn, tx.value, [keeper])).slice(0, 8)}…)`);
       }
     } catch (err) {
-      log(`${launch.symbol}: moving launch fees into the Plan failed:`, err instanceof Error ? err.message : err);
+      log(`${label}: moving launch fees into its Plan failed:`, err instanceof Error ? err.message : err);
     }
   }
 }
@@ -916,7 +960,7 @@ async function reclaimLeftovers(): Promise<void> {
     ...(await Promise.all(vaas.map((v) => pyth.buildCloseEncodedVaaInstruction(v.pubkey)))),
   ];
   const txs = await TransactionBuilder.batchIntoVersionedTransactions(keeper.publicKey, conn, ixs, { computeUnitPriceMicroLamports: PRIORITY_MICRO_LAMPORTS });
-  await pyth.provider.sendAll(txs, { skipPreflight: true, commitment: "confirmed" });
+  await sendSigned(txs);
   log(`closed ${ixs.length} leftover price account(s); their rent is back with this keeper`);
 }
 

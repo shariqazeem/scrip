@@ -4,23 +4,16 @@ import { PublicKey } from "@solana/web3.js";
 import { planAt } from "@/lib/plan/read";
 import { connection } from "@/lib/solana/connection";
 import { readTxViews } from "@/lib/solana/tx-view";
-import { feesWaiting, curveClient } from "./claims";
-import { DEPLOYED, type Launch } from "./deployed";
-import { CURVE_QUOTE, DAMM_V2_PROGRAM_ID, DBC_PROGRAM_ID, THRESHOLD_QUOTE } from "./preset";
+import { DEPLOYED } from "./deployed";
+import { type ChainLaunch, launchesOnChain } from "./launches";
+import { CURVE_STOCKS, type CurveStock, DAMM_V2_PROGRAM_ID, DBC_PROGRAM_ID } from "./preset";
 
 /**
- * SCRIP CURVE, READ FROM THE CHAIN — the Plan the launches fund, each launch's curve, and every
- * fee that reached the Plan's escrow, for /curve. Every figure is an account or a transaction read
- * now; when nothing is deployed the page says so. Held for a minute: the page is public and the
- * chain is the scarce thing.
+ * SCRIP CURVE, READ FROM THE CHAIN — the Plan in each stock that the launches fund, every launch on
+ * every config, and every fee that reached a Plan's escrow, for /curve. Every figure is an account
+ * or a transaction read now; when nothing is deployed the page says so. Held for a minute: the
+ * page is public and the chain is the scarce thing.
  */
-export type LaunchView = Launch & {
-  readonly quoteReserveRaw: bigint | null;
-  readonly thresholdRaw: bigint;
-  readonly feeWaitingRaw: bigint | null;
-  readonly migrated: boolean | null;
-};
-
 export type FeeInflow = {
   readonly sig: string;
   readonly at: number;
@@ -29,11 +22,13 @@ export type FeeInflow = {
 };
 
 export type CurvePlanView = {
+  readonly stock: CurveStock;
   readonly address: string;
   readonly escrow: string;
   readonly name: string | null;
   readonly sponsorHandle: string | null;
   readonly escrowRaw: bigint | null;
+  readonly decimals: number;
   readonly members: number;
   readonly matches: number;
   readonly matchedRaw: bigint;
@@ -44,35 +39,46 @@ export type CurvePlanView = {
 };
 
 const HOLD_MS = 60_000;
-const g = globalThis as typeof globalThis & { __scripCurveRead?: { at: number; plan: Promise<CurvePlanView | null>; launches: Promise<LaunchView[]> } };
+type Read = { at: number; plans: Promise<CurvePlanView[]>; launches: Promise<ChainLaunch[]> };
+const g = globalThis as typeof globalThis & { __scripCurveRead2?: Read };
 
-export function readCurve(): { plan: Promise<CurvePlanView | null>; launches: Promise<LaunchView[]> } {
-  const hit = g.__scripCurveRead;
+export function readCurve(): Read {
+  const hit = g.__scripCurveRead2;
   if (hit && Date.now() - hit.at < HOLD_MS) return hit;
-  const fresh = { at: Date.now(), plan: readPlan().catch(() => null), launches: readLaunches().catch(() => []) };
-  g.__scripCurveRead = fresh;
+  const fresh: Read = {
+    at: Date.now(),
+    plans: readPlans().catch(() => []),
+    launches: launchesOnChain(connection()).then((r) => (r.ok ? r.value : []), () => []),
+  };
+  g.__scripCurveRead2 = fresh;
   return fresh;
 }
 
-async function readPlan(): Promise<CurvePlanView | null> {
-  const p = DEPLOYED.plan;
-  if (!p) return null;
-  const view = await planAt(p.address);
-  const plan = view.ok ? view.value : null;
-  const inflows = await feeInflows(new PublicKey(p.escrow));
-  return {
-    address: p.address,
-    escrow: p.escrow,
-    name: plan?.name ?? null,
-    sponsorHandle: plan?.sponsorHandle ?? null,
-    escrowRaw: plan?.escrowRaw ?? null,
-    members: plan?.members ?? 0,
-    matches: plan?.matches ?? 0,
-    matchedRaw: plan?.matchedRaw ?? 0n,
-    matchedUsdc: plan?.matchedUsdc ?? 0n,
-    inflows,
-    fromLaunchesRaw: inflows.reduce((n, f) => n + f.raw, 0n),
-  };
+async function readPlans(): Promise<CurvePlanView[]> {
+  const out: CurvePlanView[] = [];
+  for (const stock of CURVE_STOCKS) {
+    const p = DEPLOYED.plans[stock];
+    if (!p) continue;
+    const view = await planAt(p.address);
+    const plan = view.ok ? view.value : null;
+    const inflows = await feeInflows(new PublicKey(p.escrow));
+    out.push({
+      stock,
+      address: p.address,
+      escrow: p.escrow,
+      name: plan?.name ?? null,
+      sponsorHandle: plan?.sponsorHandle ?? null,
+      escrowRaw: plan?.escrowRaw ?? null,
+      decimals: plan?.decimals ?? 8,
+      members: plan?.members ?? 0,
+      matches: plan?.matches ?? 0,
+      matchedRaw: plan?.matchedRaw ?? 0n,
+      matchedUsdc: plan?.matchedUsdc ?? 0n,
+      inflows,
+      fromLaunchesRaw: inflows.reduce((n, f) => n + f.raw, 0n),
+    });
+  }
+  return out;
 }
 
 /**
@@ -107,24 +113,4 @@ async function feeInflows(escrow: PublicKey): Promise<FeeInflow[]> {
     if (from) out.push({ sig: v.sig, at: v.blockTime, raw: after - before, from });
   }
   return out.sort((a, b) => b.at - a.at);
-}
-
-async function readLaunches(): Promise<LaunchView[]> {
-  if (DEPLOYED.launches.length === 0) return [];
-  const conn = connection();
-  const dbc = curveClient(conn);
-  const scale = 10 ** CURVE_QUOTE.decimals;
-  return Promise.all(
-    DEPLOYED.launches.map(async (l) => {
-      const [state, waiting] = await Promise.all([dbc.state.getPool(l.pool).catch(() => null), feesWaiting(conn, l)]);
-      const s = state?.poolState;
-      return {
-        ...l,
-        quoteReserveRaw: s ? BigInt(s.quoteReserve.toString()) : null,
-        thresholdRaw: BigInt(Math.round(THRESHOLD_QUOTE[l.kind] * scale)),
-        feeWaitingRaw: waiting.ok ? waiting.value.onCurve + waiting.value.onPosition : null,
-        migrated: s ? Boolean(s.isMigrated) : null,
-      };
-    }),
-  );
 }

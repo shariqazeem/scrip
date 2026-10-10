@@ -1,9 +1,10 @@
 /**
- * A NASDAQ 100 ACCOUNT FOR A LOCAL VALIDATOR — a real holder's Token-2022 account read from
- * mainnet, its owner and amount rewritten, written as a `--account` file at the payer's own
- * associated address. Only for `scripts/curve-localnet.sh`; nothing here signs or sends.
+ * A STOCK ACCOUNT FOR A LOCAL VALIDATOR — a real holder's Token-2022 account in that stock, read
+ * from mainnet (the largest holder's, found with getTokenLargestAccounts), its owner and amount
+ * rewritten, written as a `--account` file at the payer's own associated address. Only for
+ * `scripts/curve-localnet.sh`; nothing here signs or sends.
  *
- *   npx tsx scripts/curve-localnet-account.ts <payer> <out.json> [units, default 1]
+ *   npx tsx scripts/curve-localnet-account.ts <payer> <out.json> [units, default 1] [mint, default the Nasdaq 100]
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,22 +15,25 @@ for (const line of readFileSync(join(process.cwd(), ".env.local"), "utf8").split
   const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
   if (m && !process.env[m[1]!]) process.env[m[1]!] = m[2]!.replace(/^"|"$/g, "");
 }
-const QQQX = new PublicKey("Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ");
-/** The founder's test wallet's Nasdaq 100 account: any real holder's would do. */
-const TEMPLATE = new PublicKey("D63QowjkiUNCsVLuA6ob3iRRosb7ukbMbeqphFEMki13");
+const QQQX = "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ";
 
 async function main() {
   const payer = new PublicKey(process.argv[2]!);
   const out = process.argv[3]!;
   const units = Number(process.argv[4] ?? "1");
+  const mint = new PublicKey(process.argv[5] ?? QQQX);
   const conn = new Connection(process.env.NEXT_PUBLIC_SOLANA_RPC!, "confirmed");
-  const info = await conn.getAccountInfo(TEMPLATE, "confirmed");
+  // Any real holder's account would do; the largest is one that certainly exists.
+  const largest = await conn.getTokenLargestAccounts(mint, "confirmed");
+  const template = largest.value[0]?.address;
+  if (!template) throw new Error("no holder of that mint was found");
+  const info = await conn.getAccountInfo(template, "confirmed");
   if (!info) throw new Error("the template account could not be read");
   const data = Buffer.from(info.data);
-  if (!new PublicKey(data.subarray(0, 32)).equals(QQQX)) throw new Error("the template is not a Nasdaq 100 account");
+  if (!new PublicKey(data.subarray(0, 32)).equals(mint)) throw new Error("the template is not an account in that mint");
   payer.toBuffer().copy(data, 32);
   data.writeBigUInt64LE(BigInt(Math.round(units * 1e8)), 64);
-  const address = getAssociatedTokenAddressSync(QQQX, payer, false, TOKEN_2022_PROGRAM_ID);
+  const address = getAssociatedTokenAddressSync(mint, payer, false, TOKEN_2022_PROGRAM_ID);
   writeFileSync(
     out,
     JSON.stringify({ pubkey: address.toBase58(), account: { lamports: info.lamports, data: [data.toString("base64"), "base64"], owner: TOKEN_2022_PROGRAM_ID.toBase58(), executable: false, rentEpoch: 0, space: data.length } }),

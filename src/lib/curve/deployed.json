@@ -1,8 +1,8 @@
 {
   "cluster": "mainnet-beta",
-  "quoteMint": "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ",
   "feeClaimer": "9zzN2FkbG2AwHZCH1cnH6Wxo4V7YzFoKKqJXRvLATohJ",
-  "plan": null,
+  "plans": {},
   "configs": {},
-  "launches": []
+  "launches": [],
+  "lookupTable": null
 }

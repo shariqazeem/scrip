@@ -7,8 +7,8 @@ import "./curve.css";
  * here is a figure.
  */
 const NODES = [
-  { k: "A trade on the curve", v: "pays its fee in the Nasdaq 100", n: "Meteora DBC" },
-  { k: "Scrip Plan escrow", v: "the Plan's own Nasdaq 100 account", n: "Scrip program" },
+  { k: "A trade on the curve", v: "pays its fee in the stock it is priced in", n: "Meteora DBC" },
+  { k: "Scrip Plan escrow", v: "the Plan's own account in that stock", n: "Scrip program" },
   { k: "A saver's wallet", v: "matched on their automatic save", n: "on their receipt" },
 ] as const;
 const EDGES = ["claim_trading_fee, receiver = the Plan", "match_receipt, after each save"] as const;
@@ -36,7 +36,7 @@ export function MoneyTrail() {
       <div className="sp-trail-after">
         <span className="n">After graduation</span>
         <span>
-          Meteora DAMM v2 pool, launch token / Nasdaq 100, all liquidity locked. Its fees reach the same escrow with{" "}
+          Meteora DAMM v2 pool, launch token / stock, all liquidity locked. Its fees reach the same escrow with{" "}
           <span className="mono">claim_position_fee</span>, receiver = the Plan.
         </span>
       </div>
