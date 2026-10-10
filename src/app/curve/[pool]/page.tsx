@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CurveChart } from "@/components/curve/curve-chart";
 import { TradePanel } from "@/components/curve/trade-panel";
-import { Row, SiteFrame, SiteSection } from "@/components/site/site-frame";
+import { PageFrame } from "@/components/app/page-frame";
+import { Row, SiteSection } from "@/components/site/site-frame";
 import { DEPLOYED } from "@/lib/curve/deployed";
 import { launchAt } from "@/lib/curve/launches";
 import { readCurve } from "@/lib/curve/read";
@@ -23,8 +24,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { pool } = await params;
   const found = await launchAt(connection(), pool);
   const l = found.ok ? found.value : null;
-  if (!l) return { title: "Scrip Curve" };
-  return { title: `${l.symbol ?? "A launch"} on Scrip Curve`, description: `${l.name ?? "A token"}, priced in ${nameOf(l.stock)}. Every trading fee it pays goes half to its launcher and half to savers.` };
+  if (!l) return { title: "Launchpad" };
+  return { title: `${l.symbol ?? "A launch"} on the launchpad`, description: `${l.name ?? "A token"}, priced in ${nameOf(l.stock)}. Every trading fee it pays goes half to its launcher and half to savers.` };
 }
 
 const units = (raw: bigint, decimals: number, dp = 4) => (Number(raw) / 10 ** decimals).toFixed(dp);
@@ -60,11 +61,12 @@ export default async function LaunchPage({ params }: Params) {
   const liveChart = `https://www.geckoterminal.com/solana/pools/${l.migrated && l.dammPool ? l.dammPool : l.pool}`;
   const icon = `/api/curve/icon?${new URLSearchParams({ s: l.symbol ?? "?", k: l.stock })}`;
   return (
-    <SiteFrame
-      eyebrow="Scrip Curve"
+    <PageFrame
+      eyebrow="Launchpad"
       title={`${symbol}, priced in ${stockName}.`}
-      lede={`${l.name ?? "A token"}, launched on Scrip Curve by ${short(l.creator)}. Every trading fee it pays is ${stockName}: ${l.kind === "demonstration" ? "all of it to savers, after Meteora's share" : "half to its launcher, half to savers, after Meteora's share"}.`}
+      sub={`${l.name ?? "A token"}, launched on Scrip Curve by ${short(l.creator)}. Every trading fee it pays is ${stockName}: ${l.kind === "demonstration" ? "all of it to savers, after Meteora's share" : "half to its launcher, half to savers, after Meteora's share"}.`}
     >
+      <div className="sp-site-body sp-cv-body">
       <div className="sp-cv-head">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={icon} alt="" width={72} height={72} />
@@ -149,6 +151,13 @@ export default async function LaunchPage({ params }: Params) {
         </div>
       </SiteSection>
 
+      <SiteSection label="Get matched by launches like this">
+        <p className="sp-body">
+          Its fees match people&rsquo;s automatic saves. Save part of every USDC payment you receive into stocks, by itself, and Plans funded
+          by launches can add to it. <Link href="/">Start saving</Link>
+        </p>
+      </SiteSection>
+
       <SiteSection label="Before you trade">
         <p className="sp-body">
           <strong>{symbol} is a speculative token, not {stockName} and not a share of it.</strong> It belongs to whoever launched it; Scrip makes no claim about its price,
@@ -158,6 +167,7 @@ export default async function LaunchPage({ params }: Params) {
           <Link href="/curve">All launches</Link>
         </p>
       </SiteSection>
-    </SiteFrame>
+      </div>
+    </PageFrame>
   );
 }

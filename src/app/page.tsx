@@ -131,7 +131,7 @@ export default async function FrontDoor() {
               </p>
             ) : null}
             <Link href="/curve" className="go">
-              Scrip Curve
+              The launchpad
             </Link>
           </li>
         </ol>
@@ -219,7 +219,7 @@ export default async function FrontDoor() {
         <span className="sp-home-nav-spacer" />
         <Link href="/app">Your savings</Link>
         <Link href="/teams">For teams</Link>
-        <Link href="/curve">Launches</Link>
+        <Link href="/curve">Launchpad</Link>
         <Link href="/proof">Proof</Link>
         <Link href="/security">Security</Link>
         <Link href="/assets">Assets</Link>

@@ -69,7 +69,7 @@ export default async function TeamsPage({ searchParams }: { searchParams: Promis
           <Row k="Plans funded by launches">
             Scrip&rsquo;s own Plans, one each in the Nasdaq 100, the S&amp;P 500, Tesla and Nvidia, are funded by Scrip Curve: the savers&rsquo; share of
             every trading fee on a launch priced in that stock goes from Meteora&rsquo;s curve straight into the Plan&rsquo;s escrow.{" "}
-            <Link href="/curve">Scrip Curve</Link>
+            <Link href="/curve">The launchpad</Link>
           </Row>
         </div>
       </SiteSection>

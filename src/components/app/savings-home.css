@@ -368,3 +368,54 @@
     padding: var(--s-5);
   }
 }
+
+/* More ways stock reaches you: three doors under your savings, quiet, one tap each. */
+.sp-more-ways {
+  margin: var(--s-8) 0 0;
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--border);
+}
+.sp-more-ways h2 {
+  margin: 0 0 var(--s-4);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+.sp-more-ways .grid {
+  display: grid;
+  gap: var(--s-3);
+}
+@media (min-width: 760px) {
+  .sp-more-ways .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.sp-more-ways .way {
+  display: grid;
+  gap: var(--s-1);
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  text-decoration: none;
+}
+.sp-more-ways .way:hover {
+  border-color: var(--accent);
+  text-decoration: none;
+}
+.sp-more-ways .way:hover .t {
+  color: var(--accent);
+}
+.sp-more-ways .way:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sp-more-ways .t {
+  font-weight: 600;
+}
+.sp-more-ways .p {
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}

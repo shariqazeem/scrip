@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Row, SiteFrame, SiteSection } from "@/components/site/site-frame";
+import { PageFrame } from "@/components/app/page-frame";
+import { Row, SiteSection } from "@/components/site/site-frame";
 import { configsOf } from "@/lib/curve/deployed";
 import { CURVE_STOCKS, DAMM_V2_PROGRAM_ID, DBC_PROGRAM_ID, PRESET, THRESHOLD, curveQuote, tokenBadge } from "@/lib/curve/preset";
 import { readCurve } from "@/lib/curve/read";
@@ -14,7 +15,7 @@ import "./curve.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Scrip Curve",
+  title: "Launchpad",
   description:
     "Launch a token priced in the Nasdaq 100, the S&P 500, Tesla or Nvidia on Meteora's Dynamic Bonding Curve. Every trading fee is stock, and the savers' share goes straight into a Scrip Plan that matches real people's automatic savings.",
 };
@@ -31,7 +32,7 @@ function units(raw: bigint | null | undefined, decimals = 8): string {
 }
 
 /**
- * /CURVE — Scrip Curve, "Launches" on every nav since 10 October: launch a token priced in a stock on
+ * /CURVE — Scrip Curve, the "Launchpad" of every nav and the app's rail since 10 October: launch a token priced in a stock on
  * Meteora's Dynamic Bonding Curve, from this site, and every launch's partner fee goes into a
  * Scrip Plan in the same stock that matches savers' automatic saves. The page reads the launches
  * (every pool on a Scrip Curve config, anyone's), the Plans and every fee transfer from the chain,
@@ -46,18 +47,18 @@ export default async function CurvePage() {
     .sort((a, b) => b.at - a.at)
     .slice(0, 8);
   return (
-    <SiteFrame
-      eyebrow="Scrip Curve"
+    <PageFrame
+      eyebrow="Launchpad"
       title="Launch a token priced in a stock. Its fees match savers."
-      lede={`A launch preset on Meteora's Dynamic Bonding Curve, priced in ${STOCK_LIST}. Every buy pays in the stock and every trading fee is stock; the savers' share goes straight from the curve into a Scrip Plan, which adds it to real people's automatic savings.`}
-    >
-      <div className="sp-cv-actions">
-        <Link href="/curve/launch" className="sp-btn is-primary">
+      sub={`Scrip Curve is Scrip's launchpad, on Meteora's Dynamic Bonding Curve, priced in ${STOCK_LIST}. Every buy pays in the stock and every trading fee is stock; the savers' share goes straight from the curve into a Scrip Plan, which adds it to real people's automatic savings.`}
+      actions={
+        <Link href="/curve/launch" className="sp-action is-primary">
           Launch a token
         </Link>
-      </div>
-
-      <SiteSection label="Launches" aside={launches.length > 0 ? `${launches.length} on chain` : undefined}>
+      }
+    >
+      <div className="sp-site-body sp-cv-body">
+      <SiteSection label="Every launch" aside={launches.length > 0 ? `${launches.length} on chain` : undefined}>
         {launches.length === 0 ? (
           <p className="sp-body">No launch yet. The first appears here the moment it is on chain, whoever launches it.</p>
         ) : (
@@ -236,6 +237,7 @@ export default async function CurvePage() {
           <Link href="/teams">Plans, for whoever pays you</Link>
         </p>
       </SiteSection>
-    </SiteFrame>
+      </div>
+    </PageFrame>
   );
 }

@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import { LaunchForm, type LaunchStock } from "@/components/curve/launch-form";
-import { SiteFrame } from "@/components/site/site-frame";
+import { PageFrame } from "@/components/app/page-frame";
 import { DEPLOYED } from "@/lib/curve/deployed";
 import { CURVE_STOCKS, curveQuote } from "@/lib/curve/preset";
 import { nameOf } from "@/lib/save/names";
 import { cluster } from "@/lib/solana/cluster";
+import "@/app/landing.css";
 import "../curve.css";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Launch on Scrip Curve",
+  title: "Launch a token",
   description: "Launch a token priced in the Nasdaq 100, the S&P 500, Tesla or Nvidia. Its trading fees go to savers as stock, and half of them to you if you choose.",
 };
 
@@ -28,12 +29,14 @@ export default function LaunchPage() {
     toSavers: Boolean(DEPLOYED.configs[s]?.demonstration),
   }));
   return (
-    <SiteFrame
-      eyebrow="Scrip Curve"
+    <PageFrame
+      eyebrow="Launchpad"
       title="Launch a token priced in a stock."
-      lede="Pick the stock, name it, sign once. Its trading fees go to savers as stock, through a Scrip Plan, and half of them to you if you choose."
+      sub="Pick the stock, name it, sign once. Its trading fees go to savers as stock, through a Scrip Plan, and half of them to you if you choose."
     >
-      <LaunchForm stocks={stocks} cluster={cluster()} />
-    </SiteFrame>
+      <div className="sp-cv-body">
+        <LaunchForm stocks={stocks} cluster={cluster()} />
+      </div>
+    </PageFrame>
   );
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, Ellipsis, FileText, HandCoins, House, Layers, PiggyBank, Receipt, Rocket, ScrollText, Send, Settings, ShieldCheck, SlidersHorizontal, Wallet, X } from "lucide-react";
+import { BookOpen, Ellipsis, FileText, HandCoins, House, Layers, PiggyBank, Receipt, Rocket, ScrollText, Send, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Wallet, X } from "lucide-react";
 import { ScripMark } from "@/components/brand/scrip-mark";
 import { useSession } from "@/lib/session/use-session";
 import { short } from "@/lib/format";
@@ -12,14 +12,16 @@ import { short } from "@/lib/format";
  * The floating hover-expand rail. Collapsed it is a slim icon column; on hover it glides
  * open into a labelled card. Below 720px it reflows to a bottom icon bar, in CSS.
  *
- * TWO GROUPS. YOUR SAVINGS is everything a saver does: the first screen, saving now, saving
- * every payment, the receipts, the stocks, the statements, the settings, and paying someone
- * in stock. PUBLIC is what anyone can open without an account: Scrip Curve's launches, whose
- * fees match savers, the proof (the floor and the rest of the machine), the ledger and the docs.
+ * FOUR GROUPS, ONE PER THING A PERSON COMES TO DO (10 Oct, the founder: "every feature should be
+ * automatically findable … they shouldn't be confused or lost anywhere"). YOUR SAVINGS is the
+ * saver: the first screen, saving now, saving every payment, the receipts, the stocks, the
+ * statements, the settings. FOR TEAMS is whoever pays people: pay in stock, and Plans that match
+ * what their people save. LAUNCHPAD is Scrip Curve: launch a token priced in a stock, and every
+ * launch. PUBLIC is what anyone can check: the proof, the ledger and the docs. The groups are
+ * the front door's three ways stock reaches someone, in the same words as the public nav.
  *
  * ON A PHONE the rail is a bottom bar of FIVE labelled tabs: Home, Save, Every payment,
- * Receipts, and More, which opens the rest. Eleven bare icons in 375 px was a row nobody
- * could read; five words is the bar every banking app has.
+ * Receipts, and More, which opens the rest under the same group headings.
  *
  * `/pay`, `/receipt` and `/claim` are deliberately NOT here: each belongs to somebody who
  * is not the owner, so they are reached from a book, a link or a ledger row, never chrome.
@@ -35,14 +37,25 @@ const NAV = [
       { href: "/app/holdings", label: "Stocks", phone: null, Icon: Layers },
       { href: "/app/statements", label: "Statements", phone: null, Icon: FileText },
       { href: "/app/settings", label: "Settings", phone: null, Icon: Settings },
+    ],
+  },
+  {
+    group: "For teams",
+    items: [
       { href: "/app/org", label: "Pay in stock", phone: null, Icon: Send },
-      { href: "/app/org/plans", label: "Plans", phone: null, Icon: HandCoins },
+      { href: "/app/org/plans", label: "Match savers", phone: null, Icon: HandCoins },
+    ],
+  },
+  {
+    group: "Launchpad",
+    items: [
+      { href: "/curve/launch", label: "Launch a token", phone: null, Icon: Rocket },
+      { href: "/curve", label: "All launches", phone: null, Icon: Sparkles },
     ],
   },
   {
     group: "Public",
     items: [
-      { href: "/curve", label: "Launches", phone: null, Icon: Rocket },
       { href: "/proof", label: "Proof", phone: null, Icon: ShieldCheck },
       { href: "/ledger", label: "Ledger", phone: null, Icon: ScrollText },
       { href: "/docs", label: "Docs", phone: null, Icon: BookOpen },
@@ -50,8 +63,9 @@ const NAV = [
   },
 ] as const;
 
-/** What the phone's More sheet lists: every destination that is not one of the four tabs. */
-const MORE = NAV.flatMap((g) => g.items.filter((i) => i.phone === null));
+/** What the phone's More sheet lists: every destination that is not one of the four tabs, under its group. */
+const MORE_GROUPS = NAV.map((g) => ({ group: g.group, items: g.items.filter((i) => i.phone === null) })).filter((g) => g.items.length > 0);
+const MORE = MORE_GROUPS.flatMap((g) => g.items);
 
 /** Every route the rail offers — the shell must survive all of them. Held by a test. */
 export const RAIL_ROUTES: readonly string[] = NAV.flatMap((g) => g.items.map((i) => i.href));
@@ -60,6 +74,8 @@ function isActive(href: string, pathname: string): boolean {
   if (href === "/app") return pathname === "/app";
   // Plans has its own item; pay in stock lights up for everything else under /app/org.
   if (href === "/app/org") return (pathname === "/app/org" || pathname.startsWith("/app/org/")) && !pathname.startsWith("/app/org/plans");
+  // Launch a token has its own item; all launches lights up for the list and every launch's page.
+  if (href === "/curve") return (pathname === "/curve" || pathname.startsWith("/curve/")) && !pathname.startsWith("/curve/launch");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -123,11 +139,16 @@ export function AppRail() {
 
       {more ? (
         <div id="app-rail-more" className="app-rail-sheet" role="dialog" aria-label="More">
-          {MORE.map(({ href, label, Icon }) => (
-            <Link key={href} href={href} className={`app-rail-sheet-link${isActive(href, pathname) ? " on" : ""}`}>
-              <Icon size={18} strokeWidth={1.9} />
-              {label}
-            </Link>
+          {MORE_GROUPS.map(({ group, items }) => (
+            <div key={group} className="app-rail-sheet-group">
+              <p className="app-rail-sheet-head">{group}</p>
+              {items.map(({ href, label, Icon }) => (
+                <Link key={href} href={href} className={`app-rail-sheet-link${isActive(href, pathname) ? " on" : ""}`}>
+                  <Icon size={18} strokeWidth={1.9} />
+                  {label}
+                </Link>
+              ))}
+            </div>
           ))}
           <p className="app-rail-sheet-who">{session.owner ? <>Signed in as <span className="mono">{short(session.owner)}</span></> : <Link href="/app">Sign in</Link>}</p>
         </div>

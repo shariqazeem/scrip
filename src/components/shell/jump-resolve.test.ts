@@ -19,6 +19,10 @@ describe("⌘K resolves from shape", () => {
   it("a page by name, and a path as itself", () => {
     expect(resolveJump("ledger")).toBe("/ledger");
     expect(resolveJump("Plans")).toBe("/app/org/plans");
+    expect(resolveJump("launchpad")).toBe("/curve");
+    // The old names still open the renamed pages.
+    expect(resolveJump("launches")).toBe("/curve");
+    expect(resolveJump("curve")).toBe("/curve");
     expect(resolveJump("Stocks")).toBe("/app/holdings");
     expect(resolveJump("/app/org/runs")).toBe("/app/org/runs");
   });

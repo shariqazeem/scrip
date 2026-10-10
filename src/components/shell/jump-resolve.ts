@@ -8,8 +8,8 @@ export const JUMP_PAGES: ReadonlyArray<readonly [href: string, name: string, wha
   ["/", "Save", "part of the USDC you were paid, into a stock, now"],
   ["/proof", "Proof", "how Scrip works, every number read from the chain"],
   ["/teams", "Teams", "pay people in stock, and add to what they save"],
-  ["/curve", "Launches", "Scrip Curve: tokens priced in a stock, whose fees match savers"],
-  ["/curve/launch", "Launch", "a token priced in a stock, from your own wallet"],
+  ["/curve", "Launchpad", "every launch on Scrip Curve: tokens priced in a stock, whose fees match savers"],
+  ["/curve/launch", "Launch a token", "priced in a stock, from your own wallet, in one approval"],
   ["/app", "Your savings", "what you own, and your next step"],
   ["/app/save", "Save now", "turn some USDC into a stock, inside the app"],
   ["/app/rule", "Every payment", "how much of every payment is saved, by itself"],
@@ -21,7 +21,7 @@ export const JUMP_PAGES: ReadonlyArray<readonly [href: string, name: string, wha
   ["/app/org/pay", "Pay one person", "a handle, an amount, a reason"],
   ["/app/org/runs", "Runs", "a payroll run is one file and one signature"],
   ["/app/org/grants", "Grants", "vesting from an escrow the payer cannot spend"],
-  ["/app/org/plans", "Plans", "match what your people save, enforced by the program"],
+  ["/app/org/plans", "Match savers", "Plans: match what your people save, enforced by the program"],
   ["/floor", "The floor", "every stub as it prints, the world over"],
   ["/ledger", "Ledger", "everything that has settled"],
   ["/assets", "Assets", "what a rule can buy, issuer powers on every row"],
@@ -30,6 +30,15 @@ export const JUMP_PAGES: ReadonlyArray<readonly [href: string, name: string, wha
   ["/docs", "Docs", "how it works, in six pages"],
   ["/changelog", "Changelog", "what changed, with signatures"],
 ];
+
+/** Single words people use for a page named otherwise ("plans", "curve", "launches"), so the old names still open it. */
+const ALIASES: Readonly<Record<string, string>> = {
+  plans: "/app/org/plans",
+  match: "/app/org/plans",
+  curve: "/curve",
+  launches: "/curve",
+  launch: "/curve/launch",
+};
 
 const BASE58 = /^[1-9A-HJ-NP-Za-km-z]+$/;
 
@@ -46,6 +55,8 @@ export function resolveJump(raw: string): string | null {
   if (BASE58.test(s) && s.length >= 86 && s.length <= 88) return `/receipt/${s}`;
   if (BASE58.test(s) && s.length >= 32 && s.length <= 44) return `/grant/${s}`;
   if (/^[a-z0-9]{3,20}$/i.test(s)) {
+    const alias = ALIASES[s.toLowerCase()];
+    if (alias) return alias;
     const page = JUMP_PAGES.find(([, name]) => name.toLowerCase() === s.toLowerCase());
     return page ? page[0] : `/@${s.toLowerCase()}`;
   }

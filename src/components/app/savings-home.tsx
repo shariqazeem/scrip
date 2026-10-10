@@ -217,3 +217,30 @@ export function FirstSteps({
     </section>
   );
 }
+
+/**
+ * MORE WAYS STOCK REACHES YOU — the front door's three ways, from inside your savings: whoever
+ * pays you can match what you save, launches on the launchpad fund those matches, and you can pay
+ * someone else in stock. Always shown, so nothing Scrip does is more than one tap from home.
+ */
+export function MoreWays({ from }: { from: string }) {
+  return (
+    <section className="sp-more-ways" aria-labelledby="more-ways">
+      <h2 id="more-ways">More ways stock reaches you</h2>
+      <div className="grid">
+        <Link href={`/teams?${new URLSearchParams({ from })}`} className="way">
+          <span className="t">Whoever pays you can match it</span>
+          <span className="p">A Plan adds a share of every automatic save, in stock, capped each month. Show them how.</span>
+        </Link>
+        <Link href="/curve" className="way">
+          <span className="t">Launches that pay savers</span>
+          <span className="p">Tokens launched on the launchpad send part of every trading fee into Plans that match automatic saves.</span>
+        </Link>
+        <Link href="/app/org" className="way">
+          <span className="t">Pay someone in stock</span>
+          <span className="p">One person or a whole team, from your wallet, with a receipt that says why.</span>
+        </Link>
+      </div>
+    </section>
+  );
+}

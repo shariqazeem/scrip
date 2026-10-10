@@ -25,6 +25,7 @@ export function SiteFrame({ eyebrow, title, lede, children, wide = false }: { ey
         <Link href="/company">Company</Link>
         <Link href="/security">Security</Link>
         <Link href="/bounties">Bounties</Link>
+        <Link href="/curve">Launchpad</Link>
         <Link href="/proof">Proof</Link>
         <Link href="/assets">Assets</Link>
         <Link href="/changelog">Changelog</Link>

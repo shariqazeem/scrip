@@ -3,13 +3,14 @@ import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import { LiveBook } from "@/components/app/live-book";
 import { PageFrame } from "@/components/app/page-frame";
-import { FirstSteps, SavingsHead, SignInPanel } from "@/components/app/savings-home";
+import { FirstSteps, MoreWays, SavingsHead, SignInPanel } from "@/components/app/savings-home";
 import { SignOut } from "@/components/auth/connect";
 import { PlanMemberships } from "@/components/plan/memberships";
 import { RequestToJoin } from "@/components/plan/request-to-join";
 import { SavedList } from "@/components/save/saved-list";
 import { StartCard } from "@/components/start/start-card";
 import { liveView } from "@/lib/book/live";
+import { short } from "@/lib/format";
 import { askedAt } from "@/lib/plan/open";
 import { membershipsOf } from "@/lib/plan/read";
 import { automaticToday, listOf } from "@/lib/save/card";
@@ -116,6 +117,8 @@ export default async function HomePage() {
           <SavedList rows={saved} />
         </section>
       ) : null}
+
+      <MoreWays from={short(owner)} />
     </PageFrame>
   );
 }

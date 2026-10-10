@@ -23,7 +23,7 @@ describe("the rail and the shell agree", () => {
 
 describe("isAppRoute", () => {
   it("shells the book and everything under it", () => {
-    for (const p of ["/app", "/app/rule", "/app/org", "/app/org/runs", "/assets", "/ledger", "/keepers", "/floor"]) expect(isAppRoute(p)).toBe(true);
+    for (const p of ["/app", "/app/rule", "/app/org", "/app/org/runs", "/assets", "/ledger", "/keepers", "/floor", "/curve", "/curve/launch", "/curve/DxB9g2qStVTxroTPsqvUotKESGqwnYR9uy2qrvkz4bXe"]) expect(isAppRoute(p)).toBe(true);
   });
   it("leaves the landing, pay, receipts, claims and docs unshelled", () => {
     // A receipt is opened by someone who has never heard of Scrip; a pay page by a payer with
@@ -33,5 +33,6 @@ describe("isAppRoute", () => {
   it("does not shell a route that merely starts with a shelled word", () => {
     expect(isAppRoute("/applications")).toBe(false);
     expect(isAppRoute("/assetsomething")).toBe(false);
+    expect(isAppRoute("/curveball")).toBe(false);
   });
 });

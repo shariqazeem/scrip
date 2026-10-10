@@ -440,3 +440,9 @@
     display: none;
   }
 }
+
+/* Inside the app frame since 10 Oct: the launchpad keeps its reading column, so a form and a
+   trade panel never stretch across a wide screen. */
+.sp-cv-body {
+  max-width: var(--measure);
+}

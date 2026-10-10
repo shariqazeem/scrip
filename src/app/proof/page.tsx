@@ -126,7 +126,7 @@ export default async function ProofPage() {
             For teams
           </Link>
           <Link href="/curve" className="sp-nav-link">
-            Launches
+            Launchpad
           </Link>
           <Link href="/ledger" className="sp-nav-link">
             Ledger
@@ -420,7 +420,7 @@ export default async function ProofPage() {
             Open the ledger
           </Link>
           . Every stub is an account anyone can read, anchored to a transaction that already happened. Launch fees that fund savings, through
-          Meteora: <Link href="/curve" className="sp-inline-link">Scrip Curve</Link>.
+          Meteora: <Link href="/curve" className="sp-inline-link">the launchpad</Link>.
         </p>
       </section>
 
@@ -447,7 +447,7 @@ export default async function ProofPage() {
           <span>Scrip</span>
           <span className="sp-foot-spacer" />
           <Link href="/">Save</Link>
-          <Link href="/curve">Scrip Curve</Link>
+          <Link href="/curve">Launchpad</Link>
           <Link href="/assets">Assets</Link>
           <Link href="/ledger">Ledger</Link>
           <Link href="/docs">Docs</Link>

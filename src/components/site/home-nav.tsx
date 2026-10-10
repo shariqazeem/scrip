@@ -5,7 +5,7 @@ import "@/app/front.css";
 
 /**
  * THE PUBLIC NAV, ON PAPER — on the front page and every page a stranger reads. Scrip, For
- * teams, Launches (Scrip Curve), Proof, the way into your savings, and the one primary action,
+ * teams, Launchpad (Scrip Curve), Proof, the way into your savings, and the one primary action,
  * Start saving. On a phone: the mark, your savings, and a menu for the rest. The dark floor's nav
  * lives only on /proof.
  *
@@ -23,7 +23,7 @@ export function HomeNav({ front = false }: { front?: boolean } = {}) {
         For teams
       </Link>
       <Link href="/curve" className="sp-home-nav-link is-wide">
-        Launches
+        Launchpad
       </Link>
       <Link href="/proof" className="sp-home-nav-link is-wide">
         Proof

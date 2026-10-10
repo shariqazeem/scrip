@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { House, PiggyBank, SlidersHorizontal } from "lucide-react";
+import { HandCoins, House, PiggyBank, Rocket, Send, SlidersHorizontal, Sparkles } from "lucide-react";
 import { ServiceWorker } from "@/components/app/offline";
 import { AppRail } from "./app-rail";
 import { NetworkChip } from "./network-chip";
@@ -15,25 +15,44 @@ import "./app-shell.css";
  * pill. Mounted once in the root layout and shown only on app routes. Sets
  * `html[data-app-shell="on"]` so page content clears the fixed chrome.
  *
- * THREE SEGMENTS, THE THREE THINGS A SAVER DOES HERE: look at what they own, save now, and
- * save every payment. Paying someone in stock is the payer's side and lives in the rail. On a
- * phone the bottom bar carries the same doors, so the pill is a computer's only.
+ * THE PILL IS THE SECTION YOU ARE IN, so nobody has to wonder where they are. Your savings (and
+ * every public page): look at what you own, save now, save every payment. For teams: pay in
+ * stock, match savers. The launchpad: every launch, launch a token. The rail carries all of it;
+ * the pill only says which part this page belongs to and its neighbours. On a phone the bottom
+ * bar carries the doors, so the pill is a computer's only.
  */
+type Seg = { href: string; label: string; Icon: typeof House; on: boolean };
+
+function segmentsFor(pathname: string): Seg[] {
+  if (pathname === "/curve" || pathname.startsWith("/curve/")) {
+    const launching = pathname.startsWith("/curve/launch");
+    return [
+      { href: "/curve", label: "All launches", Icon: Sparkles, on: !launching },
+      { href: "/curve/launch", label: "Launch a token", Icon: Rocket, on: launching },
+    ];
+  }
+  if (pathname === "/app/org" || pathname.startsWith("/app/org/")) {
+    const plans = pathname.startsWith("/app/org/plans");
+    return [
+      { href: "/app/org", label: "Pay in stock", Icon: Send, on: !plans },
+      { href: "/app/org/plans", label: "Match savers", Icon: HandCoins, on: plans },
+    ];
+  }
+  return [
+    { href: "/app", label: "Home", Icon: House, on: pathname === "/app" },
+    { href: "/app/save", label: "Save now", Icon: PiggyBank, on: pathname.startsWith("/app/save") },
+    { href: "/app/rule", label: "Every payment", Icon: SlidersHorizontal, on: pathname.startsWith("/app/rule") },
+  ];
+}
+
 function ModePill({ pathname }: { pathname: string }) {
-  const onRule = pathname.startsWith("/app/rule");
-  const onSave = pathname.startsWith("/app/save");
-  const onHome = pathname === "/app";
   return (
-    <div className="mode-pill" role="group" aria-label="Mode">
-      <Link href="/app" className={`mode-seg${onHome ? " on" : ""}`}>
-        <House size={14} strokeWidth={2} /> Home
-      </Link>
-      <Link href="/app/save" className={`mode-seg${onSave ? " on" : ""}`}>
-        <PiggyBank size={14} strokeWidth={2} /> Save now
-      </Link>
-      <Link href="/app/rule" className={`mode-seg${onRule ? " on" : ""}`}>
-        <SlidersHorizontal size={14} strokeWidth={2} /> Every payment
-      </Link>
+    <div className="mode-pill" role="group" aria-label="This section">
+      {segmentsFor(pathname).map(({ href, label, Icon, on }) => (
+        <Link key={href} href={href} className={`mode-seg${on ? " on" : ""}`} aria-current={on ? "page" : undefined}>
+          <Icon size={14} strokeWidth={2} /> {label}
+        </Link>
+      ))}
     </div>
   );
 }

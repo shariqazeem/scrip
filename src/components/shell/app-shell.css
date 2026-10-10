@@ -407,6 +407,10 @@ html[data-app-shell="on"] .sp-page {
   }
   .app-rail-sheet {
     display: grid;
+    gap: var(--s-1);
+    max-height: calc(100vh - 120px);
+    max-height: calc(100dvh - 120px);
+    overflow-y: auto;
     position: fixed;
     bottom: 88px;
     left: 50%;
@@ -460,4 +464,14 @@ html[data-app-shell="on"] .sp-page {
   html[data-app-shell="on"] .sp-page {
     padding-top: 0 !important;
   }
+}
+
+/* The More sheet's group headings: the same four groups as the rail, so a phone finds the same doors. */
+.app-rail-sheet-group {
+  display: grid;
+}
+.app-rail-sheet-head {
+  margin: var(--s-2) var(--s-3) var(--s-1);
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
 }
