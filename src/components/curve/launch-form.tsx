@@ -119,7 +119,7 @@ export function LaunchForm({ stocks, cluster }: { stocks: readonly LaunchStock[]
             </button>
             <button type="button" role="radio" aria-checked={kind === "demonstration"} className={`sp-cv-stock${kind === "demonstration" ? " is-on" : ""}`} onClick={() => setKind("demonstration")}>
               <span className="n">All of it to savers</span>
-              <span className="d">You keep none; graduates at about $30</span>
+              <span className="d">You keep none; graduates at about $15</span>
             </button>
           </div>
         </div>
@@ -155,7 +155,7 @@ export function LaunchForm({ stocks, cluster }: { stocks: readonly LaunchStock[]
         Of every trading fee, Meteora keeps a fifth.{" "}
         {effectiveKind === "public"
           ? `Of the rest, half is yours and half goes to savers, into a Scrip Plan in ${picked?.name} that adds it to people's automatic saves. At about $850 of ${picked?.name} the curve graduates to a Meteora pool, every position locked for good.`
-          : `All of the rest goes to savers, into a Scrip Plan in ${picked?.name} that adds it to people's automatic saves; you keep none. At about $30 of ${picked?.name} the curve graduates to a Meteora pool, every position locked for good.`}{" "}
+          : `All of the rest goes to savers, into a Scrip Plan in ${picked?.name} that adds it to people's automatic saves; you keep none. At about $15 of ${picked?.name} the curve graduates to a Meteora pool, every position locked for good.`}{" "}
         The new accounts cost about 0.03 SOL, from your wallet.
       </p>
 

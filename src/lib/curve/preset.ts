@@ -42,7 +42,7 @@ import { type Asset, assetBySymbol } from "@/lib/assets/registry";
  *                         demonstration (every fee goes to savers, none to whoever launched it)
  *   graduation            about $850 of the stock on the public preset, above the $750 Meteora's
  *                         own migration keepers need for a stock quote, so Meteora graduates a full
- *                         curve by itself; about $30 on a demonstration, graduated by hand
+ *                         curve by itself; about $15 on a demonstration, graduated by hand
  *   all liquidity locked  partner and creator positions locked for good at graduation: nobody can
  *                         pull the pool, and the locked partner position keeps paying the Plan
  *   immutable token       nobody can mint more or change the metadata after launch
@@ -96,8 +96,8 @@ export type CurveKind = "public" | "demonstration";
 export const THRESHOLD: Readonly<Record<CurveKind, Readonly<Record<CurveStock, number>>>> = {
   /** About $850: above the $750 Meteora's keepers need to graduate a stock-quoted curve themselves. */
   public: { QQQx: 1.15, SPYx: 1.1, TSLAx: 2.25, NVDAx: 3.75 },
-  /** About $30: low enough to graduate with one real buy after the fee has fallen. */
-  demonstration: { QQQx: 0.04, SPYx: 0.04, TSLAx: 0.08, NVDAx: 0.13 },
+  /** About $15: low enough for the founder's own buys to fill and graduate it. */
+  demonstration: { QQQx: 0.02, SPYx: 0.02, TSLAx: 0.04, NVDAx: 0.065 },
 };
 
 export const PRESET = {

@@ -29,12 +29,12 @@ describe("the Scrip Curve presets, priced in four stocks", () => {
       });
     }
 
-    it(`graduates a public ${stock} curve above the $750 Meteora's keepers need, and a demonstration near $30`, () => {
+    it(`graduates a public ${stock} curve above the $750 Meteora's keepers need, and a demonstration near $15`, () => {
       const p = PRICES_10_OCT[stock]!;
       expect(THRESHOLD.public[stock] * p).toBeGreaterThan(800);
       expect(THRESHOLD.public[stock] * p).toBeLessThan(900);
-      expect(THRESHOLD.demonstration[stock] * p).toBeGreaterThan(25);
-      expect(THRESHOLD.demonstration[stock] * p).toBeLessThan(35);
+      expect(THRESHOLD.demonstration[stock] * p).toBeGreaterThan(12);
+      expect(THRESHOLD.demonstration[stock] * p).toBeLessThan(18);
     });
 
     it(`knows ${stock} from the registry, Token-2022, 8 decimals, and back from its mint`, () => {

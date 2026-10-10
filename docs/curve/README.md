@@ -73,7 +73,7 @@ refused: a launch is a token priced in a stock, not a share of it.
 | Quote | `QQQx`, `SPYx`, `TSLAx`, `NVDAx`: Token-2022, 8 decimals, issued by Backed (xStocks) |
 | Fee | exponential schedule 25% → 1% over 3,600 s (60 periods), dynamic fee on, collected in the quote. An early bot pays the savers; a holder does not |
 | Who keeps it | Meteora keeps 20% of each fee. Public: of the rest, half to the launcher, half to the Plan. Demonstration: all of the rest to the Plan |
-| Graduation | public about $850 of the stock (1.15 QQQx, 1.1 SPYx, 2.25 TSLAx, 3.75 NVDAx at 10 October's prices), above the $750 Meteora's own migration keepers need for a stock quote, so Meteora graduates it; a demonstration about $30, graduated with `curve.ts migrate`. 2% graduation fee; DAMM v2 collecting in the quote |
+| Graduation | public about $850 of the stock (1.15 QQQx, 1.1 SPYx, 2.25 TSLAx, 3.75 NVDAx at 10 October's prices), above the $750 Meteora's own migration keepers need for a stock quote, so Meteora graduates it; a demonstration about $15, graduated with `curve.ts migrate`. 2% graduation fee; DAMM v2 collecting in the quote |
 | Liquidity | partner and creator positions 100% permanently locked |
 | Token | SPL, 6 decimals, 1B supply, immutable metadata, no mint authority |
 
