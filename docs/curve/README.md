@@ -41,7 +41,7 @@ the Plan by itself, with no signer to trust, is the next step.
 | --- | --- |
 | `/curve` | every launch with its progress to graduation, the money trail, each stock's Plan and every fee that reached it, the preset, the proof |
 | `/curve/launch` | the stock, a name and a symbol, who keeps the fee, an optional first buy in USDC; one approval |
-| `/curve/<pool>` | a launch read from the chain: progress, the fee this second, the savers' share waiting; buy with USDC, sell for the stock |
+| `/curve/<pool>` | a launch read from the chain: progress, the fee this second, the savers' share waiting; buy with USDC, sell for the stock; once the curve is full, graduate it (`buildGraduate`, the two position NFT keys made in the browser and signing after the wallet) |
 | `/api/curve/tx` | builds a launch, a buy or a sale (`src/lib/curve/build.ts`), simulated before the wallet is asked |
 | `/api/curve/send` | relays what the wallet (and, for a launch, the new token's own key) signed; only DBC, DAMM v2 or Jupiter transactions |
 | `/api/curve/meta`, `/api/curve/icon` | a token's metadata and image, made by Scrip from its name, symbol and stock: no uploads, no free text |
@@ -73,7 +73,7 @@ refused: a launch is a token priced in a stock, not a share of it.
 | Quote | `QQQx`, `SPYx`, `TSLAx`, `NVDAx`: Token-2022, 8 decimals, issued by Backed (xStocks) |
 | Fee | exponential schedule 25% → 1% over 3,600 s (60 periods), dynamic fee on, collected in the quote. An early bot pays the savers; a holder does not |
 | Who keeps it | Meteora keeps 20% of each fee. Public: of the rest, half to the launcher, half to the Plan. Demonstration: all of the rest to the Plan |
-| Graduation | public about $850 of the stock (1.15 QQQx, 1.1 SPYx, 2.25 TSLAx, 3.75 NVDAx at 10 October's prices), above the $750 Meteora's own migration keepers need for a stock quote, so Meteora graduates it; a demonstration about $15, graduated with `curve.ts migrate`. 2% graduation fee; DAMM v2 collecting in the quote |
+| Graduation | public about $850 of the stock (1.15 QQQx, 1.1 SPYx, 2.25 TSLAx, 3.75 NVDAx at 10 October's prices), above the $750 Meteora's own migration keepers need for a stock quote, so Meteora graduates it (its docs: both migration keepers "migrate Stock Token quote pairs when the threshold is at least 750 USD equivalent"); a demonstration about $15, which Meteora's keepers skip, graduated by anyone from its page on scrip.work (one approval, about 0.025 SOL of the new pool's rent; 0.0238 simulated for DEMO1) or with `curve.ts migrate`. 2% graduation fee; DAMM v2 collecting in the quote |
 | Liquidity | partner and creator positions 100% permanently locked |
 | Token | SPL, 6 decimals, 1B supply, immutable metadata, no mint authority |
 
