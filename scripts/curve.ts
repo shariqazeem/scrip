@@ -56,6 +56,10 @@ async function main() {
   const { memoIx } = await import("@/lib/intake/instructions");
   const { addMemberIx, openPlanIx, planEscrow, planPda } = await import("@/lib/plan/instructions");
   const { newReleaseId } = await import("@/lib/solana/program");
+  const { confirmSignature } = await import("@/lib/solana/confirm");
+  /** The saving service's own priority: a leader that drops a transaction does not say so. */
+  const PRIORITY = 100_000;
+  const ATTEMPTS = 3;
 
   const rpc = process.env.SOLANA_MAINNET_RPC?.trim().replace(/"/g, "") || process.env.CURVE_RPC?.trim() || "https://api.mainnet-beta.solana.com";
   const conn = new Connection(rpc, "confirmed");
@@ -92,27 +96,41 @@ async function main() {
     return kp;
   };
 
-  /** Simulate, then sign and send, then wait for it: every legacy write goes through here. */
+  /**
+   * Simulate, then sign and send, then wait for it: every legacy write goes through here. The same
+   * signed bytes are re-sent until the network has seen them; if the blockhash still runs out, the
+   * transaction can never land, so it is signed again with a fresh one, up to three times. On
+   * 10 October the first setup's Plan was sent once and dropped.
+   */
   const send = async (tx: InstanceType<typeof Transaction>, payer: Kp, extra: Kp[], what: string) => {
     if (!tx.instructions.some((ix) => ix.programId.equals(ComputeBudgetProgram.programId))) {
-      tx.instructions.unshift(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }));
+      tx.instructions.unshift(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: PRIORITY }));
     }
-    const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
-    tx.feePayer = payer.publicKey;
-    tx.recentBlockhash = blockhash;
-    tx.sign(payer, ...extra);
-    const sim = await conn.simulateTransaction(tx);
-    if (sim.value.err) {
-      console.log((sim.value.logs ?? []).slice(-14).join("\n"));
-      throw new Error(`${what}: the simulation failed (${JSON.stringify(sim.value.err)}). Nothing was sent.`);
+    for (let attempt = 1; ; attempt += 1) {
+      const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
+      tx.feePayer = payer.publicKey;
+      tx.recentBlockhash = blockhash;
+      tx.sign(payer, ...extra);
+      if (attempt === 1) {
+        const sim = await conn.simulateTransaction(tx);
+        if (sim.value.err) {
+          console.log((sim.value.logs ?? []).slice(-14).join("\n"));
+          throw new Error(`${what}: the simulation failed (${JSON.stringify(sim.value.err)}). Nothing was sent.`);
+        }
+        console.log(`${what}: simulation ok, ${sim.value.unitsConsumed} compute units`);
+        if (has("dry-run")) return "dry-run";
+      }
+      const raw = tx.serialize();
+      const sig = await conn.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 });
+      const done = await confirmSignature(conn, sig, lastValidBlockHeight, "confirmed", () => conn.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }));
+      if (done.ok) {
+        console.log(`${what}: ${sig}`);
+        return sig;
+      }
+      if (/failed on chain/.test(done.why)) throw new Error(`${what}: landed but failed (${done.why}): ${sig}`);
+      if (attempt >= ATTEMPTS) throw new Error(`${what}: not confirmed after ${ATTEMPTS} tries; nothing landed, so it is safe to run the command again.`);
+      console.log(`${what}: not seen before its blockhash ran out, so it never landed; signing again (${attempt + 1} of ${ATTEMPTS})`);
     }
-    console.log(`${what}: simulation ok, ${sim.value.unitsConsumed} compute units`);
-    if (has("dry-run")) return "dry-run";
-    const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 5 });
-    const done = await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-    if (done.value.err) throw new Error(`${what}: landed but failed (${JSON.stringify(done.value.err)}): ${sig}`);
-    console.log(`${what}: ${sig}`);
-    return sig;
   };
 
   /** The site's own transactions (base64, unsigned): signed by whoever they need, simulated, sent in order. */
@@ -121,25 +139,37 @@ async function main() {
     for (const [i, b64] of transactions.entries()) {
       const label = transactions.length > 1 ? `${what} (${i + 1} of ${transactions.length})` : what;
       const tx = VersionedTransaction.deserialize(Buffer.from(b64, "base64"));
-      const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
-      tx.message.recentBlockhash = blockhash;
       const needed = tx.message.staticAccountKeys.slice(0, tx.message.header.numRequiredSignatures);
-      tx.sign(signers.filter((s) => needed.some((k) => k.equals(s.publicKey))));
-      const sim = await conn.simulateTransaction(tx, { commitment: "confirmed" });
-      if (sim.value.err) {
-        console.log((sim.value.logs ?? []).slice(-14).join("\n"));
-        throw new Error(`${label}: the simulation failed (${JSON.stringify(sim.value.err)}). Nothing was sent.`);
+      const own = signers.filter((s) => needed.some((k) => k.equals(s.publicKey)));
+      for (let attempt = 1; ; attempt += 1) {
+        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
+        tx.message.recentBlockhash = blockhash;
+        tx.signatures = tx.signatures.map(() => new Uint8Array(64));
+        tx.sign(own);
+        if (attempt === 1) {
+          const sim = await conn.simulateTransaction(tx, { commitment: "confirmed" });
+          if (sim.value.err) {
+            console.log((sim.value.logs ?? []).slice(-14).join("\n"));
+            throw new Error(`${label}: the simulation failed (${JSON.stringify(sim.value.err)}). Nothing was sent.`);
+          }
+          console.log(`${label}: simulation ok, ${sim.value.unitsConsumed} compute units, ${tx.serialize().length} bytes`);
+          if (has("dry-run")) {
+            sigs.push("dry-run");
+            break;
+          }
+        }
+        const raw = tx.serialize();
+        const sig = await conn.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 });
+        const done = await confirmSignature(conn, sig, lastValidBlockHeight, "confirmed", () => conn.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }));
+        if (done.ok) {
+          console.log(`${label}: ${sig}`);
+          sigs.push(sig);
+          break;
+        }
+        if (/failed on chain/.test(done.why)) throw new Error(`${label}: landed but failed (${done.why}): ${sig}`);
+        if (attempt >= ATTEMPTS) throw new Error(`${label}: not confirmed after ${ATTEMPTS} tries; nothing landed, so it is safe to run the command again.`);
+        console.log(`${label}: not seen before its blockhash ran out, so it never landed; signing again (${attempt + 1} of ${ATTEMPTS})`);
       }
-      console.log(`${label}: simulation ok, ${sim.value.unitsConsumed} compute units, ${tx.serialize().length} bytes`);
-      if (has("dry-run")) {
-        sigs.push("dry-run");
-        continue;
-      }
-      const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 5 });
-      const done = await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-      if (done.value.err) throw new Error(`${label}: landed but failed (${JSON.stringify(done.value.err)}): ${sig}`);
-      console.log(`${label}: ${sig}`);
-      sigs.push(sig);
     }
     return sigs;
   };
@@ -169,7 +199,7 @@ async function main() {
     const name = flag("name") ?? `Scrip Curve: launch fees in ${asset.symbol} matching savers`;
     const open = openPlanIx({ sponsor: sponsor.publicKey, planId, asset, terms, reason: name });
     if (!open.ok) throw new Error(open.why);
-    const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50_000 }), memoIx(sponsor.publicKey, name), open.value);
+    const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitLimit({ units: 200_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: PRIORITY }), memoIx(sponsor.publicKey, name), open.value);
     const sig = await send(tx, sponsor, [], `open the ${stock} Plan "${name}"`);
     const address = planPda(sponsor.publicKey, planId).toBase58();
     const escrow = planEscrow(sponsor.publicKey, planId, asset).toBase58();
