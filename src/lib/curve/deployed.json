@@ -1,8 +1,66 @@
 {
   "cluster": "mainnet-beta",
   "feeClaimer": "9zzN2FkbG2AwHZCH1cnH6Wxo4V7YzFoKKqJXRvLATohJ",
-  "plans": {},
-  "configs": {},
+  "plans": {
+    "QQQx": {
+      "address": "GgAmixHNgHrxx8ADNzDPHmX7J5wyCLssjzowe5n88Yo3",
+      "sponsor": "BbDN31Q4qK53ddNuJnvpvWfC5UFMi87HGxQmuJobUv3q",
+      "planId": "8ecac6f834e5480fcd424b0559c5c942",
+      "escrow": "3dcZohqJGhbSCzButs47Djk3LzPgq5rbSU4ipjBDb8Kn",
+      "createdSig": "3nVGf6s8GbR1HmcQTtj3JtK8rGYbQrGMyemDmxZRckLeAQEkFQU3N6J3nWXZo3qtveCuFaLDtph8r7mLLgZ1RgxK"
+    },
+    "SPYx": {
+      "address": "2AiQPBFZSgKZoTCfo7AawpePcRvMY9hzJSEbwbavfavg",
+      "sponsor": "BbDN31Q4qK53ddNuJnvpvWfC5UFMi87HGxQmuJobUv3q",
+      "planId": "5c16fe90aeb1d134a2e179341273345f",
+      "escrow": "35u9Kuysh3YwiMLcRY3AkDuVgTSk91zsDiTSBFjbkswj",
+      "createdSig": "5LVLm2c3gfJNcQHyhH4YHJAwVeyeS48WEFMVZDajwMh2ySo21egQPnXPMUiPaaa8LW9HURgHHWCqmNeGgKjzKBm"
+    },
+    "TSLAx": {
+      "address": "28MAxtxZx96wEmq5xwiupQmYSwrqbetGGouKmv8JK6WZ",
+      "sponsor": "BbDN31Q4qK53ddNuJnvpvWfC5UFMi87HGxQmuJobUv3q",
+      "planId": "3a13f6bbaacddc999566362540869003",
+      "escrow": "583GNMF21BC1Bf5ZvfRtW6wYqFPZuZ6W5kGC2zViiH2X",
+      "createdSig": "aa1fSsbyjttSCGabdnP1n3TAxHg8TBp3D3w1mNciLLrpuMFau5YSDuMyi9Hkc9ddjqz8aoPkrTpHDoJ2jMV7y9e"
+    },
+    "NVDAx": {
+      "address": "9UJe6L4ct9CC3npeS2Q84KBTBC5nxzLzS2UMvU7rdLmS",
+      "sponsor": "BbDN31Q4qK53ddNuJnvpvWfC5UFMi87HGxQmuJobUv3q",
+      "planId": "7373749995d277fab78dfbdc7c61f5bd",
+      "escrow": "9AZQT25eTzqH5V8jvD6DimFX71sdBPqdBA78E798Dvx2",
+      "createdSig": "2edD9d1fHXyqE3JQmfaTS2GnmAYiFZoFRdLiSRELcEaC5pxYskGoUWJsz34McgCAbbG1mDZRzLRSFXuyJkcPuJPC"
+    }
+  },
+  "configs": {
+    "QQQx": {
+      "public": {
+        "address": "DDKKJ3SsJ8seX1vQxY1csvejYdRESsdz64tnmpaNLJBM",
+        "createdSig": "3dTUUF76UFdse6ESePzr7MQke8sfcDX3igJWYy6GWXvce1JMbZ2k8cWVJMALvFC6J3F5zS1yPBwfTKrC6X5guYCY"
+      },
+      "demonstration": {
+        "address": "DpxeQVJF5RhG9N6WDREECJPknCc3r4XFgNaQi6AWD4fZ",
+        "createdSig": "4KAc19CE2sNiyeQHnscnc4fvF2KE9F9UqBGpbM7QfzDsKn95kAtSzj5BYDuv2ZVoweMXWBF73qzbT9aUMTqtAhLA"
+      }
+    },
+    "SPYx": {
+      "public": {
+        "address": "6k6wqUuaDrWVrFat3bioguVidvkVzgjNZUms3pbM7qEu",
+        "createdSig": "2tmgWwSa1kRZ9jJ1T78EitqoHDHg4ymxQGFXAMcEvLvd34dR9RUxMM7eVKYbUx4RD8SGTBwH6suYZn1Ws8xgHUPm"
+      }
+    },
+    "TSLAx": {
+      "public": {
+        "address": "6NUQLujuDwGdeCwzf1EMWjmuCqdn9FGCx2gNAUK6iVQz",
+        "createdSig": "34shdmH88R4kr8gF43MgFtMwNF2WKpuJw1ojdJ31x9vRAB2B51ZBnxJ1RLEEvak7L7cfwuD53zt1e6ejz6E6m1EE"
+      }
+    },
+    "NVDAx": {
+      "public": {
+        "address": "GNSNuS4boky7XVkWwaXssvRGffWXvnD2VPEksZ2Lkkj1",
+        "createdSig": "4AVY1WtCgKZShzUdXPbYmfvW47xtzUJ8X5jpoMXnaLSVe6BfPFTK5EZSxX8Y84NRPmB1HH2zafcYQdd3G18cw2Qo"
+      }
+    }
+  },
   "launches": [],
-  "lookupTable": null
+  "lookupTable": "7tUmTfHxNQad5QRBZjra6knrdd7BNt2xw2kbLjmudRAC"
 }
