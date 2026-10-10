@@ -25,7 +25,9 @@ const STOCK_LIST = "the Nasdaq 100, the S&P 500, Tesla or Nvidia";
 /** Base units of a stock, as a person reads them: "0.0100". */
 function units(raw: bigint | null | undefined, decimals = 8): string {
   if (raw === null || raw === undefined) return "—";
-  return (Number(raw) / 10 ** decimals).toFixed(4);
+  const v = Number(raw) / 10 ** decimals;
+  // A launch fee is often a few hundred-thousandths: four places would print it as 0.0001.
+  return v > 0 && v < 0.01 ? v.toFixed(6) : v.toFixed(4);
 }
 
 /**
