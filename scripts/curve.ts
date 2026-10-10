@@ -112,7 +112,11 @@ async function main() {
       tx.recentBlockhash = blockhash;
       tx.sign(payer, ...extra);
       if (attempt === 1) {
-        const sim = await conn.simulateTransaction(tx);
+        // Simulated as a versioned transaction so the node may use its own latest blockhash: on
+        // 10 October a load-balanced node had not yet seen the one just fetched, and answered
+        // BlockhashNotFound for a transaction that was fine. A simulation never lands.
+        const probe = new VersionedTransaction(tx.compileMessage());
+        const sim = await conn.simulateTransaction(probe, { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" });
         if (sim.value.err) {
           console.log((sim.value.logs ?? []).slice(-14).join("\n"));
           throw new Error(`${what}: the simulation failed (${JSON.stringify(sim.value.err)}). Nothing was sent.`);
@@ -147,7 +151,7 @@ async function main() {
         tx.signatures = tx.signatures.map(() => new Uint8Array(64));
         tx.sign(own);
         if (attempt === 1) {
-          const sim = await conn.simulateTransaction(tx, { commitment: "confirmed" });
+          const sim = await conn.simulateTransaction(tx, { sigVerify: false, replaceRecentBlockhash: true, commitment: "confirmed" });
           if (sim.value.err) {
             console.log((sim.value.logs ?? []).slice(-14).join("\n"));
             throw new Error(`${label}: the simulation failed (${JSON.stringify(sim.value.err)}). Nothing was sent.`);
