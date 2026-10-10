@@ -42,6 +42,9 @@ html[data-app-shell="on"] .sp-page {
   flex-direction: column;
   gap: var(--s-2);
   width: 60px;
+  /* Never taller than the window: on a short one the card scrolls inside itself. */
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   transition: width var(--dur-2) var(--ease-out);
 }
 .app-rail:hover,
@@ -61,13 +64,24 @@ html[data-app-shell="on"] .sp-page {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.app-rail-card::-webkit-scrollbar {
+  display: none;
+}
+.app-rail-pill {
+  flex: none;
 }
 .app-rail-brand,
 .app-rail-item {
   display: flex;
   align-items: center;
   gap: var(--s-3);
-  height: 42px;
+  height: 40px;
   padding: 0 11px;
   border-radius: var(--r-md);
   color: var(--ink-muted);
@@ -474,4 +488,26 @@ html[data-app-shell="on"] .sp-page {
   margin: var(--s-2) var(--s-3) var(--s-1);
   font-size: var(--fs-caption);
   color: var(--ink-faint);
+}
+
+/* On a phone the bottom bar carries your savings' doors, so the pill stays hidden there; For teams
+   and the Launchpad are one entry in More, so inside them the pill is how a phone finds their pages. */
+@media (max-width: 720px) {
+  html[data-app-section="teams"] .mode-pill,
+  html[data-app-section="launchpad"] .mode-pill {
+    display: inline-flex;
+    max-width: calc(100vw - 32px);
+  }
+  html[data-app-section="teams"] .mode-seg,
+  html[data-app-section="launchpad"] .mode-seg {
+    white-space: nowrap;
+  }
+  html[data-app-section="teams"] .mode-scrim,
+  html[data-app-section="launchpad"] .mode-scrim {
+    display: block;
+  }
+  html[data-app-shell="on"][data-app-section="teams"] .sp-page,
+  html[data-app-shell="on"][data-app-section="launchpad"] .sp-page {
+    padding-top: 78px;
+  }
 }

@@ -51,6 +51,9 @@ export default async function OrgHome() {
             <Link href="/app/org/grants" className="sp-action">
               Grant stock that vests
             </Link>
+            <Link href="/app/org/plans" className="sp-action">
+              Match what they save
+            </Link>
           </div>
         </header>
 

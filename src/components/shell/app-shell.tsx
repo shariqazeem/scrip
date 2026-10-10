@@ -22,16 +22,24 @@ import "./app-shell.css";
  * bar carries the doors, so the pill is a computer's only.
  */
 type Seg = { href: string; label: string; Icon: typeof House; on: boolean };
+type Section = "savings" | "teams" | "launchpad";
+
+export function sectionOf(pathname: string): Section {
+  if (pathname === "/curve" || pathname.startsWith("/curve/")) return "launchpad";
+  if (pathname === "/app/org" || pathname.startsWith("/app/org/")) return "teams";
+  return "savings";
+}
 
 function segmentsFor(pathname: string): Seg[] {
-  if (pathname === "/curve" || pathname.startsWith("/curve/")) {
+  const section = sectionOf(pathname);
+  if (section === "launchpad") {
     const launching = pathname.startsWith("/curve/launch");
     return [
       { href: "/curve", label: "All launches", Icon: Sparkles, on: !launching },
       { href: "/curve/launch", label: "Launch a token", Icon: Rocket, on: launching },
     ];
   }
-  if (pathname === "/app/org" || pathname.startsWith("/app/org/")) {
+  if (section === "teams") {
     const plans = pathname.startsWith("/app/org/plans");
     return [
       { href: "/app/org", label: "Pay in stock", Icon: Send, on: !plans },
@@ -61,14 +69,23 @@ export function AppShell() {
   const pathname = usePathname() ?? "";
   const active = isAppRoute(pathname);
 
+  const section = sectionOf(pathname);
+
   useEffect(() => {
     const el = document.documentElement;
-    if (active) el.dataset.appShell = "on";
-    else delete el.dataset.appShell;
+    if (active) {
+      el.dataset.appShell = "on";
+      // On a phone the pill shows only for a section whose pages the bottom bar does not carry.
+      el.dataset.appSection = section;
+    } else {
+      delete el.dataset.appShell;
+      delete el.dataset.appSection;
+    }
     return () => {
       delete el.dataset.appShell;
+      delete el.dataset.appSection;
     };
-  }, [active]);
+  }, [active, section]);
 
   if (!active) return null;
   return (

@@ -20,7 +20,7 @@ import { releaseIdFromHex } from "@/lib/solana/program";
 import "@/components/org/org.css";
 import "@/components/plan/plan.css";
 
-export const metadata: Metadata = { title: "Plans" };
+export const metadata: Metadata = { title: "Match savers" };
 export const dynamic = "force-dynamic";
 
 const MONTH = 30 * 86_400;

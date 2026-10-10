@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, Ellipsis, FileText, HandCoins, House, Layers, PiggyBank, Receipt, Rocket, ScrollText, Send, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Wallet, X } from "lucide-react";
+import { BookOpen, Ellipsis, FileText, House, Layers, PiggyBank, Receipt, Rocket, ScrollText, Settings, ShieldCheck, SlidersHorizontal, Users, Wallet, X } from "lucide-react";
 import { ScripMark } from "@/components/brand/scrip-mark";
 import { useSession } from "@/lib/session/use-session";
 import { short } from "@/lib/format";
@@ -12,13 +12,12 @@ import { short } from "@/lib/format";
  * The floating hover-expand rail. Collapsed it is a slim icon column; on hover it glides
  * open into a labelled card. Below 720px it reflows to a bottom icon bar, in CSS.
  *
- * FOUR GROUPS, ONE PER THING A PERSON COMES TO DO (10 Oct, the founder: "every feature should be
- * automatically findable … they shouldn't be confused or lost anywhere"). YOUR SAVINGS is the
- * saver: the first screen, saving now, saving every payment, the receipts, the stocks, the
- * statements, the settings. FOR TEAMS is whoever pays people: pay in stock, and Plans that match
- * what their people save. LAUNCHPAD is Scrip Curve: launch a token priced in a stock, and every
- * launch. PUBLIC is what anyone can check: the proof, the ledger and the docs. The groups are
- * the front door's three ways stock reaches someone, in the same words as the public nav.
+ * ONE ENTRY PER SECTION, ITS PAGES IN THE PILL (10 Oct). YOUR SAVINGS is the saver's every page.
+ * MORE WAYS is the other two ways stock reaches someone, each one entry: For teams (pay in stock,
+ * match savers) and the Launchpad (every launch, launch a token); inside each, the top pill is
+ * that section's pages. PUBLIC is what anyone can check. Fifteen entries, one per page, made the
+ * rail taller than a laptop's window (the founder: "sidebar got so long that it looks bad"); a
+ * section per entry keeps it at twelve, and the card scrolls inside itself if a window is shorter.
  *
  * ON A PHONE the rail is a bottom bar of FIVE labelled tabs: Home, Save, Every payment,
  * Receipts, and More, which opens the rest under the same group headings.
@@ -40,17 +39,10 @@ const NAV = [
     ],
   },
   {
-    group: "For teams",
+    group: "More ways",
     items: [
-      { href: "/app/org", label: "Pay in stock", phone: null, Icon: Send },
-      { href: "/app/org/plans", label: "Match savers", phone: null, Icon: HandCoins },
-    ],
-  },
-  {
-    group: "Launchpad",
-    items: [
-      { href: "/curve/launch", label: "Launch a token", phone: null, Icon: Rocket },
-      { href: "/curve", label: "All launches", phone: null, Icon: Sparkles },
+      { href: "/app/org", label: "For teams", phone: null, Icon: Users },
+      { href: "/curve", label: "Launchpad", phone: null, Icon: Rocket },
     ],
   },
   {
@@ -72,10 +64,7 @@ export const RAIL_ROUTES: readonly string[] = NAV.flatMap((g) => g.items.map((i)
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/app") return pathname === "/app";
-  // Plans has its own item; pay in stock lights up for everything else under /app/org.
-  if (href === "/app/org") return (pathname === "/app/org" || pathname.startsWith("/app/org/")) && !pathname.startsWith("/app/org/plans");
-  // Launch a token has its own item; all launches lights up for the list and every launch's page.
-  if (href === "/curve") return (pathname === "/curve" || pathname.startsWith("/curve/")) && !pathname.startsWith("/curve/launch");
+  // A section's entry lights up for every page in it: its pages are the pill's.
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
