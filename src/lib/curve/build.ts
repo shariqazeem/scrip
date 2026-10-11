@@ -376,16 +376,20 @@ export async function creatorFeesWaiting(conn: Connection, launch: ChainLaunch):
  * position, in one transaction the launcher signs. Only the wallet that launched it can; nothing
  * here can send a fee anywhere but to that wallet.
  */
-export async function buildClaimCreator(conn: Connection, input: { owner: PublicKey; launch: ChainLaunch; table?: string | null }): Promise<Outcome<Built & { amountRaw: bigint }>> {
+export async function buildClaimCreator(conn: Connection, input: { owner: PublicKey; launch: ChainLaunch; table?: string | null; planEscrow?: string | null }): Promise<Outcome<Built & { amountRaw: bigint; toSavers: boolean }>> {
   const { launch } = input;
   if (launch.creator !== input.owner.toBase58()) return held("Only the wallet that launched it can claim its share of the fees.");
   const waiting = await creatorFeesWaiting(conn, launch);
   const amountRaw = waiting.onCurve + waiting.onPosition;
   if (amountRaw <= 0n) return held("Nothing is waiting for you yet. Your share arrives as the launch trades.");
+  // A demonstration promised every fee to savers: after graduation the pool's fees split between
+  // the two locked positions, so the launcher's claim goes to the Plan too, never to their wallet.
+  const toSavers = launch.kind === "demonstration" && Boolean(input.planEscrow);
+  const receiver = toSavers ? new PublicKey(input.planEscrow!) : input.owner;
   const ixs: TransactionInstruction[] = [];
   try {
     if (waiting.onCurve > 0n) {
-      const tx = await curveClient(conn).creator.claimCreatorTradingFee({ creator: input.owner, payer: input.owner, pool: new PublicKey(launch.pool), maxBaseAmount: new BN(0), maxQuoteAmount: new BN(waiting.onCurve.toString()) });
+      const tx = await curveClient(conn).creator.claimCreatorTradingFee({ creator: input.owner, payer: input.owner, pool: new PublicKey(launch.pool), maxBaseAmount: new BN(0), maxQuoteAmount: new BN(waiting.onCurve.toString()), receiver });
       ixs.push(...own(tx.instructions));
     }
     if (waiting.onPosition > 0n && launch.dammPool && waiting.position) {
@@ -393,7 +397,7 @@ export async function buildClaimCreator(conn: Connection, input: { owner: Public
       const pool = await amm.fetchPoolState(new PublicKey(launch.dammPool));
       const programOf = (flag: number) => (flag === 1 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID);
       const tx = await amm.claimPositionFee2({
-        receiver: input.owner,
+        receiver,
         owner: input.owner,
         feePayer: input.owner,
         pool: new PublicKey(launch.dammPool),
@@ -413,5 +417,5 @@ export async function buildClaimCreator(conn: Connection, input: { owner: Public
   }
   const built = await assemble(conn, input.owner, [{ ixs, alts: await curveTable(conn, input.table) }], 300_000, nameOf(launch.stock));
   if (!built.ok) return built;
-  return ok({ transactions: b64(built.value.txs), simulated: built.value.simulated, amountRaw });
+  return ok({ transactions: b64(built.value.txs), simulated: built.value.simulated, amountRaw, toSavers });
 }

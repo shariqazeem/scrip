@@ -6,7 +6,7 @@ import { Keypair } from "@solana/web3.js";
 import { walletBrowseLinks } from "@/components/save/wallets";
 import { type Connected, signAndRelay, useCurveWallet } from "./wallet-flow";
 
-type Live = { tokensRaw: string | null; stockRaw: string | null; feeBps: number; quoteReserveRaw: string; thresholdRaw: string; migrated: boolean; creator: string; creatorWaitingRaw: string | null };
+type Live = { tokensRaw: string | null; stockRaw: string | null; feeBps: number; quoteReserveRaw: string; thresholdRaw: string; migrated: boolean; creator: string; creatorWaitingRaw: string | null; kind: "public" | "demonstration" };
 
 const BUYS = [5, 25, 100] as const;
 const SELLS = [25, 50, 100] as const;
@@ -184,17 +184,17 @@ export function TradePanel({
     await refresh();
     if (!sent.ok) return setWhy(sent.why || null);
     router.refresh();
-    setDone(`Claimed. Your share is ${stockName} in your wallet.`);
+    setDone(built.j.toSavers ? `Sent. Your share of the fees is in the ${stockName} Plan, for savers.` : `Claimed. Your share is ${stockName} in your wallet.`);
   };
   const mine = owner && live && live.creator === owner;
   const waiting = mine && live?.creatorWaitingRaw ? BigInt(live.creatorWaitingRaw) : 0n;
   const launcherRow = mine ? (
     <div className="sp-cv-mine">
-      <span className="k">Your share of the fees</span>
+      <span className="k">{live?.kind === "demonstration" ? "Your position's share of the fees" : "Your share of the fees"}</span>
       <span className="v">{waiting > 0n ? `${units(waiting.toString(), 8, 6)} ${stockName} waiting` : "none waiting yet"}</span>
       {waiting > 0n ? (
         <button type="button" className="sp-btn" disabled={busy} onClick={() => claim(connected)}>
-          {phase === "building" ? "Preparing…" : phase === "signing" ? "Waiting for your wallet…" : "Claim to your wallet"}
+          {phase === "building" ? "Preparing…" : phase === "signing" ? "Waiting for your wallet…" : live?.kind === "demonstration" ? "Send it to savers" : "Claim to your wallet"}
         </button>
       ) : null}
     </div>

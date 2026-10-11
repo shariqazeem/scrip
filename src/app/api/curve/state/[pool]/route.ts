@@ -53,5 +53,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ pool
     stockRaw,
     creator: l.creator,
     creatorWaitingRaw,
+    kind: l.kind,
   });
 }

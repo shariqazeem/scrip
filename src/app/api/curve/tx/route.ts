@@ -78,9 +78,9 @@ export async function POST(req: NextRequest) {
     const found = await launchAt(conn, String(body.pool ?? ""));
     if (!found.ok) return NextResponse.json({ error: found.why }, { status: 503 });
     if (!found.value) return NextResponse.json({ error: "That is not a Scrip Curve launch." }, { status: 404 });
-    const built = await buildClaimCreator(conn, { owner, launch: found.value, table: DEPLOYED.lookupTable });
+    const built = await buildClaimCreator(conn, { owner, launch: found.value, table: DEPLOYED.lookupTable, planEscrow: DEPLOYED.plans[found.value.stock]?.escrow ?? null });
     if (!built.ok) return NextResponse.json({ error: built.why }, { status: 422 });
-    return NextResponse.json({ transactions: built.value.transactions, simulated: built.value.simulated, amountRaw: built.value.amountRaw.toString() });
+    return NextResponse.json({ transactions: built.value.transactions, simulated: built.value.simulated, amountRaw: built.value.amountRaw.toString(), toSavers: built.value.toSavers });
   }
 
   if (body.action === "graduate") {

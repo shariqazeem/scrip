@@ -115,8 +115,9 @@ export default async function LaunchPage({ params }: Params) {
           <Row k="For savers">
             {l.migrated ? (
               <>
-                Its graduated pool&rsquo;s trading fees, and its share of the graduation fee, are {stockName}. Scrip&rsquo;s saving service claims them into the {planLink} every
-                half hour, where they match savers&rsquo; automatic saves.
+                Its graduated pool&rsquo;s trading fees are {stockName}, split between its two locked positions: the savers&rsquo;, which Scrip&rsquo;s saving service claims
+                into the {planLink} every half hour, and the launcher&rsquo;s{l.kind === "demonstration" ? ", which on a demonstration goes to the Plan as well" : ""}. The savers&rsquo; share
+                of the graduation fee went the same way.
               </>
             ) : l.partnerFeeRaw > 0n ? (
               <>
