@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
-import { TOO_LONG, buildBuy, buildGraduate, buildLaunch, buildSell, buildSwap } from "@/lib/curve/build";
+import { TOO_LONG, buildBuy, buildClaimCreator, buildGraduate, buildLaunch, buildSell, buildSwap } from "@/lib/curve/build";
 import { DEPLOYED } from "@/lib/curve/deployed";
 import { launchAt } from "@/lib/curve/launches";
 import { isCurveStock } from "@/lib/curve/preset";
@@ -21,6 +21,7 @@ export const dynamic = "force-dynamic";
  *   { action: "sell", owner, pool, tokens }               tokens in the launch's base units
  *   { action: "graduate", owner, pool, firstNft, secondNft }   a full curve into DAMM v2; the two
  *                                                         position mints are keys the browser made
+ *   { action: "claim", owner, pool }                      the launcher's share of the fees, to their wallet
  */
 const MAX_USD = 10_000;
 
@@ -71,6 +72,15 @@ export async function POST(req: NextRequest) {
     const built = await buildLaunch(conn, { owner, stock: body.stock, kind, config, table: DEPLOYED.lookupTable, name: String(body.name ?? ""), symbol: String(body.symbol ?? ""), mint, site: siteUrl(), firstStockRaw: stockRaw });
     if (!built.ok) return NextResponse.json({ error: built.why }, { status: 422 });
     return NextResponse.json({ transactions: built.value.transactions, pool: built.value.pool, simulated: built.value.simulated, firstStockRaw: built.value.firstStockRaw.toString() });
+  }
+
+  if (body.action === "claim") {
+    const found = await launchAt(conn, String(body.pool ?? ""));
+    if (!found.ok) return NextResponse.json({ error: found.why }, { status: 503 });
+    if (!found.value) return NextResponse.json({ error: "That is not a Scrip Curve launch." }, { status: 404 });
+    const built = await buildClaimCreator(conn, { owner, launch: found.value, table: DEPLOYED.lookupTable });
+    if (!built.ok) return NextResponse.json({ error: built.why }, { status: 422 });
+    return NextResponse.json({ transactions: built.value.transactions, simulated: built.value.simulated, amountRaw: built.value.amountRaw.toString() });
   }
 
   if (body.action === "graduate") {

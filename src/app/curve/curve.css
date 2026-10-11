@@ -446,3 +446,26 @@
 .sp-cv-body {
   max-width: var(--measure);
 }
+
+/* The launcher's own row: what their half of the fees has come to, and the one way to take it. */
+.sp-cv-mine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-md);
+  font-size: var(--fs-small);
+}
+.sp-cv-mine .k {
+  color: var(--ink-muted);
+}
+.sp-cv-mine .v {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.sp-cv-mine .sp-btn {
+  margin-left: auto;
+}

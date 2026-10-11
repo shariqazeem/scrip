@@ -30,6 +30,8 @@ export type ChainLaunch = {
   readonly migrated: boolean;
   /** The partner fee waiting on the curve, base units of the stock: the savers' share. */
   readonly partnerFeeRaw: bigint;
+  /** The launcher's own fee waiting on the curve, base units of the stock: half of the partner side on a public launch, none on a demonstration. */
+  readonly creatorFeeRaw: bigint;
   /** DBC's `migration_fee_withdraw_status`. */
   readonly migrationFeeWithdrawStatus: number;
   /** The graduated DAMM v2 pool, once migrated. */
@@ -83,6 +85,7 @@ export async function launchesOnChain(conn: Connection, configs = configsOf()): 
           activationUnix: Number(s.activationPoint.toString()),
           migrated,
           partnerFeeRaw: BigInt(s.partnerQuoteFee.toString()),
+          creatorFeeRaw: BigInt(s.creatorQuoteFee.toString()),
           migrationFeeWithdrawStatus: Number(s.migrationFeeWithdrawStatus),
           dammPool: migrated ? deriveDammV2PoolAddress(DAMM_V2_CUSTOMIZABLE_CONFIG, s.baseMint, new PublicKey(quote.mint)).toBase58() : null,
         });
@@ -141,6 +144,7 @@ export async function launchAt(conn: Connection, pool: string, configs = configs
     activationUnix: Number(state.activationPoint.toString()),
     migrated,
     partnerFeeRaw: BigInt(state.partnerQuoteFee.toString()),
+    creatorFeeRaw: BigInt(state.creatorQuoteFee.toString()),
     migrationFeeWithdrawStatus: Number(state.migrationFeeWithdrawStatus),
     dammPool: migrated ? deriveDammV2PoolAddress(DAMM_V2_CUSTOMIZABLE_CONFIG, state.baseMint, new PublicKey(quote.mint)).toBase58() : null,
   });

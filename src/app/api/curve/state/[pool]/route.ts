@@ -1,6 +1,7 @@
 import { TOKEN_2022_PROGRAM_ID, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import { type NextRequest, NextResponse } from "next/server";
+import { creatorFeesWaiting } from "@/lib/curve/build";
 import { launchAt } from "@/lib/curve/launches";
 import { curveQuote, feeBpsAt } from "@/lib/curve/preset";
 import { connection } from "@/lib/solana/connection";
@@ -21,7 +22,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ pool
   if (!l) return NextResponse.json({ error: "That is not a Scrip Curve launch." }, { status: 404 });
   let tokensRaw: string | null = null;
   let stockRaw: string | null = null;
+  // The launcher's own share, read only when the launcher is asking.
+  let creatorWaitingRaw: string | null = null;
   const ownerParam = req.nextUrl.searchParams.get("owner");
+  if (ownerParam === l.creator) {
+    const w = await creatorFeesWaiting(conn, l);
+    creatorWaitingRaw = (w.onCurve + w.onPosition).toString();
+  }
   if (ownerParam) {
     try {
       const owner = new PublicKey(ownerParam);
@@ -44,5 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ pool
     feeBps: l.migrated ? 100 : feeBpsAt(Math.floor(Date.now() / 1000) - l.activationUnix),
     tokensRaw,
     stockRaw,
+    creator: l.creator,
+    creatorWaitingRaw,
   });
 }

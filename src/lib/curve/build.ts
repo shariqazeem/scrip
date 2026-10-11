@@ -1,3 +1,4 @@
+import { CpAmm, getUnClaimLpFee } from "@meteora-ag/cp-amm-sdk";
 import {
   ActivationType,
   SwapMode,
@@ -31,7 +32,7 @@ import { launchNameProblem } from "./names";
 import { curveTable } from "./table";
 import { nameOf } from "@/lib/save/names";
 import type { ChainLaunch } from "./launches";
-import { curveClient } from "./launches";
+import { curveClient, partnerPositionOf } from "./launches";
 import { type CurveKind, type CurveStock, DAMM_V2_CUSTOMIZABLE_CONFIG, DAMM_V2_PROGRAM_ID, DBC_PROGRAM_ID, curveQuote, tokenBadge } from "./preset";
 
 export { launchNameProblem };
@@ -345,4 +346,72 @@ export async function buildGraduate(conn: Connection, input: { owner: PublicKey;
   const built = await assemble(conn, input.owner, [{ ixs: [ix], alts: await curveTable(conn, input.table) }], 600_000);
   if (!built.ok) return built;
   return ok({ transactions: b64(built.value.txs), simulated: built.value.simulated, dammPool: dammPool.toBase58() });
+}
+
+/**
+ * What a launcher has waiting, read now: their share of the fee on the curve, and after
+ * graduation their locked position's fees in the DAMM v2 pool. Base units of the stock.
+ */
+export async function creatorFeesWaiting(conn: Connection, launch: ChainLaunch): Promise<{ onCurve: bigint; onPosition: bigint; position: { position: string; nftAccount: string } | null }> {
+  let onPosition = 0n;
+  let position: { position: string; nftAccount: string } | null = null;
+  if (launch.migrated && launch.dammPool) {
+    position = await partnerPositionOf(conn, launch.dammPool, launch.creator);
+    if (position) {
+      try {
+        const amm = new CpAmm(conn);
+        const [pool, pos] = await Promise.all([amm.fetchPoolState(new PublicKey(launch.dammPool)), amm.fetchPositionState(new PublicKey(position.position))]);
+        onPosition = BigInt(getUnClaimLpFee(pool, pos).feeTokenB.toString());
+      } catch {
+        onPosition = 0n;
+      }
+    }
+  }
+  return { onCurve: launch.creatorFeeRaw, onPosition, position };
+}
+
+/**
+ * The launcher's share of the fees, claimed to their own wallet: DBC's `claim_creator_trading_fee`
+ * for what waits on the curve and, once graduated, DAMM v2's `claim_position_fee` on their locked
+ * position, in one transaction the launcher signs. Only the wallet that launched it can; nothing
+ * here can send a fee anywhere but to that wallet.
+ */
+export async function buildClaimCreator(conn: Connection, input: { owner: PublicKey; launch: ChainLaunch; table?: string | null }): Promise<Outcome<Built & { amountRaw: bigint }>> {
+  const { launch } = input;
+  if (launch.creator !== input.owner.toBase58()) return held("Only the wallet that launched it can claim its share of the fees.");
+  const waiting = await creatorFeesWaiting(conn, launch);
+  const amountRaw = waiting.onCurve + waiting.onPosition;
+  if (amountRaw <= 0n) return held("Nothing is waiting for you yet. Your share arrives as the launch trades.");
+  const ixs: TransactionInstruction[] = [];
+  try {
+    if (waiting.onCurve > 0n) {
+      const tx = await curveClient(conn).creator.claimCreatorTradingFee({ creator: input.owner, payer: input.owner, pool: new PublicKey(launch.pool), maxBaseAmount: new BN(0), maxQuoteAmount: new BN(waiting.onCurve.toString()) });
+      ixs.push(...own(tx.instructions));
+    }
+    if (waiting.onPosition > 0n && launch.dammPool && waiting.position) {
+      const amm = new CpAmm(conn);
+      const pool = await amm.fetchPoolState(new PublicKey(launch.dammPool));
+      const programOf = (flag: number) => (flag === 1 ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID);
+      const tx = await amm.claimPositionFee2({
+        receiver: input.owner,
+        owner: input.owner,
+        feePayer: input.owner,
+        pool: new PublicKey(launch.dammPool),
+        position: new PublicKey(waiting.position.position),
+        positionNftAccount: new PublicKey(waiting.position.nftAccount),
+        tokenAVault: pool.tokenAVault,
+        tokenBVault: pool.tokenBVault,
+        tokenAMint: pool.tokenAMint,
+        tokenBMint: pool.tokenBMint,
+        tokenAProgram: programOf(pool.tokenAFlag),
+        tokenBProgram: programOf(pool.tokenBFlag),
+      });
+      ixs.push(...own(tx.instructions));
+    }
+  } catch (err) {
+    return held(`The claim could not be built (${err instanceof Error ? err.message : String(err)}).`);
+  }
+  const built = await assemble(conn, input.owner, [{ ixs, alts: await curveTable(conn, input.table) }], 300_000, nameOf(launch.stock));
+  if (!built.ok) return built;
+  return ok({ transactions: b64(built.value.txs), simulated: built.value.simulated, amountRaw });
 }

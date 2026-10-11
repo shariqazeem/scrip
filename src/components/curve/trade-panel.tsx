@@ -6,7 +6,7 @@ import { Keypair } from "@solana/web3.js";
 import { walletBrowseLinks } from "@/components/save/wallets";
 import { type Connected, signAndRelay, useCurveWallet } from "./wallet-flow";
 
-type Live = { tokensRaw: string | null; stockRaw: string | null; feeBps: number; quoteReserveRaw: string; thresholdRaw: string; migrated: boolean };
+type Live = { tokensRaw: string | null; stockRaw: string | null; feeBps: number; quoteReserveRaw: string; thresholdRaw: string; migrated: boolean; creator: string; creatorWaitingRaw: string | null };
 
 const BUYS = [5, 25, 100] as const;
 const SELLS = [25, 50, 100] as const;
@@ -167,6 +167,39 @@ export function TradePanel({
 
   const busy = phase === "swapping" || phase === "building" || phase === "signing";
 
+  /** The launcher's share of the fees, claimed to their own wallet in one approval. */
+  const claim = async (c: Connected | null) => {
+    setWhy(null);
+    setDone(null);
+    if (!c) return setPhase("wallet");
+    setPhase("building");
+    const built = await ask({ action: "claim", owner: c.account.address, pool });
+    if (!built.ok) {
+      setPhase("idle");
+      return setWhy(built.why);
+    }
+    setPhase("signing");
+    const sent = await signAndRelay(c, cluster, built.j.transactions as string[]);
+    setPhase("idle");
+    await refresh();
+    if (!sent.ok) return setWhy(sent.why || null);
+    router.refresh();
+    setDone(`Claimed. Your share is ${stockName} in your wallet.`);
+  };
+  const mine = owner && live && live.creator === owner;
+  const waiting = mine && live?.creatorWaitingRaw ? BigInt(live.creatorWaitingRaw) : 0n;
+  const launcherRow = mine ? (
+    <div className="sp-cv-mine">
+      <span className="k">Your share of the fees</span>
+      <span className="v">{waiting > 0n ? `${units(waiting.toString(), 8, 6)} ${stockName} waiting` : "none waiting yet"}</span>
+      {waiting > 0n ? (
+        <button type="button" className="sp-btn" disabled={busy} onClick={() => claim(connected)}>
+          {phase === "building" ? "Preparing…" : phase === "signing" ? "Waiting for your wallet…" : "Claim to your wallet"}
+        </button>
+      ) : null}
+    </div>
+  ) : null;
+
   if (isFull) {
     return (
       <div className="sp-cv-trade">
@@ -205,6 +238,7 @@ export function TradePanel({
             </div>
           )
         ) : null}
+        {launcherRow}
         {why ? <p className="sp-cv-err">{why}</p> : null}
         {done ? <p className="sp-cv-done">{done}</p> : null}
         <button type="button" className="sp-btn is-primary" disabled={busy} onClick={() => graduate(connected)}>
@@ -311,6 +345,7 @@ export function TradePanel({
         )
       ) : null}
 
+      {launcherRow}
       {why ? <p className="sp-cv-err">{why}</p> : null}
       {done ? <p className="sp-cv-done">{done}</p> : null}
 
