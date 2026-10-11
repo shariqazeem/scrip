@@ -40,7 +40,7 @@ export default async function OrgHome() {
       <div className="sp-org">
         <header className="sp-org-head">
           <h1 className="sp-org-h1">{o.payments > 0 ? `Paying in stock since ${dateUTC(o.since ?? now)}.` : "Pay one person, or a whole team, in ownership."}</h1>
-          <p className="sp-org-lede">A slice or all of each payment becomes stock in their own wallet, with a receipt that carries the reason. A grant vests it on a schedule. Every payment recruits a register.</p>
+          <p className="sp-org-lede">A slice or all of each payment becomes stock in their own wallet, with a receipt that carries the reason. A grant vests it on a schedule. Every payment gives someone a savings record.</p>
           <div className="sp-live-actions">
             <Link href="/app/org/pay" className="sp-action is-primary">
               Pay one
@@ -60,11 +60,11 @@ export default async function OrgHome() {
         {!o.handle || o.kind !== "org" ? (
           <section className="sp-org-section">
             <p className="sp-section-label">
-              <span>{o.handle ? "This wallet has a person's register" : "This wallet has no register"}</span>
+              <span>{o.handle ? "This wallet has a person's savings record" : "This wallet has no organisation page yet"}</span>
             </p>
             {o.handle ? (
               <p className="sp-register-empty">
-                You can pay, run and grant from here as <span className="mono">@{o.handle}</span>. An organisation with its own public page is its own wallet: sign in with it and open an organisation register there.
+                You can pay, run and grant from here as <span className="mono">@{o.handle}</span>. An organisation with its own public page is its own wallet: sign in with it and open an organisation page there.
               </p>
             ) : (
               <OpenOrg owner={owner} />
@@ -110,7 +110,7 @@ export default async function OrgHome() {
 
         {o.handle && o.kind === "org" ? (
           <p className="sp-fact-note">
-            Your public page: <Link href={`/@${o.handle}`}>/@{o.handle}</Link>. It names people only where they published their own register. <Link href="/app/org/settings">Settings and exports.</Link>
+            Your public page: <Link href={`/@${o.handle}`}>/@{o.handle}</Link>. It names people only where they made their own savings public. <Link href="/app/org/settings">Settings and exports.</Link>
           </p>
         ) : null}
       </div>

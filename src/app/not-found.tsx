@@ -7,17 +7,17 @@ export default function NotFound() {
     <PageFrame
       eyebrow="Not here"
       title="Nothing at this address."
-      sub="A handle nobody has taken, a receipt that was never written, or a page that has moved. Press ⌘K to jump to a handle, a signature, a run or a grant."
+      sub="A name nobody has taken, a receipt that was never written, or a page that has moved. Press ⌘K to jump to a name, a receipt, a run, a grant or a page."
     >
       <div className="sp-actions">
         <Link href="/" className="sp-action is-primary">
-          The floor
+          Start saving
         </Link>
         <Link href="/ledger" className="sp-action is-quiet">
           The ledger
         </Link>
         <Link href="/app" className="sp-action is-quiet">
-          Your register
+          Your savings
         </Link>
         <Link href="/docs" className="sp-action is-quiet">
           Docs

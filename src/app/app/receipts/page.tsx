@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Receipts" };
 export const dynamic = "force-dynamic";
 
 const KINDS = ["all", "sweep", "pay", "gift", "vest", "grant"] as const;
-const LABEL: Record<(typeof KINDS)[number], string> = { all: "All", sweep: "Swept", pay: "Paid", gift: "Gifted", vest: "Vested", grant: "Granted" };
+const LABEL: Record<(typeof KINDS)[number], string> = { all: "All", sweep: "Automatic", pay: "Paid", gift: "Gifted", vest: "Vested", grant: "Granted" };
 
 /** EVERY STUB, filterable by kind, exportable. Each is an account anyone can open. */
 export default async function ReceiptsPage({ searchParams }: { searchParams: Promise<{ kind?: string }> }) {
@@ -43,7 +43,7 @@ export default async function ReceiptsPage({ searchParams }: { searchParams: Pro
           </a>
         </div>
         {rows.length === 0 ? (
-          <p className="sp-register-empty">{which === "all" ? "No receipt yet. The first arrival under your rule, or the first payment to you, prints here." : `Nothing of that kind yet.`}</p>
+          <p className="sp-register-empty">{which === "all" ? "No receipt yet. Your first automatic save, or the first payment to you in stock, prints here." : `Nothing of that kind yet.`}</p>
         ) : (
           <div className="stub-wall">
             {rows.map((r) => (

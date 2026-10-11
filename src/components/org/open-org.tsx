@@ -35,9 +35,9 @@ export function OpenOrg({ owner }: { owner: string }) {
 
   return (
     <div className="sp-org-form">
-      <p className="sp-register-empty">An organisation register gives this wallet a handle, a public page that lists everyone it paid in stock, and a place its runs and grants live. It is one account on chain and one signature.</p>
+      <p className="sp-register-empty">An organisation page gives this wallet a name, a public page that lists everyone it paid in stock, and a place its runs and grants live. One account on chain, one signature.</p>
       <label className="sp-q-row">
-        <span className="k">Handle</span>
+        <span className="k">Name</span>
         <span className="v">
           <span className="sp-q-at">@</span>
           <input className="sp-input is-mono" placeholder="yourorg" value={slug} onChange={(e) => setSlug(normalizeSlug(e.target.value))} />
@@ -50,7 +50,7 @@ export function OpenOrg({ owner }: { owner: string }) {
       </label>
       <div className="sp-actions">
         <button type="button" className="sp-action is-primary is-big" disabled={busy || !check.ok || !attest || done} onClick={() => void open()}>
-          {busy ? "Waiting for your wallet…" : done ? "Opened" : "Open the organisation register"}
+          {busy ? "Waiting for your wallet…" : done ? "Opened" : "Open the organisation page"}
         </button>
       </div>
       {why ? (

@@ -109,7 +109,7 @@ export default async function CurvePage() {
             priced against Pyth, never taken back.
           </Row>
           <Row k="4. Graduation keeps paying">
-            At about $850 of its stock a curve graduates to a Meteora DAMM v2 pool, launch token and stock, all liquidity locked for good; Meteora&rsquo;s own keepers
+            At about $850 of its stock a curve graduates to a Meteora DAMM v2 pool, launch token and stock, all liquidity locked for good; Meteora&rsquo;s own service
             graduate it. The locked partner position&rsquo;s fees go to the same Plan with <span className="mono">claim_position_fee</span>, and the partner&rsquo;s{" "}
             {PRESET.migrationFeePercentage}% graduation fee is moved in the same minute it is withdrawn.
           </Row>
@@ -167,7 +167,7 @@ export default async function CurvePage() {
                 <span className="mono">{THRESHOLD.public[s]}</span> {nameOf(s)}
               </span>
             ))}
-            . Above the $750 Meteora&rsquo;s keepers need to graduate a stock-quoted curve by themselves. A {PRESET.migrationFeePercentage}% graduation fee; the graduated
+            . Above the $750 Meteora&rsquo;s own service needs to graduate a stock-quoted curve by itself. A {PRESET.migrationFeePercentage}% graduation fee; the graduated
             pool collects its fee in the stock.
           </Row>
           <Row k="Liquidity">Every position locked for good at graduation: nobody can pull the pool, and the locked partner position keeps paying the Plan.</Row>

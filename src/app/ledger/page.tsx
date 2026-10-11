@@ -18,7 +18,7 @@ import "@/components/app/live.css";
 
 export const metadata: Metadata = {
   title: "Ledger",
-  description: "Everything Scrip has settled: sweeps and payments, value converted, units delivered, wallets with the rule on, and keep-rate measured on chain at 7 and 30 days.",
+  description: "Everything Scrip has settled: automatic saves and payments, value converted, units delivered, wallets saving every payment, and keep-rate measured on chain at 7 and 30 days.",
 };
 export const dynamic = "force-dynamic";
 
@@ -66,7 +66,7 @@ export default async function LedgerPage() {
             <Link href="/docs/keep-rate">how keep-rate is measured</Link>
           </p>
           <div className="sp-ledger-facts">
-            <Fact k="Receipts" v={totals.receipts.toLocaleString("en-US")} note={`${totals.sweeps.toLocaleString("en-US")} sweeps, ${(totals.receipts - totals.sweeps).toLocaleString("en-US")} payments`} />
+            <Fact k="Receipts" v={totals.receipts.toLocaleString("en-US")} note={`${totals.sweeps.toLocaleString("en-US")} automatic saves, ${(totals.receipts - totals.sweeps).toLocaleString("en-US")} payments`} />
             <Fact
               k="To wallets outside the team"
               v={outside.receipts.toLocaleString("en-US")}
