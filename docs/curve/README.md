@@ -41,7 +41,7 @@ the Plan by itself, with no signer to trust, is the next step.
 | --- | --- |
 | `/curve` | every launch with its progress to graduation, the money trail, each stock's Plan and every fee that reached it, the preset, the proof |
 | `/curve/launch` | the stock, a name and a symbol, who keeps the fee, an optional first buy in USDC; one approval |
-| `/curve/<pool>` | a launch read from the chain: progress, the fee this second, the savers' share waiting; buy with USDC, sell for the stock; once the curve is full, graduate it (`buildGraduate`, the two position NFT keys made in the browser and signing after the wallet) |
+| `/curve/<pool>` | a launch read from the chain: its curve drawn (the price path, every real trade, the graduation), progress, the fee this second, the savers' share waiting; buy with USDC, sell for the stock; once the curve is full, graduate it (`buildGraduate`, the two position NFT keys made in the browser and signing after the wallet); the launcher's own share, claimed to their wallet in one approval (`buildClaimCreator`; on a demonstration, to the Plan) |
 | `/api/curve/tx` | builds a launch, a buy or a sale (`src/lib/curve/build.ts`), simulated before the wallet is asked |
 | `/api/curve/send` | relays what the wallet (and, for a launch, the new token's own key) signed; only DBC, DAMM v2 or Jupiter transactions |
 | `/api/curve/meta`, `/api/curve/icon` | a token's metadata and image, made by Scrip from its name, symbol and stock: no uploads, no free text |
