@@ -44,22 +44,34 @@ export async function confirmSignature(
   }
 }
 
+/**
+ * Re-broadcast the SAME signed bytes through every endpoint given, while a signature is unseen.
+ * One provider dropping its forwards (12 October: every price post and clean-up through the main
+ * endpoint vanished for an hour, while the network ran at four thousand transactions a second)
+ * must not be a dropped save; identical bytes cannot land twice, so a second endpoint is free.
+ */
+export function rebroadcast(raw: Uint8Array, via: readonly Connection[]): () => Promise<unknown> {
+  return () => Promise.all(via.map((c) => c.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }).catch(() => undefined)));
+}
+
 /** Sign, send, and wait — the whole thing over HTTP. Throws what the RPC throws, like web3.js. */
-export async function sendAndConfirm(conn: Connection, tx: Transaction, signers: Keypair[]): Promise<string> {
+export async function sendAndConfirm(conn: Connection, tx: Transaction, signers: Keypair[], also: readonly Connection[] = []): Promise<string> {
   const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
   tx.recentBlockhash = blockhash;
   tx.feePayer = tx.feePayer ?? signers[0]!.publicKey;
   tx.sign(...signers);
-  const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: false, preflightCommitment: "confirmed" });
-  const done = await confirmSignature(conn, sig, lastValidBlockHeight);
+  const raw = tx.serialize();
+  const sig = await conn.sendRawTransaction(raw, { skipPreflight: false, preflightCommitment: "confirmed", maxRetries: 0 });
+  const done = await confirmSignature(conn, sig, lastValidBlockHeight, "confirmed", rebroadcast(raw, [conn, ...also]));
   if (!done.ok) throw new Error(done.why);
   return sig;
 }
 
 /** The same for a versioned transaction, which carries its own blockhash. */
-export async function sendAndConfirmV0(conn: Connection, tx: VersionedTransaction, lastValidBlockHeight: number): Promise<string> {
-  const sig = await conn.sendTransaction(tx, { skipPreflight: false, preflightCommitment: "confirmed" });
-  const done = await confirmSignature(conn, sig, lastValidBlockHeight);
+export async function sendAndConfirmV0(conn: Connection, tx: VersionedTransaction, lastValidBlockHeight: number, also: readonly Connection[] = []): Promise<string> {
+  const raw = tx.serialize();
+  const sig = await conn.sendRawTransaction(raw, { skipPreflight: false, preflightCommitment: "confirmed", maxRetries: 0 });
+  const done = await confirmSignature(conn, sig, lastValidBlockHeight, "confirmed", rebroadcast(raw, [conn, ...also]));
   if (!done.ok) throw new Error(done.why);
   return sig;
 }

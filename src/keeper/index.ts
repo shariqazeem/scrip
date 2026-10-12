@@ -32,7 +32,7 @@ import {
   getAssociatedTokenAddressSync,
   unpackAccount,
 } from "@solana/spl-token";
-import { type AccountInfo, ComputeBudgetProgram, Keypair, PublicKey, type Signer, Transaction, type VersionedTransaction } from "@solana/web3.js";
+import { type AccountInfo, ComputeBudgetProgram, Keypair, PublicKey, type Signer, Transaction, type VersionedTransaction, type Connection } from "@solana/web3.js";
 import { type Asset, type PriceFeed, USDC_MINT, assetByMint } from "@/lib/assets/registry";
 import { type Book, type Grant, decodeBook, decodeGrant, decodeMember, decodePlan, releasableRaw } from "@/lib/book/decode";
 import { matchReceiptIx } from "@/lib/plan/instructions";
@@ -55,7 +55,7 @@ import { assetAta, syncWatermarkIx, tokenProgramFor, usdcAta } from "@/lib/rule/
 import { FEED_MAX_AGE_SECONDS, MAX_CONF_BPS, MIN_SLICE, computeSlice, effectiveRate } from "@/lib/rule/slice";
 import { SCRIP_PROGRAM_ID, bookPda, discriminatorFilter, newReleaseId, receiptPda } from "@/lib/solana/program";
 import { buildSweepTransaction } from "@/lib/sweep/build";
-import { confirmSignature, sendAndConfirm } from "@/lib/solana/confirm";
+import { confirmSignature, rebroadcast, sendAndConfirm } from "@/lib/solana/confirm";
 import { makeConnection } from "@/lib/solana/make-connection";
 import { rentFor } from "@/lib/solana/rent";
 
@@ -135,6 +135,19 @@ function loadKeypair(): Keypair {
 
 const keeper = loadKeypair();
 const conn = makeConnection(RPC, { wsEndpoint: process.env.NEXT_PUBLIC_SOLANA_WS?.trim() || undefined });
+/**
+ * Endpoints a signed transaction is ALSO re-broadcast through while the network has not seen it.
+ * On 12 October every price post and clean-up sent through the main endpoint was dropped before
+ * any leader for an hour, with the network itself healthy; the same bytes through Solana's own
+ * endpoint land. Identical bytes cannot land twice, so a second path costs nothing but a call.
+ */
+const SEND_ALSO: Connection[] = (process.env.KEEPER_SEND_ALSO?.trim() || (CLUSTER === "mainnet-beta" ? "https://api.mainnet-beta.solana.com" : ""))
+  .split(",")
+  .map((u) => u.trim())
+  .filter((u) => u.length > 0 && u !== RPC)
+  .map((u) => makeConnection(u));
+/** Every endpoint a re-broadcast goes through: the main one first. */
+const SEND_VIA: Connection[] = [conn, ...SEND_ALSO];
 const pyth = new PythSolanaReceiver({ connection: conn, wallet: new Wallet(keeper) });
 
 const startedAt = Math.floor(Date.now() / 1000);
@@ -307,7 +320,7 @@ async function matchOnce(owner: PublicKey, receipt: PublicKey, sweptAsset: Asset
       const ix = matchReceiptIx({ caller: keeper.publicKey, plan: planKey, owner, receipt, priceUpdate: source.account, asset: planAsset });
       if (!ix.ok) throw new Error(ix.why);
       const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitLimit({ units: 300_000 }), ComputeBudgetProgram.setComputeUnitPrice({ microLamports: PRIORITY_MICRO_LAMPORTS }), ix.value);
-      const sig = await sendAndConfirm(conn, tx, [keeper]);
+      const sig = await sendAndConfirm(conn, tx, [keeper], SEND_ALSO);
       log(`matched ${who}…'s save from plan ${planKey.toBase58().slice(0, 8)}… (${sig})`);
     } catch (err) {
       const why = err instanceof Error ? err.message : String(err);
@@ -508,12 +521,19 @@ const sharedPrices = new Map<string, { account: PublicKey; publishTime: number; 
  * halfway is closed by its caller; otherwise a failure is logged and left for reclaimLeftovers.
  */
 async function sendSigned(txs: ReadonlyArray<{ tx: VersionedTransaction; signers: Signer[] }>, strict = false): Promise<void> {
+  // The library fetched each transaction's blockhash as it built it, moments ago: a blockhash
+  // is accepted for 150 blocks, so this height bounds how long any of them can still land.
+  const lastValidBlockHeight = (await conn.getBlockHeight("confirmed")) + 150;
   for (const { tx, signers } of txs) {
     tx.sign([keeper, ...signers]);
-    const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: !strict, maxRetries: 3 });
-    const done = await conn.confirmTransaction(sig, "confirmed").catch((err: unknown) => ({ value: { err: err instanceof Error ? err.message : String(err) } }));
-    if (done.value.err) {
-      const why = `${sig.slice(0, 8)}… failed: ${JSON.stringify(done.value.err).slice(0, 160)}`;
+    const raw = tx.serialize();
+    const sig = await conn.sendRawTransaction(raw, { skipPreflight: !strict, maxRetries: 0 });
+    // Until 12 October this was one send and a thirty-second wait, which is how a dropped
+    // forward became "waiting for a fresh price" on a weekday with the market open: re-sent
+    // through every endpoint until the network has seen it, like the save itself.
+    const done = await confirmSignature(conn, sig, lastValidBlockHeight, "confirmed", rebroadcast(raw, SEND_VIA));
+    if (!done.ok) {
+      const why = `${sig.slice(0, 8)}… failed: ${done.why.slice(0, 160)}`;
       if (strict) throw new Error(why);
       log(why);
     }
@@ -583,7 +603,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     const ix = syncWatermarkIx(owner, usdcMint);
     if (ix.ok) {
       try {
-        const sig = await sendAndConfirm(conn, new Transaction().add(ix.value), [keeper]);
+        const sig = await sendAndConfirm(conn, new Transaction().add(ix.value), [keeper], SEND_ALSO);
         log(`sync_watermark ${key.slice(0, 8)} → ${usdc.amount} (${sig.slice(0, 8)}…)`);
       } catch (err) {
         log("sync_watermark failed:", err instanceof Error ? err.message : err);
@@ -747,9 +767,7 @@ async function evaluate(entry: { pda: PublicKey; book: Book; lamports: number; d
     const sig = await conn.sendRawTransaction(raw, { skipPreflight: false, preflightCommitment: "confirmed", maxRetries: 0 });
     // Re-broadcast the same bytes until the network has seen them: a dropped sweep otherwise
     // waits out its blockhash, and "seconds later" becomes a minute.
-    const landed = await confirmSignature(conn, sig, built.lastValidBlockHeight, "confirmed", () =>
-      conn.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }),
-    );
+    const landed = await confirmSignature(conn, sig, built.lastValidBlockHeight, "confirmed", rebroadcast(raw, SEND_VIA));
     if (!landed.ok) throw new Error(landed.why);
     sweeps += 1;
     waitingSince.delete(key);
@@ -816,24 +834,24 @@ async function launchFeesToPlan(): Promise<void> {
     try {
       if (w.onCurve >= CURVE_MIN_RAW) {
         const tx = await curveFees.curveFeeToPlan(conn, { pool: launch.pool, claimer: keeper.publicKey, plan: planKey, amount: w.onCurve });
-        if (tx.ok) log(`${label}: ${w.onCurve} base units of ${launch.stock} launch fee into its Plan (${(await sendAndConfirm(conn, tx.value, [keeper])).slice(0, 8)}…)`);
+        if (tx.ok) log(`${label}: ${w.onCurve} base units of ${launch.stock} launch fee into its Plan (${(await sendAndConfirm(conn, tx.value, [keeper], SEND_ALSO)).slice(0, 8)}…)`);
       }
       if (w.graduationFeeWaiting) {
         const account = curveFees.claimerQuoteAccount(keeper.publicKey, launch.stock);
         const before = BigInt((await conn.getTokenAccountBalance(account, "confirmed").catch(() => null))?.value.amount ?? "0");
         const tx = await curveFees.migrationFeeWithdraw(conn, { pool: launch.pool, claimer: keeper.publicKey });
         if (tx.ok) {
-          await sendAndConfirm(conn, tx.value, [keeper]);
+          await sendAndConfirm(conn, tx.value, [keeper], SEND_ALSO);
           const after = BigInt((await conn.getTokenAccountBalance(account, "confirmed")).value.amount);
           if (after > before) {
             const fwd = new Transaction().add(curveFees.forwardToPlan({ claimer: keeper.publicKey, escrow: new PublicKey(plan.escrow), amount: after - before, stock: launch.stock }));
-            log(`${label}: ${after - before} base units of graduation fee into its Plan (${(await sendAndConfirm(conn, fwd, [keeper])).slice(0, 8)}…)`);
+            log(`${label}: ${after - before} base units of graduation fee into its Plan (${(await sendAndConfirm(conn, fwd, [keeper], SEND_ALSO)).slice(0, 8)}…)`);
           }
         }
       }
       if (w.onPosition >= CURVE_MIN_RAW) {
         const tx = await curveFees.positionFeeToPlan(conn, { source, claimer: keeper.publicKey, plan: planKey });
-        if (tx.ok) log(`${label}: ${w.onPosition} base units of graduated-pool fee into its Plan (${(await sendAndConfirm(conn, tx.value, [keeper])).slice(0, 8)}…)`);
+        if (tx.ok) log(`${label}: ${w.onPosition} base units of graduated-pool fee into its Plan (${(await sendAndConfirm(conn, tx.value, [keeper], SEND_ALSO)).slice(0, 8)}…)`);
       }
     } catch (err) {
       log(`${label}: moving launch fees into its Plan failed:`, err instanceof Error ? err.message : err);
@@ -921,7 +939,7 @@ async function vestDue(): Promise<void> {
       continue;
     }
     try {
-      const sig = await sendAndConfirm(conn, new Transaction().add(ix.value), [keeper]);
+      const sig = await sendAndConfirm(conn, new Transaction().add(ix.value), [keeper], SEND_ALSO);
       lastVestAt.set(key, now);
       vests += 1;
       log(`vested ${releasable} raw of grant ${key.slice(0, 8)}… → ${grant.recipient.slice(0, 8)}…: ${sig}`);
@@ -1072,7 +1090,7 @@ async function main(): Promise<void> {
     } else {
       log(`keeper USDC account ${ata.toBase58()} does not exist; creating it`);
       const ix = createAssociatedTokenAccountIdempotentInstruction(keeper.publicKey, ata, keeper.publicKey, mint, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-      const made = await sendAndConfirm(conn, new Transaction().add(ix), [keeper]);
+      const made = await sendAndConfirm(conn, new Transaction().add(ix), [keeper], SEND_ALSO);
       log(`keeper USDC account created: ${made}`);
     }
   }
