@@ -21,6 +21,9 @@ export const TEAM: ReadonlyMap<string, string> = new Map([
   // The founder's fresh Phantom account: the first start through the one-card flow, 9 October.
   ["4hf34x32RzZ5FS3JUXoZ5eFZCZtdZDnNq1QjAxXRS3dV", "the founder's test wallet"],
   ["9P3hWtaU6k2jxm3w1YMdEB9d8yEApQDZdEoQ9u3F2TSo", "the founder's test wallet, the first start that saved its last payment"],
+  // The founder's fresh Phantom account for the submitted demo, recorded 13 October at 03:53
+  // Lahore. Left off this list, it was counted as "1 person outside the team is saving".
+  ["B4AwMqvSUcK4Lds1L9FKqpNJH63i82L6PRLkwimcB7FG", "the founder's demo wallet, 13 October"],
 ]);
 
 /**
