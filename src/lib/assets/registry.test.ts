@@ -85,7 +85,16 @@ import { offeredAssets as offered, ruleAssets as rules } from "./registry";
 describe("what the rule page offers", () => {
   it("leaves out only the stocks with no fresh on-chain price", () => {
     const left = rules().filter((a) => !offered().includes(a)).map((a) => a.symbol).sort();
-    expect(left).toEqual(["COINx", "CRCLx", "HOODx"]);
+    // MSFTx and MSTRx since 17 Oct 2026: their 24/7 token feeds are 25–35 days stale on chain and
+    // their share feeds are not in the key's entitlement, so an automatic save could never settle.
+    expect(left).toEqual(["COINx", "CRCLx", "HOODx", "MSFTx", "MSTRx"]);
+  });
+  it("pins the 24/7 token feed for every stock Pyth keeps fresh around the clock", () => {
+    const always = ["SPYx", "QQQx", "NVDAx", "GOOGLx", "TSLAx", "METAx", "AAPLx", "AMZNx"];
+    for (const sym of always) {
+      const a = offered().find((x) => x.symbol === sym);
+      expect(a?.feedRaw?.account, `${sym} pins its Crypto.${sym.toUpperCase()}/USD account`).toMatch(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
+    }
   });
   it("offers every stock whose share price is pinned, and the index and the metal", () => {
     for (const a of offered()) expect(Boolean(a.feedAdjusted?.account || a.feedRaw?.account), `${a.symbol} has a pinned price account`).toBe(true);

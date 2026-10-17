@@ -5,6 +5,14 @@ export const metadata: Metadata = { title: "Changelog", description: "What shipp
 
 const LOG: ReadonlyArray<{ date: string; items: readonly string[] }> = [
   {
+    date: "17 Oct 2026",
+    items: [
+      "Automatic saves around the clock, weekends included, for the S&P 500, the Nasdaq 100, Nvidia, Alphabet, Tesla, Meta, Apple and Amazon: each now settles against the token's own 24/7 Pyth price, which Pyth keeps fresh on chain, fully verified. Gold saves on weekdays, while its market trades.",
+      "Microsoft and MicroStrategy leave every payment, because no verified price for them is fresh on chain; both stay in Save now.",
+      "The demo wallet of 13 October is counted as the team's, so no count of savers outside the team includes the founder.",
+    ],
+  },
+  {
     date: "10 Oct 2026",
     items: [
       "The launchpad, on Meteora: launch a token priced in the Nasdaq 100, the S&P 500, Tesla or Nvidia from your own wallet in one approval; buy with USDC, sell for the stock; graduate a full curve from its page. The savers' share of every trading fee is claimed straight into a Scrip Plan in that stock.",

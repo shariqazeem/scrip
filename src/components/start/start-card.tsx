@@ -718,7 +718,7 @@ function FirstPanel({
       ) : null}
       <p className="sp-go-first-say">
         {stock.ready === false
-          ? `US stock prices pause at weekends, and Scrip never guesses one: this saves itself when a fresh price returns (the newest is ${stock.waited} old). Until then it stays in your wallet.`
+          ? `Its market is closed right now, and Scrip never guesses a price: this saves itself when a fresh verified price returns (the newest is ${stock.waited} old). Until then it stays in your wallet.`
           : "Seconds after you approve, Scrip saves it the way it will save every payment after: by itself, at a price Pyth verifies, onto a receipt you can open."}
       </p>
       <button type="button" className="sp-save-textbtn" onClick={skip}>
@@ -1036,7 +1036,7 @@ function Started({
                 )}
                 <span>
                   {watch?.waitingForPrice
-                    ? `${dollars(Number(expected) / 1e6)} waits for a price. US stock prices pause at weekends, and Scrip never guesses one; it saves itself when a fresh price returns, and the money stays in your wallet until then.`
+                    ? `${dollars(Number(expected) / 1e6)} waits for a price. Its market is closed right now, and Scrip never guesses one; it saves itself when a fresh verified price returns, and the money stays in your wallet until then.`
                     : over
                       ? `Saving ${dollars(Number(expected) / 1e6)} into ${name} is taking longer than usual. Your savings page shows it the moment it prints.`
                       : `Saving ${dollars(Number(expected) / 1e6)} into ${name}, by itself… ${elapsed} s`}
