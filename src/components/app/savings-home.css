@@ -176,9 +176,9 @@
 }
 .sp-sv-list li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: var(--s-4);
-  align-items: baseline;
+  align-items: center;
   padding: var(--s-4) 0;
   border-bottom: 1px solid var(--border);
   font-variant-numeric: tabular-nums;
@@ -210,16 +210,25 @@
     padding: var(--s-5);
   }
   .sp-sv-list li {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: var(--s-3);
     row-gap: 0;
   }
-  .sp-sv-list .u {
+  .sp-sv-list .sp-logo {
     grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .sp-sv-list .nm {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .sp-sv-list .u {
+    grid-column: 2;
     grid-row: 2;
     font-size: var(--fs-small);
   }
   .sp-sv-list .v {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1 / span 2;
     align-self: center;
   }

@@ -124,6 +124,21 @@
   font: inherit;
   cursor: pointer;
 }
+.sp-cv-stock.has-logo {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "logo n" "logo d";
+  column-gap: var(--s-3);
+  align-items: center;
+}
+.sp-cv-stock.has-logo .sp-logo {
+  grid-area: logo;
+}
+.sp-cv-stock.has-logo .n {
+  grid-area: n;
+}
+.sp-cv-stock.has-logo .d {
+  grid-area: d;
+}
 .sp-cv-stock:hover {
   border-color: var(--accent);
 }

@@ -387,7 +387,7 @@ button.sp-start-secondary {
   align-items: center;
   gap: var(--s-2);
   min-height: 50px;
-  padding: 0 var(--s-3) 0 var(--s-4);
+  padding: 0 var(--s-3) 0 var(--s-2);
   font: inherit;
   font-weight: 600;
   color: var(--accent-strong);
@@ -406,7 +406,7 @@ button.sp-start-secondary {
   left: 0;
   z-index: 30;
   display: grid;
-  width: min(320px, calc(100vw - 2 * var(--s-4)));
+  width: min(340px, calc(100vw - 2 * var(--s-4)));
   max-height: min(420px, 60vh);
   overflow-y: auto;
   padding: var(--s-2);
@@ -420,9 +420,10 @@ button.sp-start-secondary {
 }
 .sp-go-opt {
   display: grid;
-  gap: 2px;
-  justify-items: start;
-  min-height: 52px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
   padding: var(--s-2) var(--s-3);
   font: inherit;
   text-align: left;
@@ -438,12 +439,27 @@ button.sp-start-secondary {
 .sp-go-opt.is-selected {
   background: var(--accent-soft);
 }
+.sp-go-opt .txt {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
 .sp-go-opt .name {
   font-weight: 600;
 }
+.sp-go-opt .tick {
+  margin-left: 2px;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--ink-faint);
+}
 .sp-go-opt .note {
   font-size: var(--fs-caption);
+  line-height: 1.4;
   color: var(--ink-muted);
+}
+.sp-go-opt .note.is-waiting {
+  color: var(--warn);
 }
 
 .sp-go-how {
@@ -506,6 +522,11 @@ button.sp-start-secondary {
 }
 .sp-go-cell.is-stock .v {
   color: var(--accent-strong);
+}
+.sp-go-cell .k.is-named {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .sp-go-arrow {
   color: var(--ink-faint);

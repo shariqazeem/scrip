@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 export default function LaunchPage() {
   const stocks: LaunchStock[] = CURVE_STOCKS.map((s) => ({
     symbol: s,
+    mint: curveQuote(s).mint,
     name: nameOf(s),
     issuer: `${curveQuote(s).symbol}, issued by Backed (xStocks)`,
     ready: Boolean(DEPLOYED.configs[s]?.public),

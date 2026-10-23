@@ -546,6 +546,23 @@
   min-width: 0;
   max-width: 560px;
 }
+/* The stocks a saver knows, by their logos: a beginner sees at a glance that this is the stock market. */
+.sp-home-stocks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin: 0;
+  max-width: 560px;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.sp-home-stocks .logos {
+  display: inline-flex;
+  flex: none;
+  gap: 6px;
+}
 .sp-home-hero.is-sentence .sp-home-once {
   max-width: 560px;
   margin-top: 0;

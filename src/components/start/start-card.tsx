@@ -14,6 +14,7 @@ import { QrClient } from "@/components/pay/qr-client";
 import { CopyText } from "@/components/app/copy-text";
 import { AskForMatch } from "@/components/receipt/share";
 import { RequestToJoin } from "@/components/plan/request-to-join";
+import { StockLogo } from "@/components/stock/stock-logo";
 import { Stub } from "@/components/stub/stub";
 import { short, stampUTC } from "@/lib/format";
 import {
@@ -447,8 +448,29 @@ export function StartCard({
         />
       ) : !connected ? (
         <p className="sp-go-how">
-          Every payment that lands in your wallet saves {pct}% of itself as {stock.name},
-          seconds after it lands. Connect your wallet to watch it happen with your last payment.
+          {stock.ready === false ? (
+            // Said before anyone approves: a promise of seconds over a price days old is the one
+            // sentence that would make Scrip read as broken. The cause is not guessed; the chain
+            // only proves the price is old.
+            <>
+              Every payment that lands in your wallet will save {pct}% of itself as {stock.name},
+              by itself. Right now saves wait: Scrip saves only at a price Pyth has verified on
+              Solana, and the newest for {stock.name} is {stock.waited} old. Until a fresh one
+              arrives, your USDC stays in your wallet.
+            </>
+          ) : stock.ready === true ? (
+            <>
+              Every payment that lands in your wallet saves {pct}% of itself as {stock.name},
+              seconds after it lands. Connect your wallet to watch it happen with your last
+              payment.
+            </>
+          ) : (
+            <>
+              Every payment that lands in your wallet saves {pct}% of itself as {stock.name}, by
+              itself, at a price Pyth verifies. Connect your wallet to see it with your last
+              payment.
+            </>
+          )}
         </p>
       ) : null}
 
@@ -590,6 +612,8 @@ function StockPicker({
     () => [...stocks].sort((a, b) => Number(b.ready !== false) - Number(a.ready !== false)),
     [stocks],
   );
+  // "Saves now" is news only while some stocks wait; on an ordinary day every row would say it.
+  const mixed = stocks.some((s) => s.ready === false) && stocks.some((s) => s.ready === true);
 
   useEffect(() => {
     if (!open) return;
@@ -616,6 +640,7 @@ function StockPicker({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
+        <StockLogo mint={stock.mint} size={30} eager />
         <span>{stock.name}</span>
         <ChevronDown size={16} strokeWidth={2} aria-hidden />
       </button>
@@ -633,11 +658,18 @@ function StockPicker({
                 setOpen(false);
               }}
             >
-              <span className="name">{s.name}</span>
-              <span className="note">
-                {s.ready === false
-                  ? `waits for a price (newest ${s.waited} old)`
-                  : s.issuerLine.split(".")[0]}
+              <StockLogo mint={s.mint} size={36} />
+              <span className="txt">
+                <span className="name">
+                  {s.name} <span className="tick">{s.ticker}</span>
+                </span>
+                <span className={`note${s.ready === false ? " is-waiting" : ""}`}>
+                  {s.ready === false
+                    ? `Waits for a price, the newest is ${s.waited} old`
+                    : mixed && s.ready
+                      ? `Saves now. ${s.issuerLine.split(".")[0]}`
+                      : s.issuerLine.split(".")[0]}
+                </span>
               </span>
             </button>
           ))}
@@ -672,8 +704,11 @@ function FirstPanel({
       <div className="sp-go-first is-next">
         <p className="sp-go-first-title">Your first save: your next payment</p>
         <p className="sp-go-first-say">
-          When USDC next lands in this wallet, {pct}% of it becomes {stock.name} by itself,
-          seconds later. Start, then send any USDC to this wallet to watch it happen.
+          {stock.ready === false
+            ? `When USDC next lands in this wallet, ${pct}% of it becomes ${stock.name} by itself, once Pyth has a fresh verified price for it on Solana (the newest is ${stock.waited} old). Until then the USDC stays in your wallet.`
+            : stock.ready === true
+              ? `When USDC next lands in this wallet, ${pct}% of it becomes ${stock.name} by itself, seconds later. Start, then send any USDC to this wallet to watch it happen.`
+              : `When USDC next lands in this wallet, ${pct}% of it becomes ${stock.name} by itself, at a price Pyth verifies. Start, then send any USDC to this wallet to see it.`}
         </p>
         {skipped && couldFirst ? (
           <button type="button" className="sp-save-textbtn" onClick={unskip}>
@@ -707,7 +742,10 @@ function FirstPanel({
         <ArrowRight className="sp-go-arrow" size={18} strokeWidth={2} aria-hidden />
         <div className="sp-go-cell is-stock">
           <span className="v">{units ? `≈ ${approxUnits(units)}` : stock.ticker}</span>
-          <span className="k">{stock.name}</span>
+          <span className="k is-named">
+            <StockLogo mint={stock.mint} size={18} />
+            {stock.name}
+          </span>
         </div>
       </div>
       {first.capped && first.payment ? (
@@ -718,8 +756,10 @@ function FirstPanel({
       ) : null}
       <p className="sp-go-first-say">
         {stock.ready === false
-          ? `Its market is closed right now, and Scrip never guesses a price: this saves itself when a fresh verified price returns (the newest is ${stock.waited} old). Until then it stays in your wallet.`
-          : "Seconds after you approve, Scrip saves it the way it will save every payment after: by itself, at a price Pyth verifies, onto a receipt you can open."}
+          ? `Saves wait right now: Scrip saves only at a price Pyth has verified on Solana, and the newest for ${stock.name} is ${stock.waited} old. This slice saves itself when a fresh one arrives; until then it stays in your wallet as USDC.`
+          : stock.ready === true
+            ? "Seconds after you approve, Scrip saves it the way it will save every payment after: by itself, at a price Pyth verifies, onto a receipt you can open."
+            : "After you approve, Scrip saves it the way it will save every payment after: by itself, at a price Pyth verifies, onto a receipt you can open."}
       </p>
       <button type="button" className="sp-save-textbtn" onClick={skip}>
         Start with my next payment instead

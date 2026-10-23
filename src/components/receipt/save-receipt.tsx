@@ -10,6 +10,7 @@ import { describeDeviation } from "@/lib/receipt/figures";
 import { explorerUrl } from "@/lib/solana/cluster";
 import { isTeam, walletTag } from "@/lib/team";
 import { LocalAmount } from "@/components/save/local-amount";
+import { StockLogo } from "@/components/stock/stock-logo";
 import { LocalTime } from "./local-time";
 import { AskForMatch, ShareReceipt } from "./share";
 
@@ -196,7 +197,9 @@ export function SaveReceipt({
           <span>{stock ? `${stock.ticker} · ${stock.issuer.short}` : short(view.mint)}</span>
         </div>
         <div className="sp-receipt-asset">
-          <div>
+          <div className="sp-receipt-asset-id">
+            {stock ? <StockLogo mint={stock.mint} size={40} /> : null}
+            <div>
             <div className="sp-receipt-asset-name">{stock ? `${stock.name} (${stock.symbol})` : "A token Scrip's catalogue does not name"}</div>
             <div className="sp-receipt-asset-issuer">
               {stock ? (
@@ -204,6 +207,7 @@ export function SaveReceipt({
               ) : (
                 <span className="mono">{view.mint}</span>
               )}
+            </div>
             </div>
           </div>
           {stock ? <p className="sp-receipt-asset-disclosure">{disclosure(stock)}</p> : <p className="sp-receipt-asset-disclosure">{ISSUERS.xstocks.who}</p>}

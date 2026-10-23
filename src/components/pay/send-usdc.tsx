@@ -13,7 +13,7 @@ import { CopyText } from "@/components/app/copy-text";
  */
 const PRESETS = [5, 20, 50, 200];
 
-export function SendUsdc({ owner, who, usdcMint, rateBps, assetSymbol, standIn, minUsd }: { owner: string; who: string; usdcMint: string; rateBps: number | null; assetSymbol: string; standIn: boolean; minUsd: number }) {
+export function SendUsdc({ owner, who, usdcMint, rateBps, assetSymbol, standIn, minUsd, waited }: { owner: string; who: string; usdcMint: string; rateBps: number | null; assetSymbol: string; standIn: boolean; minUsd: number; waited: string | null }) {
   const [amount, setAmount] = useState<string>(String(Math.max(minUsd, 20)));
   const [qr, setQr] = useState<string | null>(null);
   const dollars = Number(amount);
@@ -86,8 +86,8 @@ export function SendUsdc({ owner, who, usdcMint, rateBps, assetSymbol, standIn, 
               <span className="v">{usd(dollars - slice)}</span>
             </div>
             <div className="sp-quote-row">
-              <span className="k">Swept</span>
-              <span className="v">within seconds, by itself</span>
+              <span className="k">Saved</span>
+              <span className="v">{waited ? `by itself, once Pyth has a fresh verified price (the newest is ${waited} old)` : "within seconds, by itself"}</span>
             </div>
             <div className="sp-quote-row">
               <span className="k">Receipt</span>

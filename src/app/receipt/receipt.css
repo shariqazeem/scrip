@@ -143,6 +143,12 @@
   display: grid;
   gap: var(--s-3);
 }
+.sp-receipt-asset-id {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+}
 .sp-receipt-asset-name {
   font-size: var(--fs-body);
   font-weight: 600;

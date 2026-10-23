@@ -8,6 +8,8 @@ import { SendUsdc } from "@/components/pay/send-usdc";
 import { defaultAsset } from "@/lib/assets/registry";
 import { resolveAsset } from "@/lib/assets/stand-in";
 import { MIN_SLICE } from "@/lib/rule/slice";
+import { waitedFor } from "@/lib/pyth/price";
+import { priceState } from "@/lib/pyth/ready";
 import { readBookOf, resolveHandle } from "@/lib/book/read-book";
 import { validateSlug } from "@/lib/handle";
 import { short } from "@/lib/format";
@@ -61,6 +63,9 @@ export default async function PayPage({ params, searchParams }: Params) {
   const asset = hasBook && book?.ok && book.value ? await resolveAsset(book.value.asset) : defaultAsset();
   const rule = hasBook && book?.ok && book.value && book.value.rule.enabled ? book.value.rule : null;
   const standIn = !!asset && asset.symbol === "stand-in";
+  // A payer is told when the recipient's stock has no fresh verified price, rather than "within seconds".
+  const price = rule && asset ? await priceState(asset).catch(() => null) : null;
+  const waited = price && price.ready === false ? (waitedFor(price.lastAt) ?? "days") : null;
   const ownerHandle = hasBook && book?.ok && book.value ? book.value.slug : r.handle;
   const who = ownerHandle ? `@${ownerHandle}` : r.owner ? short(r.owner) : handle;
   const site = siteUrl();
@@ -131,7 +136,7 @@ export default async function PayPage({ params, searchParams }: Params) {
                   assetSymbol={asset.symbol}
                   rateOn={rule !== null}
                   stock={form}
-                  usdc={<SendUsdc owner={r.owner} who={who} usdcMint={book.value.usdcMint} rateBps={rule?.rateBps ?? null} assetSymbol={asset.symbol} standIn={standIn} minUsd={minUsd} />}
+                  usdc={<SendUsdc owner={r.owner} who={who} usdcMint={book.value.usdcMint} rateBps={rule?.rateBps ?? null} assetSymbol={asset.symbol} standIn={standIn} minUsd={minUsd} waited={waited} />}
                 />
               );
             })()}

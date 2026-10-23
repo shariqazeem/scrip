@@ -6,6 +6,7 @@ import { ShieldCheck, X } from "lucide-react";
 import type { PickerStock } from "@/lib/save/catalogue";
 import { type Sendable, connect, fromBase64, signAndSend } from "@/lib/wallet/client";
 import { useTxToast } from "@/components/toast/use-tx-toast";
+import { StockLogo } from "@/components/stock/stock-logo";
 import { StockSearch } from "./stock-search";
 import { type BuiltBody, type QuoteBody, type WalletBody, dayMonth, dollars, solInMoney, unitsText } from "./types";
 import { useLocalMoney } from "./use-local-money";
@@ -284,7 +285,8 @@ export function SaveNow({ stocks, featured, defaultMint, initialQuote, readAt, c
         <legend>Into</legend>
         <div className="sp-save-chips is-stocks">
           {chips.map((s) => (
-            <button key={s.mint} type="button" className={`sp-save-chip${s.mint === mint ? " is-selected" : ""}`} aria-pressed={s.mint === mint} onClick={() => setMint(s.mint)}>
+            <button key={s.mint} type="button" className={`sp-save-chip is-stock${s.mint === mint ? " is-selected" : ""}`} aria-pressed={s.mint === mint} onClick={() => setMint(s.mint)}>
+              <StockLogo mint={s.mint} size={24} eager />
               {s.name}
             </button>
           ))}

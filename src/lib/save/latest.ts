@@ -58,6 +58,8 @@ export function frontRank(c: FrontCandidate): number {
 export type FrontReceipt = {
   readonly sig: string;
   readonly kind: "save" | "sweep";
+  /** The stock's mint, for its logo. */
+  readonly mint: string;
   readonly paidUsdc: bigint;
   /** A sweep's inflow, the "landed" figure; null for a save. */
   readonly basisUsdc: bigint | null;
@@ -99,6 +101,7 @@ export async function frontReceipt(): Promise<FrontReceipt | null> {
     return {
       sig: save.sig,
       kind: "save",
+      mint: save.mint,
       paidUsdc: BigInt(save.paidUsdc),
       basisUsdc: null,
       rateBps: null,
@@ -120,6 +123,7 @@ export async function frontReceipt(): Promise<FrontReceipt | null> {
   return {
     sig: sweep.sig,
     kind: "sweep",
+    mint: sweep.asset,
     paidUsdc: BigInt(sweep.paidUsdc),
     basisUsdc: BigInt(sweep.basisUsdc),
     rateBps: sweep.rateBps,

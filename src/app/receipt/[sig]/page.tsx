@@ -7,6 +7,7 @@ import { SettlingReceipt } from "@/components/receipt/settling";
 import { CopyLink } from "@/components/receipt/copy-link";
 import { MatchWatch } from "@/components/receipt/match-watch";
 import { type StubSection, Stub } from "@/components/stub/stub";
+import { StockLogo } from "@/components/stock/stock-logo";
 import { readBookOf } from "@/lib/book/read-book";
 import { poolLabels, readSaveTx, viewSave } from "@/lib/save/read";
 import { pricedAsset } from "@/lib/save/catalogue";
@@ -344,7 +345,9 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
             <span>in the recipient&rsquo;s own wallet</span>
           </div>
           <div className="sp-receipt-asset">
-            <div>
+            <div className="sp-receipt-asset-id">
+              {asset ? <StockLogo mint={r.asset} size={40} /> : null}
+              <div>
               <div className="sp-receipt-asset-name">{asset ? `${asset.name} (${asset.symbol})` : "Unrecognised mint"}</div>
               <div className="sp-receipt-asset-issuer">
                 {asset ? (
@@ -354,6 +357,7 @@ export default async function ReceiptPage({ params, searchParams }: Params) {
                 ) : (
                   <span className="mono">{r.asset}</span>
                 )}
+              </div>
               </div>
             </div>
             {asset ? (

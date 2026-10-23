@@ -5,9 +5,10 @@ import Link from "next/link";
 import { Keypair } from "@solana/web3.js";
 import { launchNameProblem } from "@/lib/curve/names";
 import { walletBrowseLinks } from "@/components/save/wallets";
+import { StockLogo } from "@/components/stock/stock-logo";
 import { type Connected, signAndRelay, useCurveWallet } from "./wallet-flow";
 
-export type LaunchStock = { readonly symbol: string; readonly name: string; readonly issuer: string; readonly ready: boolean; readonly toSavers: boolean };
+export type LaunchStock = { readonly symbol: string; readonly mint: string; readonly name: string; readonly issuer: string; readonly ready: boolean; readonly toSavers: boolean };
 
 const FIRST_BUYS = [0, 5, 25, 100] as const;
 
@@ -117,7 +118,8 @@ export function LaunchForm({ stocks, cluster }: { stocks: readonly LaunchStock[]
         <span className="k">Priced in</span>
         <div className="sp-cv-stocks" role="radiogroup" aria-label="The stock it is priced in">
           {stocks.map((s) => (
-            <button key={s.symbol} type="button" role="radio" aria-checked={stock === s.symbol} className={`sp-cv-stock${stock === s.symbol ? " is-on" : ""}`} disabled={!s.ready && !s.toSavers} onClick={() => setStock(s.symbol)}>
+            <button key={s.symbol} type="button" role="radio" aria-checked={stock === s.symbol} className={`sp-cv-stock has-logo${stock === s.symbol ? " is-on" : ""}`} disabled={!s.ready && !s.toSavers} onClick={() => setStock(s.symbol)}>
+              <StockLogo mint={s.mint} size={32} />
               <span className="n">{s.name}</span>
               <span className="d">{s.ready || s.toSavers ? s.issuer : "Not open yet"}</span>
             </button>

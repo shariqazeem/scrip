@@ -27,6 +27,7 @@ import { CopyText } from "@/components/app/copy-text";
 import { QrClient } from "@/components/pay/qr-client";
 import "./rule.css";
 import { useTxToast } from "@/components/toast/use-tx-toast";
+import { StockLogo } from "@/components/stock/stock-logo";
 
 type AssetOpt = { mint: string; symbol: string; name: string; label: string; singleName: boolean; xstocks: boolean; issuer: string; kind: string };
 type View = {
@@ -319,6 +320,7 @@ export function RuleEditor({
                 .filter((a) => !a.singleName || a.mint === assetMint)
                 .map((a) => (
                   <button key={a.mint} type="button" className={`sp-choice${assetMint === a.mint ? " on" : ""}`} onClick={() => setAssetMint(a.mint)} title={`${a.name} (${a.symbol})`}>
+                    <StockLogo mint={a.mint} size={22} />
                     {a.label}
                   </button>
                 ))}
@@ -329,6 +331,7 @@ export function RuleEditor({
                     .filter((a) => a.singleName)
                     .map((a) => (
                       <button key={a.mint} type="button" className={`sp-choice${assetMint === a.mint ? " on" : ""}`} onClick={() => setAssetMint(a.mint)} title={`${a.name} (${a.symbol})`}>
+                        <StockLogo mint={a.mint} size={22} />
                         {a.label}
                       </button>
                     ))}

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { HomeNav } from "@/components/site/home-nav";
 import { StartCard } from "@/components/start/start-card";
+import { StockLogo } from "@/components/stock/stock-logo";
 import { RealSave } from "@/components/start/real-save";
 import { Stub } from "@/components/stub/stub";
 import { stampUTC, unitsFromRaw, usdc } from "@/lib/format";
 import { MoneyTrail } from "@/app/curve/trail";
 import { curveCounts } from "@/lib/curve/read";
 import { plansSummary } from "@/lib/plan/read";
+import { catalogue } from "@/lib/save/catalogue";
 import { frontReceipt, strangersSaving } from "@/lib/save/latest";
 import { startCardProps } from "@/lib/start/card";
 import "./front.css";
@@ -37,6 +39,8 @@ export const revalidate = 30;
 export default async function FrontDoor() {
   const [card, receipt, strangers, plans, curve] = await Promise.all([startCardProps(), frontReceipt(), strangersSaving(), plansSummary(), curveCounts()]);
   const live = plans.ok ? plans.value : null;
+  // Stocks every payment can save into, so the picker below has each one the row shows.
+  const known = ["AAPLx", "NVDAx", "TSLAx", "QQQx", "SPYx", "AMZNx"].flatMap((sym) => catalogue().filter((s) => s.symbol === sym));
 
   return (
     <div className="sp-home">
@@ -48,6 +52,14 @@ export default async function FrontDoor() {
           <p className="sp-home-lede">
             A slice of every USDC payment you receive becomes stock in your own wallet, by itself. Whoever pays you can match it, and so can
             every token launched on Scrip Curve, out of its trading fees.
+          </p>
+          <p className="sp-home-stocks">
+            <span className="logos" aria-hidden>
+              {known.map((s) => (
+                <StockLogo key={s.mint} mint={s.mint} size={30} eager />
+              ))}
+            </span>
+            <span>Apple, Nvidia, Tesla, the Nasdaq 100 and more US stocks.</span>
           </p>
           <div className="sp-home-start" aria-label="Start saving">
             <StartCard {...card} />
@@ -96,8 +108,8 @@ export default async function FrontDoor() {
           <li>
             <span className="n">From every payment you receive</span>
             <p className="p">
-              Say yes once, and a slice of every USDC payment becomes stock seconds after it lands. The program checks each save against a
-              price Pyth verified, or nothing moves.
+              Say yes once, and a slice of every USDC payment becomes stock seconds after it lands, whenever Pyth has a fresh verified price
+              for it. The program checks every save against that price, or nothing moves.
             </p>
             <p className="f">On mainnet since 21 September 2026.</p>
             <Link href="/ledger" className="go">

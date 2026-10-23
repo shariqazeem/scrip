@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
+import { StockLogo } from "@/components/stock/stock-logo";
 import type { PickerStock } from "@/lib/save/catalogue";
 
 /**
@@ -71,6 +72,7 @@ export function StockSearch({
                 onClose();
               }}
             >
+              <StockLogo mint={s.mint} size={36} />
               <span className="name">{s.name}</span>
               <span className="meta">
                 {s.ticker} · {s.issuer}

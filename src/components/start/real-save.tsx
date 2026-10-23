@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowDownLeft, Plus, Repeat2, TrendingUp } from "lucide-react";
+import { ArrowDownLeft, Plus, Repeat2 } from "lucide-react";
+import { StockLogo } from "@/components/stock/stock-logo";
 import { bps, unitsFromRaw, usdc } from "@/lib/format";
 import { describeSeconds } from "@/lib/receipt/figures";
 import type { FrontReceipt } from "@/lib/save/latest";
@@ -20,6 +21,7 @@ export function RealSave({ r }: { r: FrontReceipt }) {
   const lines = [
     {
       icon: <ArrowDownLeft size={18} strokeWidth={2} aria-hidden />,
+      logo: false,
       what: r.atStart ? "Saving turned on" : "A payment lands",
       sub: r.atStart ? "the last payment, already in the wallet" : "USDC, sent the way it always is",
       amount: `+${usdc(r.basisUsdc ?? 0n)}`,
@@ -27,13 +29,15 @@ export function RealSave({ r }: { r: FrontReceipt }) {
     },
     {
       icon: <Repeat2 size={18} strokeWidth={2} aria-hidden />,
+      logo: false,
       what: `Scrip saves ${rate}`,
       sub: r.seconds !== null ? `by itself, ${describeSeconds(r.seconds)} later` : "by itself",
       amount: `−${usdc(r.paidUsdc)}`,
       tone: "",
     },
     {
-      icon: <TrendingUp size={18} strokeWidth={2} aria-hidden />,
+      icon: <StockLogo mint={r.mint} size={36} eager />,
+      logo: true,
       what: r.name,
       sub: "in the same wallet, at a price Pyth verified",
       amount: `+${units}`,
@@ -43,6 +47,7 @@ export function RealSave({ r }: { r: FrontReceipt }) {
       ? [
           {
             icon: <Plus size={18} strokeWidth={2} aria-hidden />,
+            logo: false,
             what: `Added by ${r.match.by}`,
             sub: "a sponsor's Plan, matching the save",
             amount: `+${unitsFromRaw(r.match.amountRaw, r.decimals)}`,
@@ -61,7 +66,7 @@ export function RealSave({ r }: { r: FrontReceipt }) {
       <ol className="sp-real-lines">
         {lines.map((l, i) => (
           <li key={l.what} className={`sp-real-line ${l.tone}`} style={{ ["--i" as string]: i }}>
-            <span className="ic">{l.icon}</span>
+            <span className={`ic${l.logo ? " is-logo" : ""}`}>{l.icon}</span>
             <span className="what">
               <span className="t">{l.what}</span>
               <span className="s">{l.sub}</span>

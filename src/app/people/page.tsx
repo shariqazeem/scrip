@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "For people", description: "A rule on
 
 export default function PeoplePage() {
   return (
-    <SiteFrame eyebrow="For people" title="Set a rate once. Then get paid." lede="A rule on the address you already get paid to. A slice of every USDC that lands becomes S&P 500 in the same wallet, seconds later, with a receipt anyone can open. Payers never open Scrip.">
+    <SiteFrame eyebrow="For people" title="Set a rate once. Then get paid." lede="A rule on the address you already get paid to. A slice of every USDC that lands becomes stock in the same wallet, seconds later whenever Pyth has a fresh verified price, with a receipt anyone can open. Payers never open Scrip.">
       <SiteSection label="The five-second version">
         <div style={{ maxWidth: 440 }}>
           <ExampleStub />

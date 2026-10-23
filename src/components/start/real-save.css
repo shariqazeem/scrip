@@ -89,6 +89,14 @@
   color: var(--ok);
   background: var(--ok-soft);
 }
+/* The stock arrives as itself: its logo fills the circle the other lines draw an icon in. */
+.sp-real-line .ic.is-logo {
+  background: none;
+}
+.sp-real-line .ic.is-logo .sp-logo {
+  width: 100%;
+  height: 100%;
+}
 .sp-real-line.is-ok .amt {
   color: var(--ok);
 }

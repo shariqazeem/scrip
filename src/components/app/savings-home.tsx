@@ -5,6 +5,7 @@ import { ConnectWallet } from "@/components/auth/connect";
 import { AskForMatch } from "@/components/receipt/share";
 import { unitsText } from "@/components/save/types";
 import { short, usd, usdc } from "@/lib/format";
+import { StockLogo } from "@/components/stock/stock-logo";
 import type { StockHolding } from "@/lib/save/holdings";
 import { worthOf } from "@/lib/save/holdings";
 import type { SavingsTotals } from "@/lib/save/totals";
@@ -27,7 +28,7 @@ export function SignInPanel({ lead }: { lead?: ReactNode }) {
           {lead ?? "Sign in with the Solana wallet you save from. It is a signature, not a transaction: nothing moves, and it costs nothing."}
         </p>
         <ConnectWallet />
-        <p className="sp-signin-new">New to Scrip? Start below: one approval, and your first stock lands in seconds.</p>
+        <p className="sp-signin-new">New to Scrip? Start below: one approval sets it up, and the card says when your first stock arrives.</p>
       </section>
       <section className="sp-signin-inside" aria-labelledby="inside">
         <p id="inside" className="sp-signin-k">
@@ -103,6 +104,7 @@ export function SavingsHead({ holdings, totals, why }: { holdings: readonly Stoc
       <ul className="sp-sv-list" aria-label="Your stocks">
         {holdings.map((h) => (
           <li key={h.stock.mint}>
+            <StockLogo mint={h.stock.mint} size={36} />
             <span className="nm">
               {h.stock.name}
               <span className="tk">

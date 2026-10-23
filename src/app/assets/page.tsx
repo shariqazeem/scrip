@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Info, Pause, ShieldAlert, Snowflake } from "lucide-react";
 import { PageFrame } from "@/components/app/page-frame";
+import { StockLogo } from "@/components/stock/stock-logo";
 import { ASSETS, type Asset, DEFAULT_ASSET_SYMBOL } from "@/lib/assets/registry";
 import { usd } from "@/lib/format";
 import { explorerUrl } from "@/lib/solana/cluster";
@@ -28,7 +29,7 @@ export default function AssetsPage() {
     <PageFrame
       eyebrow="Assets"
       title="What a rule can buy, and whose token it is."
-      sub="Read from the mint accounts, not from a docs page. Where an issuer can move, burn or freeze a token, the row says so. One stock per savings record; the default is the Nasdaq 100, the broad index whose price Scrip can verify on Solana today."
+      sub="Read from the mint accounts, not from a docs page. Where an issuer can move, burn or freeze a token, the row says so. One stock per savings record; the default is the Nasdaq 100. A save settles only against a price Pyth has verified on Solana, so where none is fresh, saves wait."
     >
       <div className="sp-stack">
         <p className="sp-note">
@@ -87,6 +88,7 @@ function Row({ a }: { a: Asset }) {
   return (
     <article className="sp-asset">
       <div className="sp-asset-id">
+        <StockLogo mint={a.mint} size={40} />
         <span className="sp-asset-sym">{a.symbol}</span>
         <span className="sp-asset-name">{a.name}</span>
         <a className="mono sp-asset-issuer" href={explorerUrl("address", a.mint, "mainnet-beta")} target="_blank" rel="noreferrer">
