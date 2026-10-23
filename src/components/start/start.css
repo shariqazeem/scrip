@@ -418,6 +418,20 @@ button.sp-start-secondary {
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-float);
 }
+/* On a phone the list hangs from the whole sentence, not from the field, so it spans the card
+   instead of running off the right edge of the screen. */
+@media (max-width: 560px) {
+  .sp-go-line {
+    position: relative;
+  }
+  .sp-go-pickbox {
+    position: static;
+  }
+  .sp-go-menu {
+    right: 0;
+    width: auto;
+  }
+}
 .sp-go-opt {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
