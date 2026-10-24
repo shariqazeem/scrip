@@ -115,6 +115,9 @@ export const PRESET = {
   percentageSupplyOnMigration: 20,
 } as const;
 
+/** Meteora's own share of every DBC trading fee: a fifth, set by Meteora, not by this config. */
+export const METEORA_PROTOCOL_FEE_PERCENT = 20;
+
 /** The trading fee, in basis points, `seconds` after a launch: 25% falling to 1% in 60 one-minute steps. */
 export function feeBpsAt(seconds: number): number {
   if (seconds < 0) return PRESET.startingFeeBps;

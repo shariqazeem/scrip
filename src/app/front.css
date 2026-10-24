@@ -546,6 +546,38 @@
   min-width: 0;
   max-width: 560px;
 }
+/* Scrip Curve, findable from the first screen: a quiet pill above the headline, not a second hero. */
+.sp-home-pill {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-4) 0 var(--s-3);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  transition: border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.sp-home-pill:hover {
+  color: var(--accent-strong);
+  border-color: var(--accent);
+}
+.sp-home-pill:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sp-home-pill .dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
 /* The stocks a saver knows, by their logos: a beginner sees at a glance that this is the stock market. */
 .sp-home-stocks {
   display: flex;

@@ -1,0 +1,523 @@
+/* /curve, rebuilt on 24 October as a market rather than a document: what a launch pays savers beside
+   where a fee goes on mainnet, Scrip Curve as one part of Scrip, the four stocks with their Plans,
+   every launch with its curve, and the configuration at a glance. Every value is a token. */
+.sp-cvh {
+  display: grid;
+  gap: var(--s-8);
+  max-width: var(--measure-wide);
+  margin-top: var(--s-6);
+}
+.sp-cvh-h {
+  margin: 0;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.sp-cvh-lede {
+  margin: 0;
+  max-width: 64ch;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+.sp-cvh-sec {
+  display: grid;
+  gap: var(--s-4);
+}
+
+/* ── what a launch pays savers, and where a fee goes ─────────────────── */
+.sp-cvh-top {
+  display: grid;
+  gap: var(--s-5);
+}
+@media (min-width: 960px) {
+  .sp-cvh-top {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+.sp-cvh-calc,
+.sp-cvh-live {
+  display: grid;
+  gap: var(--s-4);
+  padding: var(--s-6);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+@media (max-width: 520px) {
+  .sp-cvh-calc,
+  .sp-cvh-live {
+    padding: var(--s-5);
+  }
+}
+.sp-cvh-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+.sp-cvh-ask .w {
+  color: var(--ink-muted);
+}
+.sp-cvh-seg {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+}
+.sp-cvh-segbtn {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0 var(--s-3);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--r-md) - 3px);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.sp-cvh-segbtn:hover {
+  color: var(--ink);
+}
+.sp-cvh-segbtn.is-on {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.sp-cvh-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.sp-cvh-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-3) 0 var(--s-2);
+  font: inherit;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out);
+}
+.sp-cvh-pick:hover {
+  border-color: var(--accent);
+}
+.sp-cvh-pick.is-on {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.sp-cvh-segbtn:focus-visible,
+.sp-cvh-pick:focus-visible,
+.sp-cvh-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sp-cvh-out {
+  display: grid;
+  gap: var(--s-2);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border);
+}
+.sp-cvh-out .big {
+  margin: 0;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.sp-cvh-out .big .v {
+  display: block;
+  font-size: var(--fs-h1);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-strong);
+}
+.sp-cvh-out .sub {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.sp-cvh-split {
+  display: grid;
+  margin: var(--s-2) 0 0;
+}
+.sp-cvh-split > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  font-size: var(--fs-small);
+  border-bottom: 1px solid var(--border);
+}
+.sp-cvh-split > div:last-child {
+  border-bottom: 0;
+}
+.sp-cvh-split dt {
+  color: var(--ink-muted);
+}
+.sp-cvh-split dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.sp-cvh-split > div.is-savers dd,
+.sp-cvh-split > div.is-savers dt {
+  color: var(--accent-strong);
+}
+.sp-cvh-fine {
+  margin: 0;
+  font-size: var(--fs-caption);
+  line-height: 1.55;
+  color: var(--ink-faint);
+}
+.sp-cvh-steps {
+  display: grid;
+  gap: var(--s-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-cvh-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--s-3);
+  row-gap: 2px;
+}
+.sp-cvh-steps .n {
+  grid-row: 1 / span 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-radius: 50%;
+}
+.sp-cvh-steps .t {
+  font-weight: 600;
+  color: var(--ink);
+}
+.sp-cvh-steps .s {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-cvh-steps .s.mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+}
+.sp-cvh-steps .go {
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+/* ── one part of Scrip ─────────────────────────────────────────────────── */
+.sp-cvh-ways {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 860px) {
+  .sp-cvh-ways {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.sp-cvh-ways li {
+  display: grid;
+  gap: var(--s-2);
+  align-content: start;
+  padding: var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.sp-cvh-ways li.is-here {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.sp-cvh-ways .k {
+  font-weight: 600;
+  color: var(--ink);
+}
+.sp-cvh-ways p {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+.sp-cvh-ways p.f {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-cvh-ways a {
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+.sp-cvh-ways .here {
+  justify-self: start;
+  padding: 2px var(--s-2);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  color: var(--accent-strong);
+  background: var(--surface);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-pill);
+}
+
+/* ── the four stocks ───────────────────────────────────────────────────── */
+.sp-cvh-rails {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 640px) {
+  .sp-cvh-rails {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1180px) {
+  .sp-cvh-rails {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.sp-cvh-rail {
+  display: grid;
+  gap: var(--s-4);
+  align-content: start;
+  padding: var(--s-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.sp-cvh-rail .id {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--s-3);
+  align-items: center;
+}
+.sp-cvh-rail .id .sp-logo {
+  grid-row: 1 / span 2;
+}
+.sp-cvh-rail .t {
+  font-weight: 600;
+  color: var(--ink);
+}
+.sp-cvh-rail .tk {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-cvh-rail dl {
+  display: grid;
+  margin: 0;
+}
+.sp-cvh-rail dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: 6px 0;
+  font-size: var(--fs-small);
+  border-bottom: 1px solid var(--border);
+}
+.sp-cvh-rail dl > div:last-child {
+  border-bottom: 0;
+}
+.sp-cvh-rail dt {
+  color: var(--ink-muted);
+}
+.sp-cvh-rail dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.sp-cvh-rail .sp-action {
+  justify-content: center;
+}
+
+/* ── every launch ──────────────────────────────────────────────────────── */
+.sp-cvh-headrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.sp-cvh-headrow .aside {
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+}
+.sp-cvh-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-cvh-card {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  color: inherit;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  transition: border-color var(--dur-1) var(--ease-out);
+}
+.sp-cvh-card:hover {
+  border-color: var(--accent);
+}
+.sp-cvh-card .top {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.sp-cvh-card .sym {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+.sp-cvh-card .kind {
+  margin-left: auto;
+  padding: 2px var(--s-2);
+  font-size: var(--fs-caption);
+  color: var(--ink-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+}
+.sp-cvh-card .name {
+  font-size: var(--fs-small);
+  color: var(--ink-muted);
+}
+.sp-cvh-card .meta {
+  display: grid;
+  gap: 2px;
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-cvh-spark {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.sp-cvh-spark .whole {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+.sp-cvh-spark .area {
+  fill: var(--accent-soft);
+  stroke: none;
+}
+.sp-cvh-spark .filled {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.sp-cvh-spark .mark {
+  fill: var(--accent-strong);
+}
+.sp-cvh-spark .mark.is-sell {
+  fill: var(--ink-muted);
+}
+
+/* ── the configuration, at a glance ────────────────────────────────────── */
+.sp-cvh-config {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 600px) {
+  .sp-cvh-config {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 960px) {
+  .sp-cvh-config {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.sp-cvh-config li {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.sp-cvh-config .k {
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+}
+.sp-cvh-config .v {
+  font-weight: 600;
+  color: var(--ink);
+}
+.sp-cvh-config .s {
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+/* ── the full preset, folded ───────────────────────────────────────────── */
+.sp-cvh-more {
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--border-strong);
+}
+.sp-cvh-more > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  cursor: pointer;
+  list-style: none;
+}
+.sp-cvh-more > summary::-webkit-details-marker {
+  display: none;
+}
+.sp-cvh-more > summary::after {
+  content: "Show";
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+.sp-cvh-more[open] > summary::after {
+  content: "Hide";
+}
+.sp-cvh-more > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sp-cvh-more-body {
+  display: grid;
+  gap: var(--s-5);
+  max-width: var(--measure);
+  padding-top: var(--s-4);
+}

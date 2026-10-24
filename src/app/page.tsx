@@ -48,6 +48,10 @@ export default async function FrontDoor() {
 
       <header className="sp-home-hero is-sentence">
         <div className="sp-home-hero-copy">
+          <Link href="/curve" className="sp-home-pill">
+            <span className="dot" aria-hidden />
+            Live on Meteora: every trade on Scrip Curve pays savers
+          </Link>
           <h1 className="sp-home-display">Your income invests itself.</h1>
           <p className="sp-home-lede">
             A slice of every USDC payment you receive becomes stock in your own wallet, by itself. Whoever pays you can match it, and so can

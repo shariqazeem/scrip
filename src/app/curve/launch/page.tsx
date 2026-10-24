@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LaunchForm, type LaunchStock } from "@/components/curve/launch-form";
 import { PageFrame } from "@/components/app/page-frame";
 import { DEPLOYED } from "@/lib/curve/deployed";
-import { CURVE_STOCKS, curveQuote } from "@/lib/curve/preset";
+import { CURVE_STOCKS, curveQuote, isCurveStock } from "@/lib/curve/preset";
 import { nameOf } from "@/lib/save/names";
 import { cluster } from "@/lib/solana/cluster";
 import "@/app/landing.css";
@@ -20,7 +20,9 @@ export const metadata: Metadata = {
  * symbol, an optional first buy, one approval. A stock is offered once its config exists on chain
  * (`deployed.json`); until then it says so instead of failing in the wallet.
  */
-export default function LaunchPage() {
+export default async function LaunchPage({ searchParams }: { searchParams: Promise<{ stock?: string }> }) {
+  // "Launch in Tesla" on /curve opens the form on Tesla.
+  const { stock: asked } = await searchParams;
   const stocks: LaunchStock[] = CURVE_STOCKS.map((s) => ({
     symbol: s,
     mint: curveQuote(s).mint,
@@ -36,7 +38,7 @@ export default function LaunchPage() {
       sub="Pick the stock, name it, sign once. Its trading fees go to savers as stock, through a Scrip Plan, and half of them to you if you choose."
     >
       <div className="sp-cv-body">
-        <LaunchForm stocks={stocks} cluster={cluster()} />
+        <LaunchForm stocks={stocks} cluster={cluster()} initialStock={isCurveStock(asked) ? asked : undefined} />
       </div>
     </PageFrame>
   );

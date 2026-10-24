@@ -18,10 +18,10 @@ const FIRST_BUYS = [0, 5, 25, 100] as const;
  * wallet; the server never sees it. What the launcher keeps, what savers get and what it costs
  * are said before the button, in the button's own words.
  */
-export function LaunchForm({ stocks, cluster }: { stocks: readonly LaunchStock[]; cluster: string }) {
+export function LaunchForm({ stocks, cluster, initialStock }: { stocks: readonly LaunchStock[]; cluster: string; initialStock?: string }) {
   const { wallets, connected, choose } = useCurveWallet();
   const ready = stocks.filter((s) => s.ready || s.toSavers);
-  const [stock, setStock] = useState<string>(ready[0]?.symbol ?? "QQQx");
+  const [stock, setStock] = useState<string>(ready.some((s) => s.symbol === initialStock) ? initialStock! : (ready[0]?.symbol ?? "QQQx"));
   const [kind, setKind] = useState<"public" | "demonstration">("public");
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
