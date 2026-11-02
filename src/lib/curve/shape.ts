@@ -69,12 +69,15 @@ function sqrtAtSold(segments: readonly Segment[], start: BN, end: BN, baseRaw: B
   return hi;
 }
 
-const HOLD_MS = 60_000;
+// Held ten minutes, keyed by what the curve holds: a trade changes the reserve, so it is drawn again at
+// once, and a quiet launch is never read twice in a row (its whole history is the slow part).
+const HOLD_MS = 10 * 60_000;
 const g = globalThis as typeof globalThis & { __scripCurveShapes?: Map<string, { at: number; value: CurveShape }> };
 
 export async function curveShape(conn: Connection, launch: ChainLaunch): Promise<Outcome<CurveShape>> {
   const cache = (g.__scripCurveShapes ??= new Map());
-  const hit = cache.get(launch.pool);
+  const key = `${launch.pool}:${launch.quoteReserveRaw}:${launch.migrated}`;
+  const hit = cache.get(key);
   if (hit && Date.now() - hit.at < HOLD_MS) return ok(hit.value);
   try {
     const dbc = curveClient(conn);
@@ -134,7 +137,7 @@ export async function curveShape(conn: Connection, launch: ChainLaunch): Promise
     const last = points[points.length - 1]!;
     const now = launch.migrated ? last : point(BN.min(BN.max(pool.poolState.sqrtPrice as BN, start), end));
     const value: CurveShape = { points, threshold: last.quote, now, marks, graduated };
-    cache.set(launch.pool, { at: Date.now(), value });
+    cache.set(key, { at: Date.now(), value });
     return ok(value);
   } catch (err) {
     return held(`The curve could not be drawn (${err instanceof Error ? err.message : String(err)}).`);

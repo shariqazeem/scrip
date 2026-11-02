@@ -68,30 +68,63 @@ export async function curveCounts(): Promise<CurveCounts | null> {
 }
 
 async function readPlans(): Promise<CurvePlanView[]> {
-  const out: CurvePlanView[] = [];
-  for (const stock of CURVE_STOCKS) {
-    const p = DEPLOYED.plans[stock];
-    if (!p) continue;
-    const view = await planAt(p.address);
-    const plan = view.ok ? view.value : null;
-    const inflows = await feeInflows(new PublicKey(p.escrow));
-    out.push({
-      stock,
-      address: p.address,
-      escrow: p.escrow,
-      name: plan?.name ?? null,
-      sponsorHandle: plan?.sponsorHandle ?? null,
-      escrowRaw: plan?.escrowRaw ?? null,
-      decimals: plan?.decimals ?? 8,
-      members: plan?.members ?? 0,
-      matches: plan?.matches ?? 0,
-      matchedRaw: plan?.matchedRaw ?? 0n,
-      matchedUsdc: plan?.matchedUsdc ?? 0n,
-      inflows,
-      fromLaunchesRaw: inflows.reduce((n, f) => n + f.raw, 0n),
-    });
+  const all = await Promise.all(CURVE_STOCKS.map((stock) => curvePlan(stock)));
+  return all.filter((p): p is CurvePlanView => p !== null);
+}
+
+/**
+ * ONE STOCK'S PLAN, for a launch's page, which needs only the Plan its fees go to. Its fees reach the
+ * Plan at most every half hour, so it is held five minutes and then answered from what is held while
+ * it is read again behind the reader: a visit after a quiet spell no longer waits on fifty transactions.
+ */
+const PLAN_FRESH_MS = 5 * 60_000;
+type PlanHeld = { at: number; value: Promise<CurvePlanView | null>; refreshing: boolean };
+const gp = globalThis as typeof globalThis & { __scripCurvePlans?: Map<CurveStock, PlanHeld> };
+const plansHeld = (gp.__scripCurvePlans ??= new Map<CurveStock, PlanHeld>());
+
+export function curvePlan(stock: CurveStock): Promise<CurvePlanView | null> {
+  const hit = plansHeld.get(stock);
+  if (hit && (Date.now() - hit.at < PLAN_FRESH_MS || hit.refreshing)) return hit.value;
+  if (hit) {
+    hit.refreshing = true;
+    void readPlan(stock)
+      .catch(() => null)
+      .then((v) => {
+        if (v) plansHeld.set(stock, { at: Date.now(), value: Promise.resolve(v), refreshing: false });
+        else hit.refreshing = false;
+      });
+    return hit.value;
   }
-  return out;
+  const value = readPlan(stock).catch(() => null);
+  plansHeld.set(stock, { at: Date.now(), value, refreshing: false });
+  // A read that failed is not held: the next reader tries again.
+  void value.then((v) => {
+    if (!v && plansHeld.get(stock)?.value === value) plansHeld.delete(stock);
+  });
+  return value;
+}
+
+async function readPlan(stock: CurveStock): Promise<CurvePlanView | null> {
+  const p = DEPLOYED.plans[stock];
+  if (!p) return null;
+  const view = await planAt(p.address);
+  const plan = view.ok ? view.value : null;
+  const inflows = await feeInflows(new PublicKey(p.escrow));
+  return {
+    stock,
+    address: p.address,
+    escrow: p.escrow,
+    name: plan?.name ?? null,
+    sponsorHandle: plan?.sponsorHandle ?? null,
+    escrowRaw: plan?.escrowRaw ?? null,
+    decimals: plan?.decimals ?? 8,
+    members: plan?.members ?? 0,
+    matches: plan?.matches ?? 0,
+    matchedRaw: plan?.matchedRaw ?? 0n,
+    matchedUsdc: plan?.matchedUsdc ?? 0n,
+    inflows,
+    fromLaunchesRaw: inflows.reduce((n, f) => n + f.raw, 0n),
+  };
 }
 
 /**

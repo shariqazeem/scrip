@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CurveChart } from "@/components/curve/curve-chart";
@@ -7,7 +8,7 @@ import { PageFrame } from "@/components/app/page-frame";
 import { Row, SiteSection } from "@/components/site/site-frame";
 import { DEPLOYED } from "@/lib/curve/deployed";
 import { launchAt } from "@/lib/curve/launches";
-import { readCurve } from "@/lib/curve/read";
+import { curvePlan } from "@/lib/curve/read";
 import { liveChartFor } from "@/lib/curve/gecko";
 import { curveShape } from "@/lib/curve/shape";
 import { PRESET, curveQuote, feeBpsAt } from "@/lib/curve/preset";
@@ -21,9 +22,12 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ pool: string }> };
 
+/** The launch, read once per request: the title and the page ask for the same account. */
+const launchOf = cache((pool: string) => launchAt(connection(), pool));
+
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { pool } = await params;
-  const found = await launchAt(connection(), pool);
+  const found = await launchOf(pool);
   const l = found.ok ? found.value : null;
   if (!l) return { title: "Launchpad" };
   return { title: `${l.symbol ?? "A launch"} on the launchpad`, description: `${l.name ?? "A token"}, priced in ${nameOf(l.stock)}. Every trading fee it pays goes half to its launcher and half to savers.` };
@@ -39,7 +43,7 @@ const units = (raw: bigint, decimals: number, dp = 4) => (Number(raw) / 10 ** de
  */
 export default async function LaunchPage({ params }: Params) {
   const { pool } = await params;
-  const found = await launchAt(connection(), pool);
+  const found = await launchOf(pool);
   if (!found.ok) throw new Error(found.why);
   const l = found.value;
   if (!l) notFound();
@@ -53,13 +57,12 @@ export default async function LaunchPage({ params }: Params) {
   const fee = l.migrated ? null : feeBpsAt(now - l.activationUnix);
   const falls = l.activationUnix + PRESET.feeDecaySeconds;
   const plan = DEPLOYED.plans[l.stock];
+  // The Plan, the curve's history and GeckoTerminal are three different reads: side by side, not in a row.
+  const [planView, shape, liveChart] = await Promise.all([curvePlan(l.stock), curveShape(connection(), l), liveChartFor(l)]);
   // Every launch priced in this stock pays into the same Plan, so what reached it is counted for all of them.
-  const intoPlan = ((await readCurve().plans).find((p) => p.stock === l.stock)?.inflows ?? []).slice();
+  const intoPlan = (planView?.inflows ?? []).slice();
   const intoPlanRaw = intoPlan.reduce((n, f) => n + f.raw, 0n);
   const planLink = plan ? <a href={explorerUrl("address", plan.address)}>{stockName} Plan</a> : <>{stockName} Plan</>;
-  const shape = await curveShape(connection(), l);
-  // The market's own chart, only where GeckoTerminal has one: the graduated pool, else the curve.
-  const liveChart = await liveChartFor(l);
   const icon = `/api/curve/icon?${new URLSearchParams({ s: l.symbol ?? "?", k: l.stock })}`;
   return (
     <PageFrame
