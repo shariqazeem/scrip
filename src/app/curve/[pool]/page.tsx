@@ -8,6 +8,7 @@ import { Row, SiteSection } from "@/components/site/site-frame";
 import { DEPLOYED } from "@/lib/curve/deployed";
 import { launchAt } from "@/lib/curve/launches";
 import { readCurve } from "@/lib/curve/read";
+import { liveChartFor } from "@/lib/curve/gecko";
 import { curveShape } from "@/lib/curve/shape";
 import { PRESET, curveQuote, feeBpsAt } from "@/lib/curve/preset";
 import { dateUTC, short } from "@/lib/format";
@@ -57,8 +58,8 @@ export default async function LaunchPage({ params }: Params) {
   const intoPlanRaw = intoPlan.reduce((n, f) => n + f.raw, 0n);
   const planLink = plan ? <a href={explorerUrl("address", plan.address)}>{stockName} Plan</a> : <>{stockName} Plan</>;
   const shape = await curveShape(connection(), l);
-  // The market's own chart: the curve while it fills, the graduated pool after.
-  const liveChart = `https://www.geckoterminal.com/solana/pools/${l.migrated && l.dammPool ? l.dammPool : l.pool}`;
+  // The market's own chart, only where GeckoTerminal has one: the graduated pool, else the curve.
+  const liveChart = await liveChartFor(l);
   const icon = `/api/curve/icon?${new URLSearchParams({ s: l.symbol ?? "?", k: l.stock })}`;
   return (
     <PageFrame

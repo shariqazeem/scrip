@@ -378,6 +378,10 @@
 .sp-cv-chart .head .live:hover {
   color: var(--accent-strong);
 }
+.sp-cv-chart .head .soon {
+  font-size: var(--fs-small);
+  color: var(--ink-faint);
+}
 .sp-cv-chart svg {
   display: block;
   width: 100%;

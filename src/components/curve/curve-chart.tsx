@@ -12,9 +12,10 @@ const amount = (v: number) => (v > 0 && v < 0.01 ? v.toFixed(4) : v.toFixed(2));
  * fixes, the part already filled in the accent, every real trade as a dot where it left the curve,
  * and where the curve is now. No axis of prices: the shape is the point, and a number for a
  * speculative token's price is the one thing Scrip never prints. The market's own chart, from
- * GeckoTerminal, is one link away.
+ * GeckoTerminal, is one link away once GeckoTerminal lists the pool, which it does after the first
+ * trade; until then the head says so instead of linking to a page that is not there.
  */
-export function CurveChart({ shape, stockName, symbol, migrated, liveChart }: { shape: CurveShape; stockName: string; symbol: string; migrated: boolean; liveChart: string }) {
+export function CurveChart({ shape, stockName, symbol, migrated, liveChart }: { shape: CurveShape; stockName: string; symbol: string; migrated: boolean; liveChart: string | null }) {
   const { points, now, marks, threshold } = shape;
   const prices = points.map((p) => p.price);
   const lo = Math.min(...prices);
@@ -32,9 +33,13 @@ export function CurveChart({ shape, stockName, symbol, migrated, liveChart }: { 
     <figure className="sp-cv-chart">
       <figcaption className="head">
         <span className="t">The curve</span>
-        <a className="live" href={liveChart} target="_blank" rel="noreferrer">
-          Live chart on GeckoTerminal
-        </a>
+        {liveChart ? (
+          <a className="live" href={liveChart} target="_blank" rel="noreferrer">
+            Live chart on GeckoTerminal
+          </a>
+        ) : (
+          <span className="soon">{marks.length === 0 ? "On GeckoTerminal after its first trade" : "Not on GeckoTerminal yet"}</span>
+        )}
       </figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
         <title>{label}</title>
@@ -77,7 +82,7 @@ export function CurveChart({ shape, stockName, symbol, migrated, liveChart }: { 
       </div>
       <p className="note">
         {migrated
-          ? `Each dot is a real trade on the curve, at its time in UTC. Full at ${amount(threshold)} ${stockName}, it graduated to a Meteora DAMM v2 pool, where it trades now: its market chart is on GeckoTerminal.`
+          ? `Each dot is a real trade on the curve, at its time in UTC. Full at ${amount(threshold)} ${stockName}, it graduated to a Meteora DAMM v2 pool, where it trades now${liveChart ? ": its market chart is on GeckoTerminal" : ""}.`
           : `Price rises as ${stockName} flows in. Each dot is a real trade, at its time in UTC, placed where it left the curve; the large dot is now. At ${amount(threshold)} ${stockName} it graduates to a Meteora DAMM v2 pool.`}
       </p>
     </figure>
