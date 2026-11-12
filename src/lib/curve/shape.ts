@@ -4,7 +4,7 @@ import { Rounding, getDeltaAmountBaseUnsigned, getDeltaAmountQuoteUnsigned, getP
 import { type Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { type Outcome, held, ok } from "@/lib/outcome";
-import { readTxViews } from "@/lib/solana/tx-view";
+import { readTxViewsAll } from "@/lib/solana/tx-view";
 import { type ChainLaunch, curveClient } from "./launches";
 import { DAMM_V2_PROGRAM_ID, curveQuote } from "./preset";
 
@@ -108,7 +108,7 @@ export async function curveShape(conn: Connection, launch: ChainLaunch): Promise
     const total = BigInt(supply.value.amount);
     const vault = (pool.poolState.baseVault as PublicKey).toBase58();
     const sigs = await conn.getSignaturesForAddress(new PublicKey(launch.pool), { limit: 200 }, "confirmed");
-    const views = await readTxViews(
+    const views = await readTxViewsAll(
       conn,
       sigs.filter((x) => !x.err).map((x) => x.signature),
     );

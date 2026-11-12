@@ -19,7 +19,8 @@ import "./live.css";
 /**
  * THE MOMENT, LIVE.
  *
- * Polls the live view every four seconds. When the owner's USDC rises above the watermark
+ * Polls the live view every four seconds while the tab is in view, and at once when it comes
+ * back into view. When the owner's USDC rises above the watermark
  * a ghost stub appears: landed, not yet swept. When a receipt for this owner appears that
  * was not there before, a real stub prints at the top of the register — the one moment of
  * motion the product has. Everything shown is read from the chain or a receipt.
@@ -76,6 +77,9 @@ export function LiveBook({
     let alive = true;
     const later: ReturnType<typeof setTimeout>[] = [];
     const tick = async () => {
+      // A tab nobody is looking at asks nothing. Every poll is a set of chain reads, and one tab
+      // left open on a register asked 22,139 times; a hidden tab catches up the moment it is seen.
+      if (document.visibilityState === "hidden") return;
       try {
         const res = await fetch(`/api/book/live/${initial.owner}`, { cache: "no-store" });
         if (!res.ok || !alive) return;
@@ -99,9 +103,14 @@ export function LiveBook({
       }
     };
     const t = setInterval(() => void tick(), 4_000);
+    const onShow = () => {
+      if (document.visibilityState === "visible") void tick();
+    };
+    document.addEventListener("visibilitychange", onShow);
     return () => {
       alive = false;
       clearInterval(t);
+      document.removeEventListener("visibilitychange", onShow);
       for (const l of later) clearTimeout(l);
     };
   }, [initial.owner, mode, router]);

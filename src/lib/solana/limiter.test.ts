@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { limitsFor, makeGate } from "./limiter";
+import { limitsFor, makeGate, methodGateFor } from "./limiter";
 
 describe("what the gate allows, by endpoint", () => {
   it("is slow for Solana's public endpoints and fast for a paid one", () => {
@@ -8,6 +8,32 @@ describe("what the gate allows, by endpoint", () => {
     expect(limitsFor("https://mainnet.helius-rpc.com/?api-key=x").rps).toBe(100);
     expect(limitsFor("http://127.0.0.1:8899").rps).toBe(2_000);
   });
+  it("lets an override tune a paid endpoint, and only ever slow Solana's own", () => {
+    const before = { rps: process.env.SOLANA_RPC_RPS, concurrency: process.env.SOLANA_RPC_CONCURRENCY };
+    process.env.SOLANA_RPC_RPS = "8";
+    process.env.SOLANA_RPC_CONCURRENCY = "16";
+    try {
+      expect(limitsFor("https://mainnet.helius-rpc.com/?api-key=x")).toEqual({ rps: 8, concurrency: 16 });
+      expect(limitsFor("https://api.mainnet-beta.solana.com")).toEqual({ rps: 4, concurrency: 2 });
+      process.env.SOLANA_RPC_RPS = "1";
+      expect(limitsFor("https://api.mainnet-beta.solana.com").rps).toBe(1);
+    } finally {
+      for (const [k, v] of [["SOLANA_RPC_RPS", before.rps], ["SOLANA_RPC_CONCURRENCY", before.concurrency]] as const) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  });
+
+  it("gives an account search its own, slower gate on Solana's public endpoint only", () => {
+    const search = methodGateFor("https://api.mainnet-beta.solana.com", "getProgramAccounts");
+    expect(search?.rps).toBe(0.5);
+    expect(search?.concurrency).toBe(1);
+    expect(methodGateFor("https://api.mainnet-beta.solana.com", "getProgramAccounts")).toBe(search);
+    expect(methodGateFor("https://api.mainnet-beta.solana.com", "getAccountInfo")).toBeNull();
+    expect(methodGateFor("https://mainnet.helius-rpc.com/?api-key=x", "getProgramAccounts")).toBeNull();
+  });
+
   it("is not fooled by a host that merely ends in the same words", () => {
     expect(limitsFor("https://api.devnet.solana.com.evil.example").rps).toBe(100);
   });
@@ -76,5 +102,19 @@ describe("a refusal holds everyone back, not just the call that met it", () => {
     const first = gate.coolingFor();
     gate.penalize();
     expect(gate.coolingFor()).toBeGreaterThan(first);
+  });
+});
+
+describe("a batch at the gate", () => {
+  it("holds the next start back by every call the batch carried", async () => {
+    const gate = makeGate("https://api.devnet.solana.com", { rps: 20, concurrency: 4 });
+    const starts: number[] = [];
+    const t0 = Date.now();
+    await Promise.all([
+      gate.run(async () => void starts.push(Date.now() - t0), 5),
+      gate.run(async () => void starts.push(Date.now() - t0)),
+    ]);
+    // 20 a second is 50 ms a call: a batch of five holds the next start for about 250 ms.
+    expect(starts[1]! - starts[0]!).toBeGreaterThanOrEqual(230);
   });
 });

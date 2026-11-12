@@ -100,18 +100,99 @@ type BatchRpc = { _rpcBatchRequest(requests: Array<{ methodName: string; args: u
 const CONFIG = { encoding: "jsonParsed", maxSupportedTransactionVersion: 1, commitment: "confirmed" };
 
 /**
+ * EVERY TRANSACTION READ ONCE. A confirmed transaction never changes, and the same few were read
+ * again on every look: the register's live view asked for each save's later transactions every
+ * fifteen seconds per open tab. On 12 November 2026 that, with the rest, spent Solana's public
+ * budget for reading transactions, and a launch's history came back refused. Held per process;
+ * past MAX_HELD the oldest is let go.
+ */
+const MAX_HELD = 1_500;
+const store = globalThis as typeof globalThis & { __scripTxViews?: Map<string, TxView> };
+const heldViews = (store.__scripTxViews ??= new Map<string, TxView>());
+function remember(v: TxView): void {
+  if (heldViews.has(v.sig)) return;
+  if (heldViews.size >= MAX_HELD) {
+    const oldest = heldViews.keys().next().value;
+    if (oldest !== undefined) heldViews.delete(oldest);
+  }
+  heldViews.set(v.sig, v);
+}
+
+/**
  * One transaction, parsed by the RPC, through the connection's own gate. Null when it has not
  * settled yet (or never existed); a thrown error when the RPC refused.
  */
 export async function readTxView(conn: Connection, sig: string): Promise<TxView | null> {
+  const hit = heldViews.get(sig);
+  if (hit) return hit;
   const res = await (conn as unknown as Rpc)._rpcRequest("getTransaction", [sig, CONFIG]);
   if (res.error) throw new Error(res.error.message);
-  return viewOf(sig, (res.result ?? null) as RawTx | null);
+  const view = viewOf(sig, (res.result ?? null) as RawTx | null);
+  if (view) remember(view);
+  return view;
 }
 
-/** Several at once, in one batch; an entry the RPC could not return is null, never a thrown batch. */
+/**
+ * The most transactions asked for in one batch. Solana's public endpoint counts every call inside
+ * a batch against its budget for the method, and refuses the entries past it.
+ */
+const CHUNK = 10;
+/** A patient reader asks refused entries again after these pauses: the budget refills each ten seconds. */
+const PAUSES_MS = [2_000, 5_000] as const;
+const REFUSED = /too many requests|rate limit|429/i;
+
+type Got = { sig: string; error?: string; view: TxView | null };
+
+async function readMany(conn: Connection, sigs: readonly string[], patient: boolean): Promise<Got[]> {
+  const out = new Map<string, Got>();
+  let pending: string[] = [];
+  for (const sig of new Set(sigs)) {
+    const hit = heldViews.get(sig);
+    if (hit) out.set(sig, { sig, view: hit });
+    else pending.push(sig);
+  }
+  for (let round = 0; pending.length > 0; round += 1) {
+    if (round > 0) await new Promise((r) => setTimeout(r, PAUSES_MS[round - 1]));
+    const lastRound = !patient || round >= PAUSES_MS.length;
+    const again: string[] = [];
+    for (let i = 0; i < pending.length; i += CHUNK) {
+      const slice = pending.slice(i, i + CHUNK);
+      const got = await (conn as unknown as BatchRpc)._rpcBatchRequest(slice.map((s) => ({ methodName: "getTransaction", args: [s, CONFIG] })));
+      got.forEach((r, j) => {
+        const sig = slice[j]!;
+        const error = r.error?.message;
+        if (error && !lastRound && REFUSED.test(error)) {
+          again.push(sig);
+          return;
+        }
+        const view = error ? null : viewOf(sig, (r.result ?? null) as RawTx | null);
+        if (view) remember(view);
+        out.set(sig, { sig, error, view });
+      });
+    }
+    pending = again;
+  }
+  return sigs.map((sig) => out.get(sig) ?? { sig, error: "not read", view: null });
+}
+
+/** Several at once, in batches; an entry the RPC could not return is null, never a thrown batch. */
 export async function readTxViews(conn: Connection, sigs: readonly string[]): Promise<Array<TxView | null>> {
   if (sigs.length === 0) return [];
-  const out = await (conn as unknown as BatchRpc)._rpcBatchRequest(sigs.map((s) => ({ methodName: "getTransaction", args: [s, CONFIG] })));
-  return out.map((r, i) => (r.error ? null : viewOf(sigs[i]!, (r.result ?? null) as RawTx | null)));
+  return (await readMany(conn, sigs, false)).map((r) => r.view);
+}
+
+/**
+ * EVERY ONE OF THEM, OR NOTHING. For a reader that sums what it finds (the fees a Plan received)
+ * or draws every trade: an entry the RPC refused is a hole, and a total with a hole in it is a
+ * wrong number. On 12 November 2026 a Plan's fees from launches read 0.000028 where they were
+ * 0.000120, because the entries past the public endpoint's budget came back refused and were
+ * skipped. Refused entries are asked again twice, after a pause; then it throws. A transaction
+ * the RPC does not know is null.
+ */
+export async function readTxViewsAll(conn: Connection, sigs: readonly string[]): Promise<Array<TxView | null>> {
+  if (sigs.length === 0) return [];
+  const got = await readMany(conn, sigs, true);
+  const refused = got.filter((r) => r.error);
+  if (refused.length > 0) throw new Error(`${refused.length} of ${got.length} transactions could not be read (${refused[0]!.error})`);
+  return got.map((r) => r.view);
 }

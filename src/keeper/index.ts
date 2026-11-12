@@ -56,6 +56,7 @@ import { FEED_MAX_AGE_SECONDS, MAX_CONF_BPS, MIN_SLICE, computeSlice, effectiveR
 import { SCRIP_PROGRAM_ID, bookPda, discriminatorFilter, newReleaseId, receiptPda } from "@/lib/solana/program";
 import { buildSweepTransaction } from "@/lib/sweep/build";
 import { confirmSignature, rebroadcast, sendAndConfirm } from "@/lib/solana/confirm";
+import { failoverFor, fallbackFor } from "@/lib/solana/failover";
 import { makeConnection } from "@/lib/solana/make-connection";
 import { rentFor } from "@/lib/solana/rent";
 
@@ -135,6 +136,14 @@ function loadKeypair(): Keypair {
 
 const keeper = loadKeypair();
 const conn = makeConnection(RPC, { wsEndpoint: process.env.NEXT_PUBLIC_SOLANA_WS?.trim() || undefined });
+/**
+ * SOLANA'S OWN ENDPOINT, BESIDE A PAID ONE. Calls hand themselves over inside the connection
+ * (`failover.ts`); a websocket cannot, so every watched account is also watched here. From 9 to
+ * 12 November 2026 the paid endpoint refused every socket with 429, and an arrival waited for the
+ * next poll instead of waking this service. Null when the RPC is already Solana's own, or local.
+ */
+const FALLBACK_RPC = fallbackFor(RPC);
+const watchers: Connection[] = FALLBACK_RPC ? [conn, makeConnection(FALLBACK_RPC)] : [conn];
 /**
  * Endpoints a signed transaction is ALSO re-broadcast through while the network has not seen it.
  * On 12 October every price post and clean-up sent through the main endpoint was dropped before
@@ -1018,7 +1027,9 @@ async function tick(): Promise<void> {
       const ata = address.toBase58();
       if (!subscribed.has(ata)) {
         subscribed.add(ata);
-        conn.onAccountChange(address, () => void tick(), "confirmed");
+        // Both sockets may report the same change; a second wake-up during a round only asks
+        // for one more round (`wakeRequested`).
+        for (const w of watchers) w.onAccountChange(address, () => void tick(), "confirmed");
       }
     }
     await eachAtMost(CONCURRENCY, live.map((entry, n) => ({ entry, info: infos[n] ?? null })), async ({ entry, info }) => {
@@ -1064,14 +1075,38 @@ function health(): KeeperHealth {
     inFlight: evaluating.size,
     lastRoundAt: Math.floor(lastRoundAt / 1000),
     matchesWaiting: [...pendingMatches.values()].reduce((n, q) => n + q.length, 0),
+    rpcFallback: rpcFallback(),
   };
+}
+
+/** Whether calls are on Solana's own endpoint because the paid one refused, since when and why. */
+function rpcFallback(): { since: number; why: string; until: number } | null {
+  const s = FALLBACK_RPC ? failoverFor(RPC, FALLBACK_RPC).status() : null;
+  return s ? { since: Math.floor(s.since / 1000), why: s.why, until: Math.floor(s.until / 1000) } : null;
+}
+
+/**
+ * A START-UP READ WAITS FOR THE CHAIN; IT DOES NOT EXIT. pm2 starts a process that exits again at
+ * once, and every start reads the chain from the top: from 9 to 12 November 2026 one refused
+ * balance read restarted the two services 20,594 times. Now it waits, longer each time (15 s
+ * doubling to 5 min), and says so.
+ */
+async function patiently<T>(what: string, read: () => Promise<T>): Promise<T> {
+  for (let wait = 15_000; ; wait = Math.min(wait * 2, 300_000)) {
+    try {
+      return await read();
+    } catch (err) {
+      log(`${what} failed (${err instanceof Error ? err.message.slice(0, 160) : String(err)}); trying again in ${wait / 1000} s`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
 }
 
 async function main(): Promise<void> {
   // The endpoint's host only: a paid RPC's key travels in the query string, and logs are read.
-  log(`scrip keeper ${keeper.publicKey.toBase58()} on ${CLUSTER} via ${RPC.replace(/[?#].*$/, "").replace(/\/[^/]{24,}$/, "/…")}`);
+  log(`scrip keeper ${keeper.publicKey.toBase58()} on ${CLUSTER} via ${RPC.replace(/[?#].*$/, "").replace(/\/[^/]{24,}$/, "/…")}${FALLBACK_RPC ? `, falling back to ${FALLBACK_RPC}` : ""}`);
   log(`program ${SCRIP_PROGRAM_ID.toBase58()}; hermes ${hermesKey() ? "keyed" : "KEYLESS — mainnet sweeps will wait for a fresh price forever"}`);
-  const sol = await conn.getBalance(keeper.publicKey);
+  const sol = await patiently("reading this service's balance", () => conn.getBalance(keeper.publicKey));
   log(`keeper balance ${(sol / 1e9).toFixed(4)} SOL`);
   if (sol < 20_000_000) log("WARNING: under 0.02 SOL; a sweep advances rent before it is repaid");
 
@@ -1084,7 +1119,7 @@ async function main(): Promise<void> {
   {
     const mint = new PublicKey(USDC_MINT);
     const ata = getAssociatedTokenAddressSync(mint, keeper.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
-    const info = await conn.getAccountInfo(ata, "confirmed");
+    const info = await patiently("reading this service's USDC account", () => conn.getAccountInfo(ata, "confirmed"));
     if (info) {
       log(`keeper USDC account ${ata.toBase58()}`);
     } else {

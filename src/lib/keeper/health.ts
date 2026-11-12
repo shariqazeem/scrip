@@ -33,6 +33,11 @@ export type KeeperHealth = {
   readonly lastRoundAt?: number;
   /** Saves whose Plan match had to wait, and will be tried again. */
   readonly matchesWaiting?: number;
+  /**
+   * Set while the paid RPC refuses and calls go to Solana's own endpoint: since and until when
+   * (unix seconds), and the refusal. Null on the paid endpoint; absent from older services.
+   */
+  readonly rpcFallback?: { readonly since: number; readonly why: string; readonly until: number } | null;
 };
 
 /**

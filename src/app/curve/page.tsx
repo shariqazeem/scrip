@@ -7,9 +7,9 @@ import { Row, SiteSection } from "@/components/site/site-frame";
 import { StockLogo } from "@/components/stock/stock-logo";
 import { configsOf } from "@/lib/curve/deployed";
 import { CURVE_STOCKS, DAMM_V2_PROGRAM_ID, DBC_PROGRAM_ID, METEORA_PROTOCOL_FEE_PERCENT, PRESET, THRESHOLD, curveQuote, tokenBadge } from "@/lib/curve/preset";
-import { readCurve } from "@/lib/curve/read";
+import { DEPLOYED_PLANS, readCurve } from "@/lib/curve/read";
 import { curveShape } from "@/lib/curve/shape";
-import { dateUTC, short, usdc } from "@/lib/format";
+import { dateUTC, short, stampUTC, usdc } from "@/lib/format";
 import { prices as jupPrices } from "@/lib/jupiter/client";
 import { plansSummary } from "@/lib/plan/read";
 import { nameOf } from "@/lib/save/names";
@@ -37,6 +37,10 @@ const REPO = "https://github.com/shariqazeem/scrip/blob/main";
 const STOCK_LIST = "the Nasdaq 100, the S&P 500, Tesla or Nvidia";
 /** The most launches drawn as cards with their curves; the rest are a line each. */
 const BOARD = 6;
+/** What the page says where a figure would be, when the chain could not be read. Never a zero. */
+const UNREAD = "Solana couldn’t be read just now.";
+/** A list of launches older than this says when it was read. */
+const STALE_MS = 5 * 60_000;
 
 /** Base units of a stock, as a person reads them: "0.0100". */
 function units(raw: bigint | null | undefined, decimals = 8): string {
@@ -68,13 +72,18 @@ function dollars(raw: bigint | null | undefined, decimals: number, price: number
 export default async function CurvePage() {
   const read = readCurve();
   const mints = CURVE_STOCKS.map((s) => curveQuote(s).mint);
-  const [plans, launches, summary, priced] = await Promise.all([
+  const [plans, launchesRead, summary, priced] = await Promise.all([
     read.plans,
     read.launches,
     plansSummary().catch(() => null),
     jupPrices(mints).catch(() => null),
   ]);
   const priceOf = (mint: string): number | null => (priced && priced.ok ? (priced.value.get(mint) ?? null) : null);
+  // Unread is not empty: a figure the chain did not give is a dash or a sentence, never a zero.
+  const launchesKnown = launchesRead !== null;
+  const launches = launchesRead?.list ?? [];
+  const readAt = launchesRead && Date.now() - launchesRead.at > STALE_MS ? launchesRead.at : null;
+  const plansKnown = plans.length >= DEPLOYED_PLANS;
   const shown = launches.slice(0, BOARD);
   const shapes = await Promise.all(shown.map((l) => curveShape(connection(), l).catch(() => null)));
   const configs = configsOf();
@@ -82,10 +91,13 @@ export default async function CurvePage() {
     .flatMap((p) => p.inflows.map((f) => ({ ...f, stock: p.stock, decimals: p.decimals })))
     .sort((a, b) => b.at - a.at)
     .slice(0, 8);
-  const latestTrade =
-    shapes
-      .flatMap((s, i) => (s && s.ok ? s.value.marks.map((m) => ({ ...m, launch: shown[i]! })) : []))
-      .sort((a, b) => b.at - a.at)[0] ?? null;
+  // "Latest" is a claim about every launch shown: with one curve unread, the latest may be its.
+  const shapesRead = shapes.every((s) => s !== null && s.ok);
+  const latestTrade = shapesRead
+    ? (shapes
+        .flatMap((s, i) => (s && s.ok ? s.value.marks.map((m) => ({ ...m, launch: shown[i]! })) : []))
+        .sort((a, b) => b.at - a.at)[0] ?? null)
+    : null;
   const latestFee = inflows[0] ?? null;
   const matched = plans.filter((p) => p.matches > 0);
   const matches = matched.reduce((n, p) => n + p.matches, 0);
@@ -136,7 +148,7 @@ export default async function CurvePage() {
                     Latest: a {latestTrade.side} of {latestTrade.launch.symbol || "a launch"}, {dateUTC(latestTrade.at)}
                   </a>
                 ) : (
-                  <span className="s">The first trade on a launch appears here.</span>
+                  <span className="s">{launchesKnown && shapesRead ? "The first trade on a launch appears here." : UNREAD}</span>
                 )}
               </li>
               <li>
@@ -150,7 +162,7 @@ export default async function CurvePage() {
                     Latest: +{units(latestFee.raw, latestFee.decimals)} {nameOf(latestFee.stock)} from {latestFee.from}, {dateUTC(latestFee.at)}
                   </a>
                 ) : (
-                  <span className="s">The first fee into a Plan appears here.</span>
+                  <span className="s">{plansKnown ? "The first fee into a Plan appears here." : UNREAD}</span>
                 )}
               </li>
               <li>
@@ -164,7 +176,7 @@ export default async function CurvePage() {
                     {matches} automatic save{matches === 1 ? "" : "s"} matched so far, {usdc(matchedUsdc)} in stock
                   </a>
                 ) : (
-                  <span className="s">The first match appears on a saver&rsquo;s own receipt.</span>
+                  <span className="s">{plansKnown ? "The first match appears on a saver’s own receipt." : UNREAD}</span>
                 )}
               </li>
             </ol>
@@ -199,9 +211,11 @@ export default async function CurvePage() {
             <li className="is-here">
               <span className="k">From every trade on a launch</span>
               <p>The savers&rsquo; share of every trading fee on Scrip Curve goes into the Plans, which add it to people&rsquo;s automatic saves.</p>
-              <p className="f">
-                On mainnet now: {launches.length} launch{launches.length === 1 ? "" : "es"}, {fees} fee{fees === 1 ? "" : "s"} paid into a Plan.
-              </p>
+              {launchesKnown && plansKnown ? (
+                <p className="f">
+                  On mainnet now: {launches.length} launch{launches.length === 1 ? "" : "es"}, {fees} fee{fees === 1 ? "" : "s"} paid into a Plan.
+                </p>
+              ) : null}
               <span className="here">You are here</span>
             </li>
           </ol>
@@ -232,7 +246,7 @@ export default async function CurvePage() {
                     <div>
                       <dt>Launches</dt>
                       <dd>
-                        {mine.length}
+                        {launchesKnown ? mine.length : "—"}
                         {graduated > 0 ? `, ${graduated} graduated` : ""}
                       </dd>
                     </div>
@@ -272,9 +286,15 @@ export default async function CurvePage() {
             <h2 id="sp-cvh-board-h" className="sp-cvh-h">
               Every launch
             </h2>
-            <span className="aside">{launches.length} on chain</span>
+            {launchesKnown ? (
+              <span className="aside">
+                {launches.length} on chain{readAt ? `, read ${stampUTC(Math.floor(readAt / 1000))}` : ""}
+              </span>
+            ) : null}
           </div>
-          {launches.length === 0 ? (
+          {!launchesKnown ? (
+            <p className="sp-body">{UNREAD} Every launch shows here again the moment it can be.</p>
+          ) : launches.length === 0 ? (
             <p className="sp-body">No launch yet. The first appears here the moment it is on chain, whoever launches it.</p>
           ) : (
             <ul className="sp-cvh-board">
@@ -381,7 +401,7 @@ export default async function CurvePage() {
                   {p.sponsorHandle ? ` (@${p.sponsorHandle})` : ""}
                 </span>
               ))}
-              {plans.length === 0 ? "The Plans are read from the chain the moment they exist." : "."}
+              {plans.length > 0 ? "." : DEPLOYED_PLANS > 0 ? "The Plans could not be read just now." : "The Plans are read from the chain the moment they exist."}
             </Row>
             {inflows.map((f) => (
               <Row key={f.sig} k={dateUTC(f.at)}>

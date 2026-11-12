@@ -3,7 +3,7 @@ import "server-only";
 import { PublicKey } from "@solana/web3.js";
 import { planAt } from "@/lib/plan/read";
 import { connection } from "@/lib/solana/connection";
-import { readTxViews } from "@/lib/solana/tx-view";
+import { readTxViewsAll } from "@/lib/solana/tx-view";
 import { DEPLOYED } from "./deployed";
 import { type ChainLaunch, launchesOnChain } from "./launches";
 import { CURVE_STOCKS, type CurveStock, DAMM_V2_PROGRAM_ID, DBC_PROGRAM_ID } from "./preset";
@@ -39,32 +39,53 @@ export type CurvePlanView = {
 };
 
 const HOLD_MS = 60_000;
-type Read = { at: number; plans: Promise<CurvePlanView[]>; launches: Promise<ChainLaunch[]> };
-const g = globalThis as typeof globalThis & { __scripCurveRead2?: Read };
+/**
+ * Every launch as last read, and when (ms). Null when the chain has not been read in this process:
+ * a page then says it could not read it, never "no launch yet", which on 12 November 2026 /curve
+ * said over two launches while its endpoint refused every call.
+ */
+export type LaunchesRead = { readonly list: readonly ChainLaunch[]; readonly at: number } | null;
+type Read = { at: number; plans: Promise<CurvePlanView[]>; launches: Promise<LaunchesRead> };
+const g = globalThis as typeof globalThis & { __scripCurveRead3?: Read; __scripCurveLaunchesGood?: LaunchesRead };
 
 export function readCurve(): Read {
-  const hit = g.__scripCurveRead2;
+  const hit = g.__scripCurveRead3;
   if (hit && Date.now() - hit.at < HOLD_MS) return hit;
+  // A read that fails answers with the last one that did not: launches only ever add up.
+  const lastGood = (): LaunchesRead => g.__scripCurveLaunchesGood ?? null;
   const fresh: Read = {
     at: Date.now(),
     plans: readPlans().catch(() => []),
-    launches: launchesOnChain(connection()).then((r) => (r.ok ? r.value : []), () => []),
+    launches: launchesOnChain(connection()).then(
+      (r) => {
+        if (!r.ok) return lastGood();
+        const good: LaunchesRead = { list: r.value, at: Date.now() };
+        g.__scripCurveLaunchesGood = good;
+        return good;
+      },
+      () => lastGood(),
+    ),
   };
-  g.__scripCurveRead2 = fresh;
+  g.__scripCurveRead3 = fresh;
   return fresh;
 }
+
+/** How many Plans the launches pay into: the Plans the page can expect to read. */
+export const DEPLOYED_PLANS = CURVE_STOCKS.filter((s) => DEPLOYED.plans[s]).length;
 
 /**
  * Scrip Curve in one line, for the pages that mention it beside the rest of Scrip: how many
  * launches are on chain, how many graduated, and how many fees reached a Plan. Null when the
- * chain could not be read, so a page says nothing rather than a zero that means "unknown".
+ * chain could not be read, so a page says nothing rather than a zero that means "unknown"; and
+ * null while any Plan is unread, because its fees would be missing from the count.
  */
 export type CurveCounts = { readonly launches: number; readonly graduated: number; readonly fees: number };
 export async function curveCounts(): Promise<CurveCounts | null> {
   const read = readCurve();
   const [plans, launches] = await Promise.all([read.plans, read.launches]);
-  if (launches.length === 0 && plans.length === 0) return null;
-  return { launches: launches.length, graduated: launches.filter((l) => l.migrated).length, fees: plans.reduce((n, p) => n + p.inflows.length, 0) };
+  if (!launches || plans.length < DEPLOYED_PLANS) return null;
+  if (launches.list.length === 0 && plans.length === 0) return null;
+  return { launches: launches.list.length, graduated: launches.list.filter((l) => l.migrated).length, fees: plans.reduce((n, p) => n + p.inflows.length, 0) };
 }
 
 async function readPlans(): Promise<CurvePlanView[]> {
@@ -104,24 +125,31 @@ export function curvePlan(stock: CurveStock): Promise<CurvePlanView | null> {
   return value;
 }
 
+/**
+ * A Plan that could not be read throws, so `curvePlan` keeps the last view it had (or none):
+ * until 12 November 2026 an unread Plan came back as zero members and zero from launches, and
+ * /curve printed those zeros as facts.
+ */
 async function readPlan(stock: CurveStock): Promise<CurvePlanView | null> {
   const p = DEPLOYED.plans[stock];
   if (!p) return null;
   const view = await planAt(p.address);
-  const plan = view.ok ? view.value : null;
+  if (!view.ok) throw new Error(view.why);
+  const plan = view.value;
+  if (!plan) return null;
   const inflows = await feeInflows(new PublicKey(p.escrow));
   return {
     stock,
     address: p.address,
     escrow: p.escrow,
-    name: plan?.name ?? null,
-    sponsorHandle: plan?.sponsorHandle ?? null,
-    escrowRaw: plan?.escrowRaw ?? null,
-    decimals: plan?.decimals ?? 8,
-    members: plan?.members ?? 0,
-    matches: plan?.matches ?? 0,
-    matchedRaw: plan?.matchedRaw ?? 0n,
-    matchedUsdc: plan?.matchedUsdc ?? 0n,
+    name: plan.name,
+    sponsorHandle: plan.sponsorHandle,
+    escrowRaw: plan.escrowRaw,
+    decimals: plan.decimals,
+    members: plan.members,
+    matches: plan.matches,
+    matchedRaw: plan.matchedRaw,
+    matchedUsdc: plan.matchedUsdc,
     inflows,
     fromLaunchesRaw: inflows.reduce((n, f) => n + f.raw, 0n),
   };
@@ -134,11 +162,12 @@ async function readPlan(stock: CurveStock): Promise<CurvePlanView | null> {
  */
 async function feeInflows(escrow: PublicKey): Promise<FeeInflow[]> {
   const conn = connection();
-  const sigs = await conn.getSignaturesForAddress(escrow, { limit: 50 }, "confirmed").catch(() => []);
-  const views = await readTxViews(
+  // Unread history throws: an empty list here would print "0.0000 from launches" as a fact.
+  const sigs = await conn.getSignaturesForAddress(escrow, { limit: 50 }, "confirmed");
+  const views = await readTxViewsAll(
     conn,
     sigs.filter((s) => !s.err).map((s) => s.signature),
-  ).catch(() => []);
+  );
   const claimer = DEPLOYED.feeClaimer;
   const out: FeeInflow[] = [];
   for (const v of views) {

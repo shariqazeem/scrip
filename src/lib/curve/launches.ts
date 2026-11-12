@@ -70,7 +70,10 @@ export async function launchesOnChain(conn: Connection, configs = configsOf()): 
     for (const c of configs) {
       const quote = curveQuote(c.stock);
       const thresholdRaw = BigInt(Math.round(THRESHOLD[c.kind][c.stock] * 10 ** quote.decimals));
-      for (const p of await dbc.state.getPoolsByConfig(c.address)) {
+      // The pools on this config, in one search. The SDK's getPoolsByConfig makes two: it also asks
+      // for Meteora's transfer-hook pools, which a plain config like Scrip's never has, and each
+      // search counts against Solana's public endpoint's small budget for them (`limiter.ts`).
+      for (const p of await dbc.state.program.account.virtualPool.all([{ memcmp: { offset: 72, bytes: c.address } }])) {
         const s = p.account.poolState;
         const migrated = Boolean(s.isMigrated);
         found.push({
